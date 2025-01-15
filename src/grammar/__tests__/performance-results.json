@@ -1,0 +1,52 @@
+[
+  {
+    "method": "nested-50",
+    "input": "\\bd Text \\it nested\\it* more\\bd* \\bd Text \\it nest...",
+    "inputSize": 1649,
+    "executionTime": 0.45260000228881836,
+    "operations": 50,
+    "timestamp": "2025-01-14T22:44:09.361Z",
+    "version": "1.0.0",
+    "isImportant": false
+  },
+  {
+    "method": "characters-100",
+    "input": "\\bd Bold text\\bd* \\bd Bold text\\bd* \\bd Bold text\\...",
+    "inputSize": 1799,
+    "executionTime": 0.41830000281333923,
+    "operations": 100,
+    "timestamp": "2025-01-14T22:44:09.360Z",
+    "version": "1.0.0",
+    "isImportant": false
+  },
+  {
+    "method": "footnotes-50",
+    "input": "\\f + \\fr 1.1 \\ft Note text\\f* \\f + \\fr 1.1 \\ft Not...",
+    "inputSize": 1499,
+    "executionTime": 0.6464999914169312,
+    "operations": 50,
+    "timestamp": "2025-01-14T22:44:09.360Z",
+    "version": "1.0.0",
+    "isImportant": false
+  },
+  {
+    "method": "paragraphs-100",
+    "input": "\\p Simple paragraph.\n\\p Simple paragraph.\n\\p Simpl...",
+    "inputSize": 2099,
+    "executionTime": 0.4486999958753586,
+    "operations": 100,
+    "timestamp": "2025-01-14T22:44:09.359Z",
+    "version": "1.0.0",
+    "isImportant": false
+  },
+  {
+    "method": "html-visitor",
+    "input": "\\p First paragraph with \\bd bold\\bd* text.\n    \\p ...",
+    "inputSize": 188,
+    "executionTime": 0.2694000005722046,
+    "operations": 1,
+    "timestamp": "2025-01-14T22:44:09.358Z",
+    "version": "1.0.0",
+    "isImportant": false
+  }
+]

@@ -1,0 +1,53 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`USFMParser - Visitors parses alignment USFM file 1`] = `
+"
+TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
+TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
+3.0
+TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
+3.0
+Titus
+TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
+3.0
+TitusTitus
+TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
+3.0
+TitusTitus
+Titus
+TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
+3.0
+TitusTitus
+Titus
+1
+TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
+3.0
+TitusTitus
+Titus
+1
+Paul’s Greeting to Titus
+TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
+3.0
+TitusTitus
+Titus
+1
+Paul’s Greeting to Titus
+(2 Corinthians 8:16–24)
+TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
+3.0
+TitusTitus
+Titus
+1
+Paul’s Greeting to Titus
+(2 Corinthians 8:16–24)
+
+TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
+3.0
+TitusTitus
+Titus
+1
+Paul’s Greeting to Titus
+(2 Corinthians 8:16–24)
+
+1Paul, a servant of God and an apostle of Jesus Christ 2in the hope of eternal life,"
+`;

@@ -1,64 +1,26 @@
 // Types for USFM AST nodes
-export type USFMNodeType = "paragraph" | "character" | "note" | "text" | "milestone" | "peripheral";
-
-export interface USFMNode {
-  type: USFMNodeType;
-  marker?: string;
-  content?: string | USFMNode[];
-  attributes?: MilestoneAttributes;
-  accept<T>(visitor: USFMVisitor<T>): T;
-  acceptWithContext<T, C>(visitor: USFMVisitorWithContext<T, C>, context: C): T;
-}
-
-export interface ParagraphNode extends USFMNode {
-  type: "paragraph";
-  marker: string;
-  content: USFMNode[];
-  accept<T>(visitor: USFMVisitor<T>): T;
-  acceptWithContext<T, C>(visitor: USFMVisitorWithContext<T, C>, context: C): T;
-}
-
-export interface CharacterNode extends USFMNode {
-  type: "character";
-  marker: string;
-  content: USFMNode[];
-  attributes?: MilestoneAttributes | LinkAttributes;
-  accept<T>(visitor: USFMVisitor<T>): T;
-  acceptWithContext<T, C>(visitor: USFMVisitorWithContext<T, C>, context: C): T;
-}
-
-export interface NoteNode extends USFMNode {
-  type: "note";
-  marker: string;
-  caller?: string;
-  content: USFMNode[];
-  accept<T>(visitor: USFMVisitor<T>): T;
-  acceptWithContext<T, C>(visitor: USFMVisitorWithContext<T, C>, context: C): T;
-}
-
-export interface TextNode extends USFMNode {
-  type: "text";
-  content: string;
-  accept<T>(visitor: USFMVisitor<T>): T;
-  acceptWithContext<T, C>(visitor: USFMVisitorWithContext<T, C>, context: C): T;
-}
-
-export interface MilestoneAttributes {
-  sid?: string;
-  eid?: string;
-  who?: string;
-  level?: string; // Nesting level
-  [key: string]: string | string[] | undefined;
-}
-
-export interface MilestoneNode extends USFMNode {
-  type: "milestone";
-  marker: string;
-  milestoneType: "start" | "end" | "standalone";
-  attributes?: MilestoneAttributes;
-  accept<T>(visitor: USFMVisitor<T>): T;
-  acceptWithContext<T, C>(visitor: USFMVisitorWithContext<T, C>, context: C): T;
-}
+import {
+  USFMNode,
+  ParagraphNode,
+  CharacterNode,
+  NoteNode,
+  TextNode,
+  MilestoneNode,
+  PeripheralNode,
+  MilestoneAttributes,
+  PeripheralAttributes
+} from './interfaces/USFMNodes';
+import { USFMVisitor, USFMVisitorWithContext } from './interfaces/USFMNodes';
+import {
+  paragraphMarkers,
+  characterMarkers,
+  noteMarkers,
+  noteContentMarkers,
+  milestoneMarkers,
+  peripheralBooks,
+  peripheralDivisionIds,
+  markerDefaultAttributes
+} from './constants/markers';
 
 export type MarkerType = "paragraph" | "character" | "note" | "noteContent" | "milestone";
 
@@ -70,61 +32,7 @@ export interface CustomMarkerRule {
 
 export interface USFMParserOptions {
   customMarkerRules?: Record<string, CustomMarkerRule>;
-}
-
-export interface ListKeyNode extends CharacterNode {
-  type: "character";
-  marker: "lik";
-}
-
-export interface ListValueNode extends CharacterNode {
-  type: "character";
-  marker: string; // liv1, liv2, etc.
-}
-
-export interface LinkAttributes {
-  "link-href"?: string;
-  "link-title"?: string;
-  "link-id"?: string;
-  [key: string]: string | string[] | undefined;
-}
-
-export interface AttributedNode extends USFMNode {
-  attributes?: MilestoneAttributes | LinkAttributes;
-}
-
-export interface PeripheralAttributes {
-  id: string; // Required identifier for peripheral divisions
-  [key: string]: string | string[] | undefined;
-}
-
-export interface PeripheralNode extends USFMNode {
-  type: "peripheral";
-  marker: string;
-  title: string;
-  attributes: PeripheralAttributes;
-  content: USFMNode[];
-  accept<T>(visitor: USFMVisitor<T>): T;
-  acceptWithContext<T, C>(visitor: USFMVisitorWithContext<T, C>, context: C): T;
-}
-
-// Visitor pattern interfaces
-export interface USFMVisitor<T = void> {
-  visitParagraph(node: ParagraphNode): T;
-  visitCharacter(node: CharacterNode): T;
-  visitNote(node: NoteNode): T;
-  visitText(node: TextNode): T;
-  visitMilestone(node: MilestoneNode): T;
-  visitPeripheral(node: PeripheralNode): T;
-}
-
-export interface USFMVisitorWithContext<T = void, C = any> {
-  visitParagraph(node: ParagraphNode, context: C): T;
-  visitCharacter(node: CharacterNode, context: C): T;
-  visitNote(node: NoteNode, context: C): T;
-  visitText(node: TextNode, context: C): T;
-  visitMilestone(node: MilestoneNode, context: C): T;
-  visitPeripheral(node: PeripheralNode, context: C): T;
+  positionTracking?: boolean;
 }
 
 export class USFMParser {
@@ -132,273 +40,45 @@ export class USFMParser {
   private input: string = "";
   private customMarkerRules: Record<string, CustomMarkerRule> = {};
   private nodes: USFMNode[] = [];
-  // Paragraph markers (end with space, no closing marker)
-  private readonly paragraphMarkers = new Set([
-    "id", // File identification
-    "h", // Header
-    "mt", // Major title
-    "ms", // Major section heading
-    "p", // Paragraph
-    "q", // Poetry
-    "c", // Chapter number
-    "s", // Section heading
-    "r", // Parallel reference
-    "d", // Descriptive title
-    "m", // Margin paragraph
-    "pi", // Indented paragraph
-    "pc", // Centered paragraph
-    "b", // Blank line
-    "imt",
-    "imt1",
-    "imt2",
-    "imt3", // Introduction major title
-    "is",
-    "is1",
-    "is2",
-    "is3", // Introduction section heading
-    "ip", // Introduction paragraph
-    "ipi", // Indented introduction paragraph
-    "im", // Introduction margin paragraph
-    "imi", // Indented introduction margin
-    "ipq", // Introduction quote paragraph
-    "imq", // Introduction margin quote
-    "ipr", // Introduction right-aligned paragraph
-    "iq",
-    "iq1",
-    "iq2",
-    "iq3", // Introduction poetic line
-    "ib", // Introduction blank line
-    "ili",
-    "ili1",
-    "ili2", // Introduction list item
-    "iot", // Introduction outline title
-    "io",
-    "io1",
-    "io2",
-    "io3", // Introduction outline entry
-    "iex", // Introduction explanatory
-    "imte",
-    "imte1",
-    "imte2", // Introduction major title ending
-    "ie", // Introduction end
-    "mt",
-    "mt1",
-    "mt2",
-    "mt3", // Major title
-    "mte",
-    "mte1",
-    "mte2",
-    "mte3", // Major title ending
-    "ms",
-    "ms1",
-    "ms2",
-    "ms3", // Major section heading
-    "mr", // Major section reference range
-    "s",
-    "s1",
-    "s2",
-    "s3", // Section heading
-    "sr", // Section reference range
-    "r", // Parallel passage reference
-    "d", // Descriptive title
-    "sp", // Speaker identification
-    "sd",
-    "sd1",
-    "sd2",
-    "sd3", // Semantic division
-    "po", // Opening of an epistle
-    "pr", // Right-aligned paragraph
-    "cls", // Letter closure
-    "pmo", // Embedded text opening
-    "pm", // Embedded text paragraph
-    "pmc", // Embedded text closing
-    "pmr", // Embedded text refrain
-    "pi1",
-    "pi2",
-    "pi3", // Indented paragraph
-    "mi", // Indented flush left
-    "nb", // No-break with previous paragraph
-    "pc", // Centered paragraph
-    "ph1",
-    "ph2",
-    "ph3", // Hanging indent (deprecated)
-    "b", // Blank line
-    "q",
-    "q1",
-    "q2",
-    "q3", // Poetic line with indent levels
-    "qr", // Right-aligned poetic line
-    "qc", // Centered poetic line
-    "qa", // Acrostic heading
-    "qm",
-    "qm1",
-    "qm2", // Embedded text poetic line
-    "qd", // Hebrew note
-    "li",
-    "li1",
-    "li2",
-    "li3",
-    "li4", // List item (ordered or unordered)
-    "lim",
-    "lim1",
-    "lim2",
-    "lim3", // Embedded list item
-    "lf", // List footer
-    "lh", // List header
-    "liv",
-    "liv1",
-    "liv2",
-    "liv3", // Vernacular list item
-    "lik", // List entry key
-    "liv",
-    "liv1",
-    "liv2",
-    "liv3", // List entry values
-    "tr", // Table row
-    "esb", // Sidebar
-    "eb", // Extended book intro
-    "div", // Division intro
-    "sd", // Section intro
-    "efm", // Extended footnote
-    "ex", // Extended cross reference
-    "cat", // Content category
-  ]);
-
-  // Character markers (require closing marker with *)
-  private readonly characterMarkers = new Set([
-    "v", // Verse Marker
-    "bd", // Bold text
-    "it", // Italic text
-    "bdit", // Bold italic text
-    "em", // Emphasized text
-    "sc", // Small caps
-    "w", // Word/phrase
-    "wg", // Greek word/phrase
-    "wh", // Hebrew word/phrase
-    "wa", // Aramaic word/phrase
-    "nd", // Name of deity
-    "tl", // Transliterated word
-    "pn", // Proper name
-    "addpn", // Proper name (added)
-    "qt", // Quoted text
-    "sig", // Signature
-    "ord", // Ordinal number
-    "add", // Added text
-    "lit", // Liturgical note
-    "sls", // Secondary language source
-    "dc", // Deuterocanonical/LXX additions
-    "bk", // Quoted book title
-    "k", // Keyword/keyterm
-    "wj", // Words of Jesus
-    "ior", // Introduction outline reference range
-    "iqt", // Introduction quoted text
-    "rq", // Inline quotation reference
-    "qs", // Selah expression
-    "qac", // Acrostic letter
-    "lik", // List entry key
-    "liv",
-    "liv1",
-    "liv2",
-    "liv3", // List entry values
-    "th1",
-    "th2",
-    "th3",
-    "th4", // Table header cells
-    "thr1",
-    "thr2",
-    "thr3",
-    "thr4", // Table header cells (right aligned)
-    "tc1",
-    "tc2",
-    "tc3",
-    "tc4", // Table cells
-    "tcr1",
-    "tcr2",
-    "tcr3",
-    "tcr4", // Table cells (right aligned)
-    "jmp", // Link text
-    "cat", // Content category (when used inline)
-  ]);
-
-  // Note markers (require closing marker with * and may have caller)
-  private readonly noteMarkers = new Set([
-    "f", // Footnote
-    "fe", // Endnote
-    "x", // Cross reference
-  ]);
-
-  // Note content markers (no closing marker needed)
-  private readonly noteContentMarkers = new Set([
-    "fr", // Footnote reference
-    "ft", // Footnote text
-    "fk", // Footnote keyword
-    "fl", // Footnote label
-    "fw", // Footnote witness
-    "fp", // Footnote paragraph
-    "fq", // Footnote quotation
-    "fqa", // Footnote alternate translation
-    "xo", // Cross reference origin reference
-    "xk", // Cross reference keyword
-    "xq", // Cross reference quotation
-    "xt", // Cross reference target references
-    "xta", // Cross reference target alternate
-    "xop", // Cross reference published origin text
-    "xot", // Cross reference published target text
-    "xnt", // Cross reference published target notes
-    "xdc", // Cross reference published target dictionary
-  ]);
-
-  // Add milestone markers
-  private readonly milestoneMarkers = new Set([
-    "qt", // Quotation milestone
-    "ts", // Translator's section milestone
-  ]);
-
-  // Add peripheral book identifiers
-  private readonly peripheralBooks = new Set([
-    "FRT", // Front matter
-    "INT", // Introductions
-    "BAK", // Back matter
-    "CNC", // Concordance
-    "GLO", // Glossary
-    "TDX", // Topical index
-    "NDX", // Names index
-    "OTH", // Other
-  ]);
-
-  // Standard peripheral division identifiers
-  private readonly peripheralDivisionIds = new Set([
-    "title",
-    "halftitle",
-    "promo",
-    "imprimatur",
-    "pubdata",
-    "foreword",
-    "preface",
-    "contents",
-    "alphacontents",
-    "abbreviations",
-    "intletters",
-    "cover",
-    "spine",
-    "intbible",
-    "intot",
-    "intpent",
-    "inthistory",
-    "intpoetry",
-    "intprophesy",
-    "intdc",
-    "intnt",
-    "intgospels",
-    "intepistles",
-    "chron",
-    "measures",
-    "maps",
-    "lxxquotes",
-  ]);
+  private logs: Array<{type: 'warn' | 'error', message: string}> = [];
+  private positionVisits: Map<number, number> = new Map();
+  private readonly MAX_VISITS = 1000;
+  private currentMethod: string = '';
+  private readonly trackPositions: boolean;
+  
+  // Import marker sets from constants
+  private readonly paragraphMarkers = paragraphMarkers;
+  private readonly characterMarkers = characterMarkers;
+  private readonly noteMarkers = noteMarkers;
+  private readonly noteContentMarkers = noteContentMarkers;
+  private readonly milestoneMarkers = milestoneMarkers;
+  private readonly peripheralBooks = peripheralBooks;
+  private readonly peripheralDivisionIds = peripheralDivisionIds;
+  private readonly markerDefaultAttributes = markerDefaultAttributes;
 
   constructor(options?: USFMParserOptions) {
     this.customMarkerRules = options?.customMarkerRules || {};
+    this.trackPositions = options?.positionTracking ?? process.env.NODE_ENV !== 'production';
+  }
+
+  // Add method to get logs
+  getLogs(): Array<{type: 'warn' | 'error', message: string}> {
+    return this.logs;
+  }
+
+  // Add method to clear logs
+  clearLogs(): void {
+    this.logs = [];
+  }
+
+  private logWarning(message: string): void {
+    this.logs.push({ type: 'warn', message });
+    console.warn(message);
+  }
+
+  private logError(message: string): void {
+    this.logs.push({ type: 'error', message });
+    console.error(message);
   }
 
   load(input: string): USFMParser { 
@@ -413,6 +93,10 @@ export class USFMParser {
 
   parse(): USFMParser {
     this.pos = 0;
+    if (this.trackPositions) {
+      this.positionVisits.clear();
+    }
+    this.currentMethod = 'parse';
     this.nodes = this.parseNodes(false);
     return this;
   }
@@ -562,12 +246,56 @@ export class USFMParser {
     }
   }
 
-  private parseMarker(): { marker: string; isNested: boolean } {
-    this.pos++; // Skip backslash
+  private movePosition(delta: number, trackVisits: boolean = false, method?: string): void {
+    if (method) {
+      this.currentMethod = method;
+    }
+    
+    if (trackVisits && this.trackPositions) {
+      const visits = this.positionVisits.get(this.pos) || 0;
+      this.positionVisits.set(this.pos, visits + 1);
+      
+      if (visits > this.MAX_VISITS) {
+        const context = this.input.slice(Math.max(0, this.pos - 20), Math.min(this.input.length, this.pos + 20));
+        const pointer = ' '.repeat(Math.min(20, this.pos)) + '^';
+        throw new Error(
+          `Potential infinite loop detected in ${this.currentMethod} at position ${this.pos}.\n` +
+          `Context: ${context}\n` +
+          `         ${pointer}`
+        );
+      }
+    }
+    
+    this.pos += delta;
+  }
+
+  private advance(trackVisits: boolean = false): void {
+    this.movePosition(1, trackVisits);
+  }
+
+  private retreat(trackVisits: boolean = false): void {
+    this.movePosition(-1, trackVisits);
+  }
+
+  private setPosition(newPos: number, trackVisits: boolean = false): void {
+    const delta = newPos - this.pos;
+    this.movePosition(delta, trackVisits);
+  }
+
+  private savePosition(): number {
+    return this.pos;
+  }
+
+  private restorePosition(savedPos: number, trackVisits: boolean = false): void {
+    this.setPosition(savedPos, trackVisits);
+  }
+
+  private parseMarker(): { marker: string; isNested: boolean; cleanMarker: string } {
+    this.advance(false); // Skip backslash, no need to track simple advances
 
     const isNested = this.pos < this.input.length && this.input[this.pos] === "+";
     if (isNested) {
-      this.pos++; // Skip +
+      this.advance(false);
     }
 
     let marker = "";
@@ -578,7 +306,7 @@ export class USFMParser {
         break;
       }
       marker += char;
-      this.pos++;
+      this.advance(true); // Track visits here as we're in a loop
     }
 
     // Preserve significant whitespace after marker
@@ -607,63 +335,193 @@ export class USFMParser {
           }
         }
       } else {
-        // Default behavior: treat as paragraph marker
-        this.paragraphMarkers.add(marker);
+        const markerType = this.determineCustomMarkerType(marker);
+        switch (markerType) {
+          case "character":
+            this.characterMarkers.add(this.cleanMarkerSuffix(marker));
+            this.customMarkerRules[marker] = { type: "character" };
+            break;
+          case "milestone":
+            this.milestoneMarkers.add(this.cleanMarkerSuffix(marker));
+            this.customMarkerRules[marker] = { type: "milestone", isMilestone: true };
+            break;
+          case "paragraph":
+            this.paragraphMarkers.add(this.cleanMarkerSuffix(marker));
+            this.customMarkerRules[marker] = { type: "paragraph" };
+            break;
+        }
+        this.logWarning(`Unsupported marker in USFM: '\\${marker}', inferred as ${markerType}, please add it to the customMarkerRules object in the USFMParser constructor to stop seeing this warning`);
       }
     }
 
-    return { marker, isNested };
+    return { marker, isNested, cleanMarker: this.cleanMarkerSuffix(marker) };
   }
 
   private parseNodes(isInsideParagraph: boolean = false): USFMNode[] {
     const nodes: USFMNode[] = [];
     let lastWasLineBreak = false;
+    
     while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseNodes'); // Check for infinite loop without moving
       const char = this.input[this.pos];
       
       if (char === "\\") {
-        const { marker, isNested } = this.parseMarker();
+        const { marker, isNested, cleanMarker } = this.parseMarker();
+
         if (marker === "periph") {
-          nodes.push(this.parsePeripheral());
-        } else if (this.paragraphMarkers.has(marker) || lastWasLineBreak) {
-          nodes.push(this.parseParagraph(marker));
-        } else if (this.characterMarkers.has(marker)) {
-          nodes.push(this.parseCharacter(marker, isNested));
-        } else if (this.noteMarkers.has(marker)) {
-          nodes.push(this.parseNote(marker));
-        } else if (this.milestoneMarkers.has(marker)) {
-          nodes.push(this.parseMilestone(marker));
+          nodes.push(this.parsePeripheral(nodes.length));
+        } else if (this.paragraphMarkers.has(cleanMarker) || lastWasLineBreak) {
+          nodes.push(this.parseParagraph(marker, nodes.length));
+        } else if (this.characterMarkers.has(cleanMarker)) {
+          nodes.push(this.parseCharacter(marker, isNested, nodes.length));
+        } else if (this.noteMarkers.has(cleanMarker)) {
+          nodes.push(this.parseNote(marker, nodes.length));
+        } else if (this.milestoneMarkers.has(cleanMarker)) {
+          nodes.push(this.parseMilestone(marker, nodes.length));
         } else {
-          console.warn(`Unsupported marker in USFM: '${marker}'`);
-          const prevChar = this.pos > 1 ? this.input[this.pos - 2] : '\n'; // -2 because pos is after '\'
-          if (this.isLineBreakingWhitespace(prevChar)) {
-            nodes.push(this.parseParagraph(marker));
-          } else {
-            nodes.push(this.parseCharacter(marker, isNested));
+          const markerType = this.determineCustomMarkerType(marker);
+          switch (markerType) {
+            case "character":
+              this.characterMarkers.add(this.cleanMarkerSuffix(marker));
+              nodes.push(this.parseCharacter(marker, isNested, nodes.length));
+              break;
+            case "milestone":
+              this.milestoneMarkers.add(this.cleanMarkerSuffix(marker));
+              nodes.push(this.parseMilestone(marker, nodes.length));
+              break;
+            case "paragraph":
+              this.paragraphMarkers.add(this.cleanMarkerSuffix(marker));
+              nodes.push(this.parseParagraph(marker, nodes.length));
+              break;
           }
+          this.logWarning(`Unsupported marker in USFM: '\\${marker}', inferred as ${markerType}, please add it to the customMarkerRules object in the USFMParser constructor to stop seeing this warning`);
         }
       } else if (this.isNonLineBreakingWhitespace(char)) {
-        this.pos++;
+        this.advance(false);
       } else if (this.isLineBreakingWhitespace(char)) {
         lastWasLineBreak = true;
-        this.pos++;
+        this.advance(false);
       } else {
         const context = this.input.slice(Math.max(0, this.pos - 20), Math.min(this.input.length, this.pos + 20));
         const pointer = ' '.repeat(Math.min(20, this.pos)) + '^';
-        throw new Error(
-          `Unexpected character in USFM: '${char}'\n` +
+        this.logWarning(
+          `Unexpected character outside a paragraph: '${char}'\n` +
           `Context: ${context}\n` +
           `         ${pointer}`
         );
+        nodes.push(this.parseText(false, nodes.length));
       }
     }
 
     return nodes;
   }
 
-  private peekMarker(): string {
-    const savedPos = this.pos;
-    this.pos++; // Skip backslash
+  private determineCustomMarkerType(marker: string): MarkerType {
+
+    //check if it's a milestone marker
+    if (this.isMilestoneMarker(marker)) {
+      return "milestone";
+    }
+
+    //check if there's a line break before the marker
+    const hasLineBreakBefore = this.checkForPrecedingLineBreak(marker);
+    
+    //if there's no line break before the marker then it's a character marker
+    if (!hasLineBreakBefore) {
+      return "character";
+    }    
+    
+    // Default to paragraph marker
+    return "paragraph";
+  }
+
+  private checkForPrecedingLineBreak(marker: string): boolean {
+    const savedPos = this.savePosition();
+
+    // Move position back past the marker and backslash
+    this.pos -= (marker.length + 2);
+    
+    while (this.pos > 0) {
+      const prevChar = this.input[this.pos - 1];
+      if (this.isLineBreakingWhitespace(prevChar)) {
+        this.restorePosition(savedPos, false);
+        return true;
+      }
+      if (!this.isNonLineBreakingWhitespace(prevChar)) {
+        break;
+      }
+      this.retreat(false);
+    }
+    
+    this.restorePosition(savedPos, false);
+    return false;
+  }
+
+  private isMilestoneMarker(marker: string): boolean {
+    // Check for -s/-e suffix
+    if (marker.endsWith("-s") || marker.endsWith("-e")) {
+      return true;
+    }
+    
+    // Check for self-closing marker
+    const savedPos = this.savePosition();
+    let isSelfClosing = false;
+    
+    while (this.pos < this.input.length) {
+      if (this.input[this.pos] === "\\") {
+        isSelfClosing = this.input[this.pos + 1] === "*";
+        break;
+      }
+      this.advance(false);
+    }
+    
+    this.restorePosition(savedPos, false);
+    return isSelfClosing;
+  }
+
+  private cleanMarkerSuffix(marker: string): string {
+    let cleanMarker = marker;
+
+    // Handle dash-prefixed milestone markers
+    if (marker.endsWith("-s") || marker.endsWith("-e")) {
+      cleanMarker = marker.slice(0, -2);
+    }
+
+    if(marker.match(/\w\d$/)) {
+      cleanMarker = marker.slice(0, -1);
+    }
+
+    return cleanMarker;
+  }
+
+
+  /**
+   * Peek ahead for the next marker after current position that is only preceded by whitespace
+   */
+  private getFollowingMarker(): {marker: string, cleanMarker: string} {
+    while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'getFollowingMarker'); // Check for infinite loop without moving
+      const char = this.input[this.pos];
+      if (this.isWhitespace(char)) {
+        this.advance(false);
+        continue;
+      }
+      else if (char === "\\") {
+        //if it's a marker then return it
+        const {marker, cleanMarker} = this.peekMarker();
+        return {marker, cleanMarker};
+      }
+      else {
+        //found regular text
+        return {marker: "", cleanMarker: ""};
+      }
+    }
+    return {marker: "", cleanMarker: ""};
+  }
+
+  private peekMarker(): {marker: string, cleanMarker: string} {
+    const savedPos = this.savePosition();
+    this.advance(false); // Skip backslash
     let marker = "";
 
     while (this.pos < this.input.length) {
@@ -672,104 +530,134 @@ export class USFMParser {
         break;
       }
       marker += char;
-      this.pos++;
+      this.advance(true); // Track visits in loop
     }
 
-    this.pos = savedPos;
-    return marker;
+    this.restorePosition(savedPos, false);
+
+    return {marker, cleanMarker: this.cleanMarkerSuffix(marker)};
   }
 
   private getCurrentCharacter(): string {
     return this.input[this.pos];
   }
 
-  private parseAttributes(): Record<string, string | string[]> {
+  private parseAttributes(currentMarker: string): Record<string, string | string[]> {
+    this.advance(false); // Skip |
     const attributes: Record<string, string | string[]> = {};
     let currentAttr = "";
     let currentValue = "";
     let inValue = false;
     let inQuotes = false;
 
+    // Skip any leading spaces
+    while (this.pos < this.input.length && this.input[this.pos] === " ") {
+      this.advance(false);
+    }
+
+    // Look ahead to see if this is a default attribute case
+    let isDefaultAttribute = true;
+    let tempPos = this.pos;
+    let hasEquals = false;
+    while (tempPos < this.input.length) {
+      const char = this.input[tempPos];
+      if (char === "\\") break;
+      if (char === "=") {
+        hasEquals = true;
+        isDefaultAttribute = false;
+        break;
+      }
+      if (char === " " && !hasEquals) {
+        // Found a space before any equals, must be default value
+        break;
+      }
+      tempPos++;
+    }
+
+    // Handle default attribute case
+    const defaultAttr = this.markerDefaultAttributes[currentMarker];
+    if (isDefaultAttribute && defaultAttr) {
+      let defaultValue = "";
+      while (this.pos < this.input.length) {
+        const char = this.input[this.pos];
+        if (char === "\\" || char === " ") {
+          break;
+        }
+        defaultValue += char;
+        this.pos++;
+      }
+      
+      if (defaultValue) {
+        attributes[defaultAttr] = defaultValue.trim();
+      }
+
+      // Skip spaces after default value
+      while (this.pos < this.input.length && this.input[this.pos] === " ") {
+        this.pos++;
+      }
+    }
+
+    // Handle explicit attributes
     while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseAttributes'); // Check for infinite loop without moving
       const char = this.input[this.pos];
 
-      if (char === "*") break; // End of attributes
-
-      if (!inValue && char === "=") {
-        inValue = true;
-        this.pos++;
-        continue;
-      }
-
-      // Handle quotes - this allows for nested quotes in values
-      if (inValue && char === '"') {
+      // Handle quotes
+      if (char === '"') {
         inQuotes = !inQuotes;
-        this.pos++;
+        this.advance(false);
         continue;
       }
 
-      if (!inQuotes && (char === " " || char === "*")) {
-        if (currentAttr && currentValue) {
-          // Handle multiple values in attributes
-          if (currentValue.includes(",")) {
-            attributes[currentAttr.trim()] = currentValue
-              .trim()
-              .split(",")
-              .map((v) => v.trim());
-          } else {
-            attributes[currentAttr.trim()] = currentValue.trim();
+      // Only process special characters if we're not in quotes
+      if (!inQuotes) {
+        // Check for closing marker
+        if (char === "\\") {
+          if (currentAttr && currentValue) {
+            attributes[currentAttr.trim()] = currentValue.trim().replace(/^"|"$/g, '');
           }
+          break;
         }
-        currentAttr = "";
-        currentValue = "";
-        inValue = false;
-        if (char === "*") break;
+
+        // Handle attribute-value separator
+        if (char === "=") {
+          inValue = true;
+          this.advance(false);
+          continue;
+        }
+
+        // Handle space between attributes
+        if (char === " ") {
+          if (currentAttr && currentValue) {
+            attributes[currentAttr.trim()] = currentValue.trim().replace(/^"|"$/g, '');
+            currentAttr = "";
+            currentValue = "";
+            inValue = false;
+          }
+          this.advance(false);
+          continue;
+        }
+      }
+
+      // Add character to current attribute or value
+      if (inValue) {
+        currentValue += char;
       } else {
-        if (inValue) {
-          currentValue += char;
-        } else {
-          currentAttr += char;
-        }
+        currentAttr += char;
       }
 
-      this.pos++;
+      this.advance(false);
     }
 
-    // Handle default attribute for \w marker
-    if (!currentAttr && currentValue) {
-      attributes["lemma"] = currentValue;
-    }
-
-    // Handle link attributes (link-href, link-title, link-id)
-    if (currentAttr.startsWith("link-")) {
-      if (currentAttr === "link-href") {
-        // Validate URI format
-        if (currentValue.startsWith("prj:")) {
-          // Scripture reference format: prj:REF@VERSION
-          const [ref, _version] = currentValue.slice(4).split("@");
-          if (!ref) {
-            throw new Error(`Invalid scripture reference in link-href: ${currentValue}`);
-          }
-        } else if (currentValue.startsWith("x-")) {
-          // Custom URI scheme, format: x-scheme:value
-          if (!currentValue.includes(":")) {
-            throw new Error(`Invalid custom URI format in link-href: ${currentValue}`);
-          }
-        } else {
-          // Standard URI validation
-          try {
-            new URL(currentValue);
-          } catch {
-            throw new Error(`Invalid URI in link-href: ${currentValue}`);
-          }
-        }
-      }
+    // Handle the last attribute-value pair
+    if (currentAttr && currentValue) {
+      attributes[currentAttr.trim()] = currentValue.trim().replace(/^"|"$/g, '');
     }
 
     return attributes;
   }
 
-  private parseNoteContent(marker: string): CharacterNode {
+  private parseNoteContent(marker: string, index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): CharacterNode {
     const node = {
       type: "character" as const,
       marker,
@@ -778,43 +666,80 @@ export class USFMParser {
 
     // Skip whitespace after marker
     while (this.pos < this.input.length && this.input[this.pos] === " ") {
-      this.pos++;
+      this.advance(false);
     }
+
+    let textContent = "";
 
     // Parse until next marker or explicit closing marker
     const closingMarker = `\\${marker}*`;
     while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseNoteContent'); // Check for infinite loop without moving
+      
       // Check for explicit closing marker
       if (this.input.startsWith(closingMarker, this.pos)) {
+        if (textContent) {
+          node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
+          textContent = "";
+        }
         this.pos += closingMarker.length;
         break;
       }
 
       const char = this.input[this.pos];
       if (char === "\\") {
-        const nextMarker = this.peekMarker();
+        const {marker: nextMarker, cleanMarker: nextCleanMarker} = this.peekMarker();
         // Implicit closing: another note content marker or the note's closing marker
-        if (this.noteContentMarkers.has(nextMarker) || this.noteMarkers.has(nextMarker)) {
+        if (this.noteContentMarkers.has(nextCleanMarker) || this.noteMarkers.has(nextCleanMarker)) {
+          if (textContent) {
+            node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
+            textContent = "";
+          }
           break;
         }
-        // Handle nested character markers (which must have explicit closing)
-        if (this.characterMarkers.has(nextMarker)) {
-          const { marker, isNested } = this.parseMarker();
-          node.content.push(this.parseCharacter(marker, isNested));
-        } else {
-          node.content.push(this.parseText());
+        // Handle nested character markers
+        if (textContent) {
+          node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
+          textContent = "";
         }
+        const { marker: nestedMarker, isNested, cleanMarker } = this.parseMarker();
+        if (this.milestoneMarkers.has(cleanMarker)) {
+          this.logWarning(`Milestone marker found within note: ${marker}`);
+          if (textContent) {
+            node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
+            textContent = "";
+          }
+          node.content.push(this.parseMilestone(marker, node.content.length, node));
+        } else {
+          node.content.push(this.parseCharacter(nestedMarker, isNested, node.content.length, node));
+        }
+      } else if (this.isLineBreakingWhitespace(char)) {
+        //ignore line breaking whitespace in note content
+        this.advance(false);
       } else {
-        node.content.push(this.parseText());
+        textContent += char;
+        this.advance(false);
       }
     }
 
-    return this.createNode<CharacterNode>(node);
+    if (textContent) {
+      node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
+    }
+
+    return this.createNode<CharacterNode>(node, index, parent);
   }
 
-  private createNode<T extends USFMNode>(baseNode: Omit<T, 'accept' | 'acceptWithContext'>): T {
+  private createNode<T extends USFMNode>(
+    baseNode: Omit<T, 'accept' | 'acceptWithContext' | 'getChildren' | 'getParent' | 'getNextSibling' | 'getPreviousSibling'>, 
+    index: number,
+    parent?: Omit<USFMNode, 'accept' | 'acceptWithContext' | 'getChildren' | 'getParent' | 'getNextSibling' | 'getPreviousSibling'> | null
+  ): T {
     const withVisitor = {
       ...baseNode,
+      getChildren: () => ('content' in baseNode ? baseNode.content : []),
+      getParent: () => parent,
+      getNextSibling: () => parent?.content?.[index + 1],
+      getPreviousSibling: () => parent?.content?.[index - 1],
       accept<R>(visitor: USFMVisitor<R>): R {
         switch (baseNode.type) {
           case 'paragraph':
@@ -855,7 +780,7 @@ export class USFMParser {
     return withVisitor as unknown as T;
   }
 
-  private parseParagraph(marker: string): ParagraphNode {
+  private parseParagraph(marker: string, index: number, parent?: USFMNode): ParagraphNode {
     const node = {
       type: "paragraph" as const,
       marker,
@@ -871,52 +796,72 @@ export class USFMParser {
 
     // Special cases
     if (marker === "b" || marker === "nb" || marker === "ib" || marker.startsWith("sd")) {
-      return this.createNode<ParagraphNode>(node);
+      return this.createNode<ParagraphNode>(node, index, parent);
     }
 
-    // Add validation for peripheral book IDs
-    if (marker === "id") {
-      const content = this.parseText();
-      if (typeof content.content === "string") {
-        const bookId = content.content.trim();
-        if (this.peripheralBooks.has(bookId)) {
-          // Handle peripheral book ID
-          node.content.push(content);
-        }
-      }
-    }
+    let lastWasLineBreak = false;
 
     // Parse content until next paragraph marker
     while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseParagraph'); // Check for infinite loop without moving
       const char = this.input[this.pos];
+      if (node.content.length > 0 && lastWasLineBreak) {
+        const lastNode = node.content[node.content.length - 1];
+        if (lastNode.type === "text") {
+          lastNode.content = (lastNode.content as string).trimEnd() + " ";
+        } else {
+          node.content.push(this.createNode<TextNode>({ type: "text", content: " " }, node.content.length, node));
+        }
+        lastWasLineBreak = false;
+      }
       if (char === "\\") {
-        const nextMarker = this.peekMarker();
-        if (this.paragraphMarkers.has(nextMarker)) {
+        lastWasLineBreak = false;
+        const { marker, isNested, cleanMarker } = this.parseMarker();
+        if (this.paragraphMarkers.has(cleanMarker)) {
+          //skip the marker and slash
+          this.pos -= (marker.length + (isNested ? 3 : 2));
+          const char = this.getCurrentCharacter();
           break;
         }
-        const { marker, isNested } = this.parseMarker();
-        if (this.characterMarkers.has(marker)) {
-          node.content.push(this.parseCharacter(marker, isNested));
-        } else if (this.noteMarkers.has(marker)) {
-          node.content.push(this.parseNote(marker));
+        if (this.milestoneMarkers.has(cleanMarker)) {
+          node.content.push(this.parseMilestone(marker, node.content.length, node));
+        } else if (this.characterMarkers.has(cleanMarker)) {
+          node.content.push(this.parseCharacter(marker, isNested, node.content.length, node));
+        } else if (this.noteMarkers.has(cleanMarker)) {
+          node.content.push(this.parseNote(marker, node.content.length, node));
         } else {
-          node.content.push(this.parseText(true));
+          node.content.push(this.parseText(true, node.content.length, node));
         }
       } else if (this.isLineBreakingWhitespace(char)) {
-        break;
+        //peek next marker if it's a paragraph marker or unknown marker then break;
+        const { marker: nextMarker, cleanMarker: nextCleanMarker } = this.getFollowingMarker();
+        if (!nextMarker) {
+          node.content.push(this.parseText(true, node.content.length, node));
+          continue;
+        }
+        const isMilestone = this.milestoneMarkers.has(nextCleanMarker);
+        
+        if (
+          this.paragraphMarkers.has(nextCleanMarker) || 
+          (!this.characterMarkers.has(nextCleanMarker) && !this.noteMarkers.has(nextCleanMarker) && !isMilestone)
+        ) {
+          break;
+        }
+        lastWasLineBreak = true;
       } else {
-        node.content.push(this.parseText(true));
+        lastWasLineBreak = false;
+        node.content.push(this.parseText(true, node.content.length, node));
       }
     }
 
-    return this.createNode<ParagraphNode>(node);
+    return this.createNode<ParagraphNode>(node, index, parent);
   }
 
-  private parseCharacter(marker: string, isNested: boolean = false): CharacterNode {
+  private parseCharacter(marker: string, isNested: boolean = false, index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): CharacterNode {
     const node: Omit<CharacterNode, 'accept' | 'acceptWithContext'> = {
       type: "character",
       marker,
-      content: [],
+      content: []
     };
 
     // Special handling for verse numbers
@@ -926,7 +871,7 @@ export class USFMParser {
         this.pos < this.input.length
         && this.isNonLineBreakingWhitespace(this.getCurrentCharacter())
       ) {
-        this.pos++;
+        this.advance(false);
       }
 
       let number = "";
@@ -938,30 +883,13 @@ export class USFMParser {
         number += char;
         this.pos++;
       }
-      node.content.push(this.createNode<TextNode>({ type: "text", content: number }));
+      node.content.push(this.createNode<TextNode>({ type: "text", content: number }, node.content.length, node));
 
       // Skip any whitespace after verse number
       while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
         this.pos++;
       }
-      return this.createNode<CharacterNode>(node);
-    }
-
-    // Parse attributes if present
-    if (
-      this.pos < this.input.length &&
-      this.getCurrentCharacter() === "|" &&
-      (marker === "w" ||
-        marker === "rb" ||
-        marker === "xt" ||
-        marker === "fig" ||
-        marker === "wg" ||
-        marker === "wh" ||
-        marker === "wa" ||
-        marker.startsWith("jmp"))
-    ) {
-      this.pos++; // Skip |
-      node.attributes = this.parseAttributes();
+      return this.createNode<CharacterNode>(node, index, parent);
     }
 
     // Skip non-line-breaking whitespace before content
@@ -977,7 +905,8 @@ export class USFMParser {
       // Check for closing marker and move
       if (this.input.startsWith(closingMarker, this.pos)) {
         if (textContent) {
-          node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }));
+          node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
+          textContent = "";
         }
         this.pos += closingMarker.length;
         break;
@@ -986,32 +915,35 @@ export class USFMParser {
       const char = this.input[this.pos];
       
       if (char === "\\") {
-        const nextMarker = this.peekMarker();
-        if (this.paragraphMarkers.has(nextMarker)) {
+        const {cleanMarker: nextCleanMarker} = this.peekMarker();
+        if (this.paragraphMarkers.has(nextCleanMarker)) {
           break;
         }
-        const { marker, isNested } = this.parseMarker();
+        const { marker, isNested, cleanMarker } = this.parseMarker();
 
         // It's a nested marker
-        if (this.noteMarkers.has(marker)) {
+        if (this.noteMarkers.has(cleanMarker)) {
           if (textContent) {
-            node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }));
+            node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
             textContent = "";
           }
-          node.content.push(this.parseNote(marker));
-        } else if (this.milestoneMarkers.has(marker)) { 
+          node.content.push(this.parseNote(marker, node.content.length, node));
+        } else if (this.milestoneMarkers.has(cleanMarker)) {
+          this.logWarning(`Milestone marker found within character: ${marker}`);
           if (textContent) {
-            node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }));
+            node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
             textContent = "";
           }
-          node.content.push(this.parseMilestone(marker));
+          node.content.push(this.parseMilestone(marker, node.content.length, node));
         } else {
           if (textContent) {
-            node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }));
+            node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
             textContent = "";
           }
-          node.content.push(this.parseCharacter(marker, isNested));
+          node.content.push(this.parseCharacter(marker, isNested, node.content.length, node));
         }
+      } else if (char === "|") {
+        node.attributes = this.parseAttributes(marker);
       } else if (this.isLineBreakingWhitespace(char)) {
         break;
       } else {
@@ -1020,10 +952,14 @@ export class USFMParser {
       }
     }
 
-    return this.createNode<CharacterNode>(node);
+    if (textContent) {
+      node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
+    }
+
+    return this.createNode<CharacterNode>(node, index, parent);
   }
 
-  private parseNote(marker: string): NoteNode {
+  private parseNote(marker: string, index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): NoteNode {
     const node: Omit<NoteNode, 'accept' | 'acceptWithContext'> = {
       type: "note",
       marker,
@@ -1032,7 +968,7 @@ export class USFMParser {
 
     // Skip whitespace after marker
     while (this.pos < this.input.length && this.input[this.pos] === " ") {
-      this.pos++;
+      this.advance(false);
     }
 
     // Parse caller for cross references
@@ -1042,47 +978,82 @@ export class USFMParser {
       
       if (nextChar !== " " && nextChar !== "\\" && this.isWhitespace(charAfterNext)) {
         node.caller = nextChar;
-        this.pos++; // Move past the caller
+        this.advance(false); // Move past the caller
         
         // Skip any following whitespace
         while (this.pos < this.input.length && this.isWhitespace(this.input[this.pos])) {
-          this.pos++;
+          this.advance(false);
         }
       }
     }
+
+    let textContent = "";
 
     // Parse content until closing marker
     const closingMarker = `\\${marker}*`;
     while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseNote'); // Check for infinite loop without moving
+      
+      // Check for closing marker first
       if (this.input.startsWith(closingMarker, this.pos)) {
-        this.pos += closingMarker.length;
+        if (textContent) {
+          node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
+          textContent = "";
+        }
+        this.setPosition(this.pos + closingMarker.length, false);
         break;
       }
 
       const char = this.input[this.pos];
+
       if (char === "\\") {
-        const nextMarker = this.peekMarker();
-        if (this.noteContentMarkers.has(nextMarker)) {
-          const { marker } = this.parseMarker();
-          node.content.push(this.parseNoteContent(marker));
-        } else if (this.characterMarkers.has(nextMarker)) {
-          const { marker, isNested } = this.parseMarker();
-          node.content.push(this.parseCharacter(marker, isNested));
-        } else {
-          node.content.push(this.parseText());
+        const {marker: nextMarker, cleanMarker: nextCleanMarker} = this.peekMarker();
+        if (this.paragraphMarkers.has(nextCleanMarker)) {
+          break;
         }
+
+        const { marker, isNested, cleanMarker } = this.parseMarker();
+
+        if (this.milestoneMarkers.has(cleanMarker)) {
+          this.logWarning(`Milestone marker found within note: ${marker}`);
+          if (textContent) {
+            node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
+            textContent = "";
+          }
+          node.content.push(this.parseMilestone(marker, node.content.length, node));
+        } else if (this.noteContentMarkers.has(cleanMarker)) {
+          node.content.push(this.parseNoteContent(marker, node.content.length, node));
+        } else if (this.characterMarkers.has(cleanMarker)) {
+          node.content.push(this.parseCharacter(marker, isNested, node.content.length, node));
+        } else {
+          // If we don't recognize the marker, treat it as a character and advance
+          if (textContent) {
+            node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
+            textContent = "";
+          }
+          node.content.push(this.parseCharacter(marker, isNested, node.content.length, node));
+        }
+      } else if (this.isLineBreakingWhitespace(char)) {
+        break;
       } else {
-        node.content.push(this.parseText());
+        textContent += char;
+        this.advance(false);
       }
     }
 
-    return this.createNode<NoteNode>(node);
+    if (textContent) {
+      node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
+    }
+
+
+    return this.createNode<NoteNode>(node, index, parent);
   }
 
-  private parseText(isInsideParagraph: boolean = false): TextNode {
+  private parseText(isInsideParagraph: boolean = false, index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): TextNode {
     let content = "";
 
     while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseText'); // Check for infinite loop without moving
       const char = this.input[this.pos];
       if (char === "\\") {
         break;
@@ -1092,17 +1063,17 @@ export class USFMParser {
         break;
       } else {
         content += char;
-        this.pos++;
+        this.advance(false);
       }
     }
 
     return this.createNode<TextNode>({
       type: "text" as const,
       content
-    });
+    }, index, parent);
   }
 
-  private parseMilestone(marker: string): MilestoneNode {
+  private parseMilestone(marker: string, index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): MilestoneNode {
     // Determine milestone type
     let milestoneType: "start" | "end" | "standalone" = "standalone";
     if (marker.endsWith("-s")) {
@@ -1114,10 +1085,9 @@ export class USFMParser {
     }
 
     // Parse attributes if present
-    let attributes: MilestoneAttributes = {};
+    let attributes: MilestoneAttributes | null = null;
     if (this.pos < this.input.length && this.input[this.pos] === "|") {
-      this.pos++; // Skip |
-      attributes = this.parseAttributes();
+      attributes = this.parseAttributes(marker);
     }
 
     // Skip to closing *
@@ -1130,11 +1100,11 @@ export class USFMParser {
       type: "milestone" as const,
       marker,
       milestoneType,
-      attributes,
-    });
+      ...(attributes && { attributes }),
+    }, index, parent);
   }
 
-  private parsePeripheral(): PeripheralNode {
+  private parsePeripheral(index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): PeripheralNode {
     // Skip \periph marker
     this.pos += 7;
 
@@ -1150,7 +1120,7 @@ export class USFMParser {
     let attributes: PeripheralAttributes = { id: "" };
     if (this.pos < this.input.length && this.input[this.pos] === "|") {
       this.pos++; // Skip |
-      attributes = this.parseAttributes() as PeripheralAttributes;
+      attributes = this.parseAttributes("periph") as PeripheralAttributes;
 
       // Validate peripheral id
       if (!attributes.id) {
@@ -1167,7 +1137,7 @@ export class USFMParser {
       title,
       attributes,
       content: this.parseNodes(false),
-    });
+    }, index, parent);
   }
 
   // Add visitor methods to the parser
@@ -1177,202 +1147,5 @@ export class USFMParser {
 
   visitWithContext<T, C>(visitor: USFMVisitorWithContext<T, C>, context: C): T[] {
     return this.nodes.map(node => node.acceptWithContext(visitor, context));
-  }
-}
-
-// Example visitors for different output formats
-export class HTMLVisitor implements USFMVisitor<string> {
-  visitParagraph(node: ParagraphNode): string {
-    const tag = this.getParagraphTag(node.marker);
-    const content = node.content.map(child => child.accept(this)).join('');
-    return `<${tag}>${content}</${tag}>`;
-  }
-
-  visitCharacter(node: CharacterNode): string {
-    const tag = this.getCharacterTag(node.marker);
-    const content = node.content.map(child => child.accept(this)).join('');
-    const attrs = node.attributes ? this.formatAttributes(node.attributes) : '';
-    return `<${tag}${attrs}>${content}</${tag}>`;
-  }
-
-  visitNote(node: NoteNode): string {
-    const tag = this.getNoteTag(node.marker);
-    const content = node.content.map(child => child.accept(this)).join('');
-    const caller = node.caller ? ` caller="${node.caller}"` : '';
-    return `<${tag}${caller}>${content}</${tag}>`;
-  }
-
-  visitText(node: TextNode): string {
-    return this.escapeHTML(node.content);
-  }
-
-  visitMilestone(node: MilestoneNode): string {
-    const tag = this.getMilestoneTag(node.marker);
-    const attrs = node.attributes ? this.formatAttributes(node.attributes) : '';
-    return `<${tag}${attrs}/>`;
-  }
-
-  visitPeripheral(node: PeripheralNode): string {
-    const content = node.content.map(child => child.accept(this)).join('');
-    const attrs = this.formatAttributes(node.attributes);
-    return `<div class="peripheral"${attrs}>${content}</div>`;
-  }
-
-  private getParagraphTag(marker: string): string {
-    switch (marker) {
-      case 'p': return 'p';
-      case 'h': return 'h1';
-      case 'mt': return 'h1';
-      case 'ms': return 'h2';
-      default: return 'div';
-    }
-  }
-
-  private getCharacterTag(marker: string): string {
-    switch (marker) {
-      case 'bd': return 'strong';
-      case 'it': return 'em';
-      case 'sc': return 'span';
-      case 'v': return 'sup';
-      default: return 'span';
-    }
-  }
-
-  private getNoteTag(marker: string): string {
-    switch (marker) {
-      case 'f': return 'footnote';
-      case 'x': return 'crossref';
-      default: return 'note';
-    }
-  }
-
-  private getMilestoneTag(marker: string): string {
-    return `milestone-${marker}`;
-  }
-
-  private formatAttributes(attrs: Record<string, string | string[] | undefined>): string {
-    return Object.entries(attrs)
-      .filter(([_, value]) => value !== undefined)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return ` ${key}="${value.join(' ')}"`;
-        }
-        return ` ${key}="${value}"`;
-      })
-      .join('');
-  }
-
-  private escapeHTML(text: string): string {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-}
-
-export class USXVisitor implements USFMVisitor<string> {
-  visitParagraph(node: ParagraphNode): string {
-    return `<para style="${node.marker}">${node.content.map(child => child.accept(this)).join('')}</para>`;
-  }
-
-  visitCharacter(node: CharacterNode): string {
-    const attrs = node.attributes ? this.formatAttributes(node.attributes) : '';
-    return `<char style="${node.marker}"${attrs}>${node.content.map(child => child.accept(this)).join('')}</char>`;
-  }
-
-  visitNote(node: NoteNode): string {
-    const caller = node.caller ? ` caller="${node.caller}"` : '';
-    return `<note style="${node.marker}"${caller}>${node.content.map(child => child.accept(this)).join('')}</note>`;
-  }
-
-  visitText(node: TextNode): string {
-    return this.escapeXML(node.content);
-  }
-
-  visitMilestone(node: MilestoneNode): string {
-    const attrs = node.attributes ? this.formatAttributes(node.attributes) : '';
-    return `<ms style="${node.marker}"${attrs}/>`;
-  }
-
-  visitPeripheral(node: PeripheralNode): string {
-    const attrs = this.formatAttributes(node.attributes);
-    return `<peripheral${attrs}>${node.content.map(child => child.accept(this)).join('')}</peripheral>`;
-  }
-
-  private formatAttributes(attrs: Record<string, string | string[] | undefined>): string {
-    return Object.entries(attrs)
-      .filter(([_, value]) => value !== undefined)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return ` ${key}="${value.join(' ')}"`;
-        }
-        return ` ${key}="${value}"`;
-      })
-      .join('');
-  }
-
-  private escapeXML(text: string): string {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
-  }
-}
-
-export class USJVisitor implements USFMVisitor<any> {
-  visitParagraph(node: ParagraphNode): any {
-    return {
-      type: 'paragraph',
-      marker: node.marker,
-      content: node.content.map(child => child.accept(this))
-    };
-  }
-
-  visitCharacter(node: CharacterNode): any {
-    return {
-      type: 'character',
-      marker: node.marker,
-      attributes: node.attributes,
-      content: node.content.map(child => child.accept(this))
-    };
-  }
-
-  visitNote(node: NoteNode): any {
-    return {
-      type: 'note',
-      marker: node.marker,
-      caller: node.caller,
-      content: node.content.map(child => child.accept(this))
-    };
-  }
-
-  visitText(node: TextNode): any {
-    return {
-      type: 'text',
-      content: node.content
-    };
-  }
-
-  visitMilestone(node: MilestoneNode): any {
-    return {
-      type: 'milestone',
-      marker: node.marker,
-      milestoneType: node.milestoneType,
-      attributes: node.attributes,
-    };
-  }
-
-  visitPeripheral(node: PeripheralNode): any {
-    return {
-      type: 'peripheral',
-      marker: node.marker,
-      title: node.title,
-      attributes: node.attributes,
-      content: node.content.map(child => child.accept(this))
-    };
   }
 }

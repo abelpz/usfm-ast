@@ -1,0 +1,648 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`USFMParser USFM Fixtures parses basic USFM file 1`] = `
+[
+  {
+    "content": [
+      {
+        "content": "TIT EN_ULT",
+        "type": "text",
+      },
+    ],
+    "marker": "id",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": "Titus",
+        "type": "text",
+      },
+    ],
+    "marker": "h",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": "Titus",
+        "type": "text",
+      },
+    ],
+    "marker": "mt",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": "1",
+        "type": "text",
+      },
+    ],
+    "marker": "c",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": [
+          {
+            "content": "1",
+            "type": "text",
+          },
+        ],
+        "marker": "v",
+        "type": "character",
+      },
+      {
+        "attributes": {
+          "x-occurrence": "1",
+          "x-occurrences": "1",
+        },
+        "content": [
+          {
+            "content": "Paul",
+            "type": "text",
+          },
+        ],
+        "marker": "w",
+        "type": "character",
+      },
+      {
+        "content": ",",
+        "type": "text",
+      },
+      {
+        "attributes": {
+          "x-occurrence": "1",
+          "x-occurrences": "1",
+        },
+        "content": [
+          {
+            "content": "a",
+            "type": "text",
+          },
+        ],
+        "marker": "w",
+        "type": "character",
+      },
+      {
+        "attributes": {
+          "x-occurrence": "1",
+          "x-occurrences": "1",
+        },
+        "content": [
+          {
+            "content": "servant",
+            "type": "text",
+          },
+        ],
+        "marker": "w",
+        "type": "character",
+      },
+      {
+        "attributes": {
+          "x-occurrence": "1",
+          "x-occurrences": "5",
+        },
+        "content": [
+          {
+            "content": "of",
+            "type": "text",
+          },
+        ],
+        "marker": "w",
+        "type": "character",
+      },
+      {
+        "attributes": {
+          "x-occurrence": "1",
+          "x-occurrences": "2",
+        },
+        "content": [
+          {
+            "content": "God",
+            "type": "text",
+          },
+        ],
+        "marker": "w",
+        "type": "character",
+      },
+      {
+        "attributes": {
+          "x-occurrence": "1",
+          "x-occurrences": "2",
+        },
+        "content": [
+          {
+            "content": "and",
+            "type": "text",
+          },
+        ],
+        "marker": "w",
+        "type": "character",
+      },
+      {
+        "attributes": {
+          "x-occurrence": "1",
+          "x-occurrences": "1",
+        },
+        "content": [
+          {
+            "content": "an",
+            "type": "text",
+          },
+        ],
+        "marker": "w",
+        "type": "character",
+      },
+      {
+        "attributes": {
+          "x-occurrence": "1",
+          "x-occurrences": "1",
+        },
+        "content": [
+          {
+            "content": "apostle",
+            "type": "text",
+          },
+        ],
+        "marker": "w",
+        "type": "character",
+      },
+      {
+        "attributes": {
+          "x-occurrence": "2",
+          "x-occurrences": "5",
+        },
+        "content": [
+          {
+            "content": "of",
+            "type": "text",
+          },
+        ],
+        "marker": "w",
+        "type": "character",
+      },
+      {
+        "attributes": {
+          "x-occurrence": "1",
+          "x-occurrences": "1",
+        },
+        "content": [
+          {
+            "content": "Jesus",
+            "type": "text",
+          },
+        ],
+        "marker": "w",
+        "type": "character",
+      },
+      {
+        "attributes": {
+          "x-occurrence": "1",
+          "x-occurrences": "1",
+        },
+        "content": [
+          {
+            "content": "Christ",
+            "type": "text",
+          },
+        ],
+        "marker": "w",
+        "type": "character",
+      },
+      {
+        "content": ",",
+        "type": "text",
+      },
+      {
+        "content": [
+          {
+            "content": "2",
+            "type": "text",
+          },
+        ],
+        "marker": "v",
+        "type": "character",
+      },
+      {
+        "content": "In hope of eternal life, which God promised before time began.",
+        "type": "text",
+      },
+      {
+        "content": [
+          {
+            "content": "3",
+            "type": "text",
+          },
+        ],
+        "marker": "v",
+        "type": "character",
+      },
+      {
+        "content": "At the proper time, he revealed his word through the message.",
+        "type": "text",
+      },
+    ],
+    "marker": "p",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": [
+          {
+            "content": "4",
+            "type": "text",
+          },
+        ],
+        "marker": "v",
+        "type": "character",
+      },
+      {
+        "content": "To Titus, a true son in our common faith:",
+        "type": "text",
+      },
+      {
+        "content": [
+          {
+            "content": "5",
+            "type": "text",
+          },
+        ],
+        "marker": "v",
+        "type": "character",
+      },
+      {
+        "content": "For this purpose I left you in Crete, that you would set in order things unfinished.",
+        "type": "text",
+      },
+    ],
+    "marker": "p",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": "2",
+        "type": "text",
+      },
+    ],
+    "marker": "c",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": [
+          {
+            "content": "1",
+            "type": "text",
+          },
+        ],
+        "marker": "v",
+        "type": "character",
+      },
+      {
+        "content": "An elder must be without blame, the husband of one wife, with faithful children not accused of reckless behavior or rebellion.",
+        "type": "text",
+      },
+    ],
+    "marker": "p",
+    "type": "paragraph",
+  },
+]
+`;
+
+exports[`USFMParser USFM Fixtures parses medium complexity USFM file 1`] = `
+[
+  {
+    "content": [
+      {
+        "content": "TIT EN_ULT",
+        "type": "text",
+      },
+    ],
+    "marker": "id",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": "3.0",
+        "type": "text",
+      },
+    ],
+    "marker": "usfm",
+    "type": "character",
+  },
+  {
+    "content": [
+      {
+        "content": "Titus",
+        "type": "text",
+      },
+    ],
+    "marker": "h",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": "The Letter of Paul to",
+        "type": "text",
+      },
+    ],
+    "marker": "mt1",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": "Titus",
+        "type": "text",
+      },
+    ],
+    "marker": "mt2",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": "Introduction",
+        "type": "text",
+      },
+    ],
+    "marker": "is",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": "This is a letter from Paul to Titus.",
+        "type": "text",
+      },
+    ],
+    "marker": "ip",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": "1",
+        "type": "text",
+      },
+    ],
+    "marker": "c",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": [
+          {
+            "content": "1",
+            "type": "text",
+          },
+        ],
+        "marker": "v",
+        "type": "character",
+      },
+      {
+        "content": "Paul, a ",
+        "type": "text",
+      },
+      {
+        "content": [
+          {
+            "content": "servant",
+            "type": "text",
+          },
+        ],
+        "marker": "bd",
+        "type": "character",
+      },
+      {
+        "content": " of God and an ",
+        "type": "text",
+      },
+      {
+        "content": [
+          {
+            "content": "apostle",
+            "type": "text",
+          },
+        ],
+        "marker": "bd",
+        "type": "character",
+      },
+      {
+        "content": " of Jesus Christ, for the faith of God's chosen people and the knowledge of the truth.",
+        "type": "text",
+      },
+      {
+        "content": [
+          {
+            "content": "2",
+            "type": "text",
+          },
+        ],
+        "marker": "v",
+        "type": "character",
+      },
+      {
+        "content": "These are in hope of eternal life that God, who does not lie, ",
+        "type": "text",
+      },
+      {
+        "content": [
+          {
+            "content": "promised",
+            "type": "text",
+          },
+        ],
+        "marker": "add",
+        "type": "character",
+      },
+      {
+        "content": " before all the ages of time.",
+        "type": "text",
+      },
+      {
+        "content": [
+          {
+            "content": "3",
+            "type": "text",
+          },
+        ],
+        "marker": "v",
+        "type": "character",
+      },
+      {
+        "content": "At the right time, he revealed his word by the message that he trusted me to deliver by the command of God our Savior.",
+        "type": "text",
+      },
+    ],
+    "marker": "p",
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "content": [
+          {
+            "content": "4",
+            "type": "text",
+          },
+        ],
+        "marker": "v",
+        "type": "character",
+      },
+      {
+        "content": "To Titus, a true son in our common faith. ",
+        "type": "text",
+      },
+      {
+        "caller": "+",
+        "content": [
+          {
+            "content": [
+              {
+                "content": "1:4 ",
+                "type": "text",
+              },
+            ],
+            "marker": "fr",
+            "type": "character",
+          },
+          {
+            "content": "fq true son ",
+            "type": "text",
+          },
+          {
+            "content": "ft This is a metaphor that means Titus became a Christian through Paul's ministry.",
+            "type": "text",
+          },
+          {
+            "content": "f*",
+            "type": "text",
+          },
+          {
+            "content": "",
+            "type": "text",
+          },
+          {
+            "content": "Grace and peace from God ",
+            "type": "text",
+          },
+          {
+            "content": "f + ",
+            "type": "text",
+          },
+          {
+            "content": "fr 1:4 ",
+            "type": "text",
+          },
+          {
+            "content": "fq God ",
+            "type": "text",
+          },
+          {
+            "content": "ft Some versions add ",
+            "type": "text",
+          },
+          {
+            "content": "fqa the Father",
+            "type": "text",
+          },
+          {
+            "content": "fqa* .",
+            "type": "text",
+          },
+          {
+            "content": "f* and Christ Jesus our Savior.",
+            "type": "text",
+          },
+          {
+            "content": "",
+            "type": "text",
+          },
+          {
+            "content": "",
+            "type": "text",
+          },
+          {
+            "content": "",
+            "type": "text",
+          },
+          {
+            "content": "",
+            "type": "text",
+          },
+          {
+            "content": "s5",
+            "type": "text",
+          },
+          {
+            "content": "",
+            "type": "text",
+          },
+          {
+            "content": "",
+            "type": "text",
+          },
+          {
+            "content": "p",
+            "type": "text",
+          },
+          {
+            "content": "",
+            "type": "text",
+          },
+          {
+            "content": [
+              {
+                "content": "5",
+                "type": "text",
+              },
+            ],
+            "marker": "v",
+            "type": "character",
+          },
+          {
+            "content": "or this purpose I left you in Crete, that you might set in order things not yet complete and ordain elders in every city as I directed you.",
+            "type": "text",
+          },
+          {
+            "content": "",
+            "type": "text",
+          },
+          {
+            "content": [
+              {
+                "content": "6",
+                "type": "text",
+              },
+            ],
+            "marker": "v",
+            "type": "character",
+          },
+          {
+            "content": "n elder must be without blame, the husband of one wife, with faithful children not accused of reckless behavior or rebellion.",
+            "type": "text",
+          },
+          {
+            "content": "",
+            "type": "text",
+          },
+        ],
+        "marker": "f",
+        "type": "note",
+      },
+    ],
+    "marker": "p",
+    "type": "paragraph",
+  },
+]
+`;
