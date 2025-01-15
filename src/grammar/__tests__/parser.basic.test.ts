@@ -1,8 +1,6 @@
 import { USFMParser } from "..";
+import { cleanForComparison } from "./utils";
 
-function cleanForComparison(obj: any) {
-  return JSON.parse(JSON.stringify(obj));
-}
 
 describe("USFMParser - Basic", () => {
   let parser: USFMParser;
@@ -18,8 +16,8 @@ describe("USFMParser - Basic", () => {
 
   test("parses paragraph marker", () => {
     const input = String.raw`\p this is a paragraph.`;
-    const result = parser.load(input).parse().getNodes();
-    expect(JSON.parse(JSON.stringify(result))).toEqual([
+    const result = cleanForComparison(parser.load(input).parse().getNodes());
+    expect(result).toEqual([
       {
         "type": "paragraph",
         "marker": "p",

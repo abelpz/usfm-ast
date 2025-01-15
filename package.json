@@ -27,7 +27,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:debug": "node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand --no-cache",
-    "perf": "./scripts/run-perf.js"
+    "perf": "./scripts/run-perf.js",
+    "test:grammar": "jest src/grammar/__tests__/parser.*.test.ts"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

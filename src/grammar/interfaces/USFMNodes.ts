@@ -1,23 +1,25 @@
+import { CharacterUSFMNode, MilestoneUSFMNode, NoteUSFMNode, ParagraphUSFMNode, PeripheralUSFMNode, TextUSFMNode } from "../nodes";
+
 // Node types and interfaces
 export type USFMNodeType = "paragraph" | "character" | "note" | "text" | "milestone" | "peripheral";
 
 // Visitor interfaces
 export interface USFMVisitor<T = void> {
-  visitParagraph(node: ParagraphNode): T;
-  visitCharacter(node: CharacterNode): T;
-  visitNote(node: NoteNode): T;
-  visitText(node: TextNode): T;
-  visitMilestone(node: MilestoneNode): T;
-  visitPeripheral(node: PeripheralNode): T;
+  visitParagraph(node: ParagraphUSFMNode): T;
+  visitCharacter(node: CharacterUSFMNode): T;
+  visitNote(node: NoteUSFMNode): T;
+  visitText(node: TextUSFMNode): T;
+  visitMilestone(node: MilestoneUSFMNode): T;
+  visitPeripheral(node: PeripheralUSFMNode): T;
 }
 
 export interface USFMVisitorWithContext<T = void, C = any> {
-  visitParagraph(node: ParagraphNode, context: C): T;
-  visitCharacter(node: CharacterNode, context: C): T;
-  visitNote(node: NoteNode, context: C): T;
-  visitText(node: TextNode, context: C): T;
-  visitMilestone(node: MilestoneNode, context: C): T;
-  visitPeripheral(node: PeripheralNode, context: C): T;
+  visitParagraph(node: ParagraphUSFMNode, context: C): T;
+  visitCharacter(node: CharacterUSFMNode, context: C): T;
+  visitNote(node: NoteUSFMNode, context: C): T;
+  visitText(node: TextUSFMNode, context: C): T;
+  visitMilestone(node: MilestoneUSFMNode, context: C): T;
+  visitPeripheral(node: PeripheralUSFMNode, context: C): T;
 }
 
 // Node attributes
@@ -47,9 +49,46 @@ export interface USFMNode {
   marker?: string;
   content?: string | USFMNode[];
   attributes?: MilestoneAttributes;
-  accept<T>(visitor: USFMVisitor<T>): T;
-  acceptWithContext<T, C>(visitor: USFMVisitorWithContext<T, C>, context: C): T;
 }
+
+export type HydratedNode = {
+  getChildren(): USFMNode[] | string;
+  getParent(): USFMNode | undefined;
+  getNextSibling(): USFMNode | string | undefined;
+  getPreviousSibling(): USFMNode | string | undefined;
+  accept<R>(visitor: USFMVisitor<R>): R;
+  acceptWithContext<R, C>(visitor: USFMVisitorWithContext<R, C>, context: C): R;
+}
+
+export type BaseUSFMNode = {
+  type: 'paragraph' | 'character' | 'text' | 'note' | 'milestone' | 'peripheral';
+} & Omit<USFMNode, 'accept' | 'acceptWithContext' | 'getChildren' | 'getParent' | 'getNextSibling' | 'getPreviousSibling'>;
+
+export function isParagraphNode(node: BaseUSFMNode): node is ParagraphNode {
+  return node.type === 'paragraph';
+}
+
+export function isCharacterNode(node: BaseUSFMNode): node is Omit<CharacterNode, 'accept' | 'acceptWithContext'> {
+  return node.type === 'character';
+}
+
+export function isTextNode(node: BaseUSFMNode): node is Omit<TextNode, 'accept' | 'acceptWithContext'> {
+  return node.type === 'text';
+}
+
+export function isNoteNode(node: BaseUSFMNode): node is Omit<NoteNode, 'accept' | 'acceptWithContext'> {
+  return node.type === 'note';
+}
+
+export function isMilestoneNode(node: BaseUSFMNode): node is MilestoneNode {
+  return node.type === 'milestone';
+}
+
+export function isPeripheralNode(node: BaseUSFMNode): node is Omit<PeripheralNode, 'accept' | 'acceptWithContext'> {
+  return node.type === 'peripheral';
+}
+
+
 
 // Specific node types
 export interface ParagraphNode extends USFMNode {

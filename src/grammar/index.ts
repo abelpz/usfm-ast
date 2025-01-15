@@ -8,7 +8,13 @@ import {
   MilestoneNode,
   PeripheralNode,
   MilestoneAttributes,
-  PeripheralAttributes
+  PeripheralAttributes,
+  isParagraphNode,
+  isCharacterNode,
+  isTextNode,
+  isNoteNode,
+  isMilestoneNode,
+  isPeripheralNode
 } from './interfaces/USFMNodes';
 import { USFMVisitor, USFMVisitorWithContext } from './interfaces/USFMNodes';
 import {
@@ -21,8 +27,11 @@ import {
   peripheralDivisionIds,
   markerDefaultAttributes
 } from './constants/markers';
+import { CharacterUSFMNode, MilestoneUSFMNode, NodeInstanceType, NoteUSFMNode, ParagraphUSFMNode, PeripheralUSFMNode, TextUSFMNode } from './nodes';
 
 export type MarkerType = "paragraph" | "character" | "note" | "noteContent" | "milestone";
+
+export type HydratedUSFMNode = CharacterUSFMNode | NoteUSFMNode | MilestoneUSFMNode | PeripheralUSFMNode | TextUSFMNode | ParagraphUSFMNode
 
 export interface CustomMarkerRule {
   type: MarkerType;
@@ -39,7 +48,7 @@ export class USFMParser {
   private pos: number = 0;
   private input: string = "";
   private customMarkerRules: Record<string, CustomMarkerRule> = {};
-  private nodes: USFMNode[] = [];
+  private nodes: HydratedUSFMNode[] = [];
   private logs: Array<{type: 'warn' | 'error', message: string}> = [];
   private positionVisits: Map<number, number> = new Map();
   private readonly MAX_VISITS = 1000;
@@ -357,8 +366,8 @@ export class USFMParser {
     return { marker, isNested, cleanMarker: this.cleanMarkerSuffix(marker) };
   }
 
-  private parseNodes(isInsideParagraph: boolean = false): USFMNode[] {
-    const nodes: USFMNode[] = [];
+  private parseNodes(isInsideParagraph: boolean = false): HydratedUSFMNode[] {
+    const nodes: HydratedUSFMNode[] = [];
     let lastWasLineBreak = false;
     
     while (this.pos < this.input.length) {
@@ -657,12 +666,8 @@ export class USFMParser {
     return attributes;
   }
 
-  private parseNoteContent(marker: string, index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): CharacterNode {
-    const node = {
-      type: "character" as const,
-      marker,
-      content: [] as USFMNode[],
-    };
+  private parseNoteContent(marker: string, index: number, parent?: HydratedUSFMNode ): CharacterUSFMNode {
+    const node = this.createNode<CharacterNode>({ type: "character", marker, content: [] }, index, parent);
 
     // Skip whitespace after marker
     while (this.pos < this.input.length && this.input[this.pos] === " ") {
@@ -726,66 +731,92 @@ export class USFMParser {
       node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
     }
 
-    return this.createNode<CharacterNode>(node, index, parent);
+    return node;
   }
+  
 
   private createNode<T extends USFMNode>(
-    baseNode: Omit<T, 'accept' | 'acceptWithContext' | 'getChildren' | 'getParent' | 'getNextSibling' | 'getPreviousSibling'>, 
+    baseNode: T, 
     index: number,
-    parent?: Omit<USFMNode, 'accept' | 'acceptWithContext' | 'getChildren' | 'getParent' | 'getNextSibling' | 'getPreviousSibling'> | null
-  ): T {
-    const withVisitor = {
-      ...baseNode,
-      getChildren: () => ('content' in baseNode ? baseNode.content : []),
-      getParent: () => parent,
-      getNextSibling: () => parent?.content?.[index + 1],
-      getPreviousSibling: () => parent?.content?.[index - 1],
-      accept<R>(visitor: USFMVisitor<R>): R {
-        switch (baseNode.type) {
-          case 'paragraph':
-            return visitor.visitParagraph(withVisitor as unknown as ParagraphNode);
-          case 'character':
-            return visitor.visitCharacter(withVisitor as unknown as CharacterNode);
-          case 'note':
-            return visitor.visitNote(withVisitor as unknown as NoteNode);
-          case 'text':
-            return visitor.visitText(withVisitor as unknown as TextNode);
-          case 'milestone':
-            return visitor.visitMilestone(withVisitor as unknown as MilestoneNode);
-          case 'peripheral':
-            return visitor.visitPeripheral(withVisitor as unknown as PeripheralNode);
-          default:
-            throw new Error(`Unknown node type: ${baseNode.type}`);
+    parent?: HydratedUSFMNode
+  ): NodeInstanceType<T> {
+    if (isParagraphNode(baseNode)) {
+      return new ParagraphUSFMNode(
+        {
+          marker: baseNode.marker,
+          content: baseNode.content || [],
+          index,
+          parent
         }
-      },
-      acceptWithContext<R, C>(visitor: USFMVisitorWithContext<R, C>, context: C): R {
-        switch (baseNode.type) {
-          case 'paragraph':
-            return visitor.visitParagraph(withVisitor as unknown as ParagraphNode, context);
-          case 'character':
-            return visitor.visitCharacter(withVisitor as unknown as CharacterNode, context);
-          case 'note':
-            return visitor.visitNote(withVisitor as unknown as NoteNode, context);
-          case 'text':
-            return visitor.visitText(withVisitor as unknown as TextNode, context);
-          case 'milestone':
-            return visitor.visitMilestone(withVisitor as unknown as MilestoneNode, context);
-          case 'peripheral':
-            return visitor.visitPeripheral(withVisitor as unknown as PeripheralNode, context);
-          default:
-            throw new Error(`Unknown node type: ${baseNode.type}`);
+      ) as NodeInstanceType<T>;
+    }
+
+    if(isCharacterNode(baseNode)) {
+      return new CharacterUSFMNode(
+        {
+          marker: baseNode.marker,
+          content: baseNode.content || [],
+          index,
+          parent
         }
-      }
-    };
-    return withVisitor as unknown as T;
+      ) as NodeInstanceType<T>;
+    }
+
+    if(isTextNode(baseNode)) {
+      return new TextUSFMNode(
+        {
+          content: baseNode.content as string,
+          index,
+          parent
+        }
+      ) as NodeInstanceType<T>;
+    }
+
+    if(isNoteNode(baseNode)) {
+      return new NoteUSFMNode(
+        {
+          marker: baseNode.marker,
+          content: baseNode.content || [],
+          index,
+          parent
+        }
+      ) as NodeInstanceType<T>;
+    }
+
+    if(isMilestoneNode(baseNode)) {
+      return new MilestoneUSFMNode(
+        {
+          marker: baseNode.marker,
+          milestoneType: baseNode.milestoneType,
+          index,
+          parent,
+          attributes: baseNode.attributes,
+        }
+      ) as NodeInstanceType<T>;
+    }
+
+    if(isPeripheralNode(baseNode)) {
+      return new PeripheralUSFMNode(
+        {
+          marker: baseNode.marker,
+          title: baseNode.title,
+          attributes: baseNode.attributes,
+          content: baseNode.content || [],
+          index,
+          parent
+        }
+      ) as NodeInstanceType<T>;
+    }
+
+    throw new Error(`Unknown node type: ${(baseNode as any).type}`);
   }
 
-  private parseParagraph(marker: string, index: number, parent?: USFMNode): ParagraphNode {
-    const node = {
+  private parseParagraph(marker: string, index: number, parent?: HydratedUSFMNode): ParagraphUSFMNode {
+    const node = this.createNode<ParagraphNode>({
       type: "paragraph" as const,
       marker,
       content: [] as USFMNode[],
-    };
+    }, index, parent);
 
     const initialChar = this.input[this.pos];
 
@@ -854,15 +885,15 @@ export class USFMParser {
       }
     }
 
-    return this.createNode<ParagraphNode>(node, index, parent);
+    return node;
   }
 
-  private parseCharacter(marker: string, isNested: boolean = false, index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): CharacterNode {
-    const node: Omit<CharacterNode, 'accept' | 'acceptWithContext'> = {
+  private parseCharacter(marker: string, isNested: boolean = false, index: number, parent?: HydratedUSFMNode): CharacterUSFMNode {
+    const node = this.createNode<CharacterNode>({
       type: "character",
       marker,
       content: []
-    };
+    }, index, parent);
 
     // Special handling for verse numbers
     if (marker === "v") {
@@ -956,15 +987,15 @@ export class USFMParser {
       node.content.push(this.createNode<TextNode>({ type: "text", content: textContent }, node.content.length, node));
     }
 
-    return this.createNode<CharacterNode>(node, index, parent);
+    return node;
   }
 
-  private parseNote(marker: string, index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): NoteNode {
-    const node: Omit<NoteNode, 'accept' | 'acceptWithContext'> = {
+  private parseNote(marker: string, index: number, parent?: HydratedUSFMNode): NoteUSFMNode {
+    const node = this.createNode<NoteNode>({
       type: "note",
       marker,
       content: [],
-    };
+    }, index, parent);
 
     // Skip whitespace after marker
     while (this.pos < this.input.length && this.input[this.pos] === " ") {
@@ -1046,10 +1077,10 @@ export class USFMParser {
     }
 
 
-    return this.createNode<NoteNode>(node, index, parent);
+    return node;
   }
 
-  private parseText(isInsideParagraph: boolean = false, index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): TextNode {
+  private parseText(isInsideParagraph: boolean = false, index: number, parent?: HydratedUSFMNode): TextUSFMNode {
     let content = "";
 
     while (this.pos < this.input.length) {
@@ -1073,7 +1104,7 @@ export class USFMParser {
     }, index, parent);
   }
 
-  private parseMilestone(marker: string, index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): MilestoneNode {
+  private parseMilestone(marker: string, index: number, parent?: HydratedUSFMNode): MilestoneUSFMNode {
     // Determine milestone type
     let milestoneType: "start" | "end" | "standalone" = "standalone";
     if (marker.endsWith("-s")) {
@@ -1104,7 +1135,7 @@ export class USFMParser {
     }, index, parent);
   }
 
-  private parsePeripheral(index: number, parent?: Omit<USFMNode, 'accept' | 'acceptWithContext'>): PeripheralNode {
+  private parsePeripheral(index: number, parent?: HydratedUSFMNode): PeripheralUSFMNode {
     // Skip \periph marker
     this.pos += 7;
 

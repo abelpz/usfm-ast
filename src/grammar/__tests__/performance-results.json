@@ -48,5 +48,505 @@
     "timestamp": "2025-01-14T22:44:09.358Z",
     "version": "1.0.0",
     "isImportant": false
+  },
+  {
+    "method": "nest-50",
+    "inputSize": 1649,
+    "time": 1.5067999958992004,
+    "operations": 50,
+    "opsPerMs": 33.182904258080995,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971173345
+  },
+  {
+    "method": "foot-50",
+    "inputSize": 1499,
+    "time": 2.4045000076293945,
+    "operations": 50,
+    "opsPerMs": 20.794343872469014,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971173343
+  },
+  {
+    "method": "char-100",
+    "inputSize": 1799,
+    "time": 2.010499984025955,
+    "operations": 100,
+    "opsPerMs": 49.73887132282067,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971173341
+  },
+  {
+    "method": "para-100",
+    "inputSize": 2099,
+    "time": 4.374099999666214,
+    "operations": 100,
+    "opsPerMs": 22.861845867179756,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971173339
+  },
+  {
+    "method": "usx-vis",
+    "inputSize": 188,
+    "time": 0.6576000154018402,
+    "operations": 1,
+    "opsPerMs": 1.5206812295904968,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971173333
+  },
+  {
+    "method": "usj-vis",
+    "inputSize": 188,
+    "time": 0.49889999628067017,
+    "operations": 1,
+    "opsPerMs": 2.004409716285951,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971173333
+  },
+  {
+    "method": "html-vis",
+    "inputSize": 188,
+    "time": 0.6457000076770782,
+    "operations": 1,
+    "opsPerMs": 1.5487068113837024,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971173332
+  },
+  {
+    "method": "parse-lg",
+    "inputSize": 1889,
+    "time": 3.7407000064849854,
+    "operations": 1,
+    "opsPerMs": 0.2673296437207932,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971173330
+  },
+  {
+    "method": "parse-md",
+    "inputSize": 188,
+    "time": 1.9736000001430511,
+    "operations": 1,
+    "opsPerMs": 0.5066882853301163,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971173326
+  },
+  {
+    "method": "parse-sm",
+    "inputSize": 30,
+    "time": 1.515500009059906,
+    "operations": 1,
+    "opsPerMs": 0.6598482309612913,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971173324
+  },
+  {
+    "method": "nest-50",
+    "inputSize": 1649,
+    "time": 1.8167999982833862,
+    "operations": 50,
+    "opsPerMs": 27.520915922084313,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971152090
+  },
+  {
+    "method": "foot-50",
+    "inputSize": 1499,
+    "time": 1.1942999958992004,
+    "operations": 50,
+    "opsPerMs": 41.865528068058396,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971152088
+  },
+  {
+    "method": "para-100",
+    "inputSize": 2099,
+    "time": 1.3585000038146973,
+    "operations": 100,
+    "opsPerMs": 73.61059971968925,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971152086
+  },
+  {
+    "method": "char-100",
+    "inputSize": 1799,
+    "time": 0.7651000022888184,
+    "operations": 100,
+    "opsPerMs": 130.70186864572887,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971152086
+  },
+  {
+    "method": "usj-vis",
+    "inputSize": 188,
+    "time": 0.24710002541542053,
+    "operations": 1,
+    "opsPerMs": 4.0469441406119495,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971152084
+  },
+  {
+    "method": "html-vis",
+    "inputSize": 188,
+    "time": 0.4223000109195709,
+    "operations": 1,
+    "opsPerMs": 2.3679847836671137,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971152083
+  },
+  {
+    "method": "usx-vis",
+    "inputSize": 188,
+    "time": 0.34929999709129333,
+    "operations": 1,
+    "opsPerMs": 2.8628686181713285,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971152083
+  },
+  {
+    "method": "parse-lg",
+    "inputSize": 1889,
+    "time": 1.9485999941825867,
+    "operations": 1,
+    "opsPerMs": 0.513188957705754,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971152082
+  },
+  {
+    "method": "parse-md",
+    "inputSize": 188,
+    "time": 1.0114000141620636,
+    "operations": 1,
+    "opsPerMs": 0.9887284813106233,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971152080
+  },
+  {
+    "method": "parse-sm",
+    "inputSize": 30,
+    "time": 1.0049000084400177,
+    "operations": 1,
+    "opsPerMs": 0.9951238845667597,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971152079
+  },
+  {
+    "method": "nest-50",
+    "inputSize": 1649,
+    "time": 0.7621000111103058,
+    "operations": 50,
+    "opsPerMs": 65.60818694537853,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971070109
+  },
+  {
+    "method": "foot-50",
+    "inputSize": 1499,
+    "time": 1.2912999987602234,
+    "operations": 50,
+    "opsPerMs": 38.720669130337626,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971070108
+  },
+  {
+    "method": "char-100",
+    "inputSize": 1799,
+    "time": 1.0681999921798706,
+    "operations": 100,
+    "opsPerMs": 93.61542850784943,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971070107
+  },
+  {
+    "method": "para-100",
+    "inputSize": 2099,
+    "time": 1.5906000137329102,
+    "operations": 100,
+    "opsPerMs": 62.869356932365626,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971070106
+  },
+  {
+    "method": "usx-vis",
+    "inputSize": 188,
+    "time": 0.5385999977588654,
+    "operations": 1,
+    "opsPerMs": 1.856665436615368,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971070103
+  },
+  {
+    "method": "usj-vis",
+    "inputSize": 188,
+    "time": 0.32190001010894775,
+    "operations": 1,
+    "opsPerMs": 3.1065547331345154,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971070103
+  },
+  {
+    "method": "html-vis",
+    "inputSize": 188,
+    "time": 0.7317000031471252,
+    "operations": 1,
+    "opsPerMs": 1.3666803275917532,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971070102
+  },
+  {
+    "method": "parse-lg",
+    "inputSize": 1889,
+    "time": 3.3190999925136566,
+    "operations": 1,
+    "opsPerMs": 0.30128649400606616,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971070098
+  },
+  {
+    "method": "parse-md",
+    "inputSize": 188,
+    "time": 1.387000024318695,
+    "operations": 1,
+    "opsPerMs": 0.7209805208844229,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971070094
+  },
+  {
+    "method": "parse-sm",
+    "inputSize": 30,
+    "time": 2.057099997997284,
+    "operations": 1,
+    "opsPerMs": 0.4861212391101856,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736971070093
+  },
+  {
+    "method": "nest-50",
+    "inputSize": 1649,
+    "time": 0.9009000062942505,
+    "operations": 50,
+    "opsPerMs": 55.500055112297424,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970962197
+  },
+  {
+    "method": "foot-50",
+    "inputSize": 1499,
+    "time": 2.031699985265732,
+    "operations": 50,
+    "opsPerMs": 24.609932747260594,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970962196
+  },
+  {
+    "method": "char-100",
+    "inputSize": 1799,
+    "time": 0.8741999864578247,
+    "operations": 100,
+    "opsPerMs": 114.39030147459793,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970962194
+  },
+  {
+    "method": "para-100",
+    "inputSize": 2099,
+    "time": 1.4749000072479248,
+    "operations": 100,
+    "opsPerMs": 67.80120652829477,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970962193
+  },
+  {
+    "method": "usx-vis",
+    "inputSize": 188,
+    "time": 0.8212999999523163,
+    "operations": 1,
+    "opsPerMs": 1.2175818824522815,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970962191
+  },
+  {
+    "method": "usj-vis",
+    "inputSize": 188,
+    "time": 0.3442000150680542,
+    "operations": 1,
+    "opsPerMs": 2.905287496289862,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970962191
+  },
+  {
+    "method": "html-vis",
+    "inputSize": 188,
+    "time": 0.9189000129699707,
+    "operations": 1,
+    "opsPerMs": 1.0882576840628249,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970962190
+  },
+  {
+    "method": "parse-lg",
+    "inputSize": 1889,
+    "time": 2.25560000538826,
+    "operations": 1,
+    "opsPerMs": 0.44334101685190785,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970962186
+  },
+  {
+    "method": "parse-md",
+    "inputSize": 188,
+    "time": 1.854200005531311,
+    "operations": 1,
+    "opsPerMs": 0.5393161455165972,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970962184
+  },
+  {
+    "method": "parse-sm",
+    "inputSize": 30,
+    "time": 1.227400004863739,
+    "operations": 1,
+    "opsPerMs": 0.8147303210341896,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970962182
+  },
+  {
+    "method": "nest-50",
+    "inputSize": 1649,
+    "time": 1.016400009393692,
+    "operations": 50,
+    "opsPerMs": 49.19323055676303,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970608674
+  },
+  {
+    "method": "foot-50",
+    "inputSize": 1499,
+    "time": 2.1191999912261963,
+    "operations": 50,
+    "opsPerMs": 23.593809082204345,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970608673
+  },
+  {
+    "method": "char-100",
+    "inputSize": 1799,
+    "time": 1.5338999927043915,
+    "operations": 100,
+    "opsPerMs": 65.19329843902783,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970608671
+  },
+  {
+    "method": "para-100",
+    "inputSize": 2099,
+    "time": 2.65760001540184,
+    "operations": 100,
+    "opsPerMs": 37.62793476085963,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970608669
+  },
+  {
+    "method": "usj-vis",
+    "inputSize": 188,
+    "time": 0.4235000014305115,
+    "operations": 1,
+    "opsPerMs": 2.3612750805718274,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970608666
+  },
+  {
+    "method": "html-vis",
+    "inputSize": 188,
+    "time": 0.9336000084877014,
+    "operations": 1,
+    "opsPerMs": 1.071122526680197,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970608665
+  },
+  {
+    "method": "usx-vis",
+    "inputSize": 188,
+    "time": 0.6131000220775604,
+    "operations": 1,
+    "opsPerMs": 1.63105523404058,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970608665
+  },
+  {
+    "method": "parse-lg",
+    "inputSize": 1889,
+    "time": 2.934599995613098,
+    "operations": 1,
+    "opsPerMs": 0.34076194421552825,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970608661
+  },
+  {
+    "method": "parse-md",
+    "inputSize": 188,
+    "time": 1.8461999893188477,
+    "operations": 1,
+    "opsPerMs": 0.5416531284722563,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970608658
+  },
+  {
+    "method": "parse-sm",
+    "inputSize": 30,
+    "time": 2.2186000049114227,
+    "operations": 1,
+    "opsPerMs": 0.4507346965592046,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1736970608656
   }
 ]

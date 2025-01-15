@@ -2,11 +2,8 @@ import { USFMParser } from "..";
 import { HTMLVisitor, USXVisitor, USJVisitor } from "../..";
 import * as fs from 'fs';
 import * as path from 'path';
-import { USFMNode, CharacterNode } from "../interfaces/USFMNodes";
-
-function cleanForComparison(obj: any) {
-  return JSON.parse(JSON.stringify(obj));
-}
+import { CharacterNode } from "../interfaces/USFMNodes";
+import { cleanForComparison } from "./utils";
 
 describe("USFMParser - Fixtures", () => {
   let parser: USFMParser;

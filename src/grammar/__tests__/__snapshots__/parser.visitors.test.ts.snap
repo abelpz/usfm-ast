@@ -1,53 +1,13 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`USFMParser - Visitors parses alignment USFM file 1`] = `
-"
-TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
-TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
-3.0
-TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
-3.0
-Titus
-TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
-3.0
-TitusTitus
-TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
-3.0
-TitusTitus
-Titus
-TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
-3.0
-TitusTitus
-Titus
-1
-TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
-3.0
-TitusTitus
-Titus
-1
-Paul’s Greeting to Titus
-TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
-3.0
-TitusTitus
-Titus
-1
-Paul’s Greeting to Titus
-(2 Corinthians 8:16–24)
-TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
-3.0
-TitusTitus
-Titus
-1
-Paul’s Greeting to Titus
-(2 Corinthians 8:16–24)
-
-TIT EN_BSB en_English_ltr Tue Feb 20 2024 10:31:43 GMT-0500 (Eastern Standard Time) tc
-3.0
-TitusTitus
-Titus
-1
-Paul’s Greeting to Titus
-(2 Corinthians 8:16–24)
-
-1Paul, a servant of God and an apostle of Jesus Christ 2in the hope of eternal life,"
+"Remind the believers to submit to rulers and authorities, to be obedient and ready for every good work, to malign no one, and to be peaceable and gentle, showing full consideration to everyone. 
+For at one time we too were foolish, disobedient, misled, and enslaved to all sorts of desires and pleasures—living in malice and envy, being hated and hating one another. 
+But when the kindness of God our Savior and His love for mankind appeared, He saved us, not by the righteous deeds we had done, but according to His mercy, through the washing of new birth  and renewal by the Holy Spirit. This is the Spirit He poured out on us abundantly through Jesus Christ our Savior, so that, having been justified by His grace, we would become heirs with the hope of eternal life. This saying is trustworthy. And I want you to emphasize these things, so that those who have believed God will take care to devote themselves to good deeds. These things are excellent and profitable for the people. 
+But avoid foolish controversies, genealogies, arguments, and quarrels about the law, because these things are pointless and worthless. 
+Reject a divisive man after a first and second admonition, knowing that such a man is corrupt and sinful; he is self-condemned. 
+As soon as I send Artemas or Tychicus to you, make every effort to come to me at Nicopolis, because I have decided to winter there. Do your best to equip Zenas the lawyer and Apollos, so that they will have everything they need. And our people must also learn to devote themselves to good works in order to meet the pressing needs of others, so that they will not be unfruitful. 
+All who are with me send you greetings. 
+Greet those who love us in the faith.
+Grace be with all of you."
 `;
