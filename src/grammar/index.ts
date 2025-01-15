@@ -92,7 +92,7 @@ export class USFMParser {
   }
 
   parse(): USFMParser {
-    this.pos = 0;
+    this.setPosition(0);
     if (this.trackPositions) {
       this.positionVisits.clear();
     }
@@ -242,7 +242,7 @@ export class USFMParser {
   private preserveSignificantWhitespace() {
     // Keep exactly one space after markers
     if (this.pos < this.input.length && this.input[this.pos] === " ") {
-      this.pos++;
+      this.advance(false);
     }
   }
 
@@ -584,7 +584,7 @@ export class USFMParser {
           break;
         }
         defaultValue += char;
-        this.pos++;
+        this.advance(false);
       }
       
       if (defaultValue) {
@@ -593,7 +593,7 @@ export class USFMParser {
 
       // Skip spaces after default value
       while (this.pos < this.input.length && this.input[this.pos] === " ") {
-        this.pos++;
+        this.advance(false);
       }
     }
 
@@ -791,7 +791,7 @@ export class USFMParser {
 
     // Skip exactly one space after marker
     if (this.pos < this.input.length && this.isWhitespace(initialChar)) {
-      this.pos++;
+      this.advance(false);
     }
 
     // Special cases
@@ -881,20 +881,20 @@ export class USFMParser {
           break;
         }
         number += char;
-        this.pos++;
+        this.advance(false);
       }
       node.content.push(this.createNode<TextNode>({ type: "text", content: number }, node.content.length, node));
 
       // Skip any whitespace after verse number
       while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
-        this.pos++;
+        this.advance(false);
       }
       return this.createNode<CharacterNode>(node, index, parent);
     }
 
     // Skip non-line-breaking whitespace before content
     while (this.pos < this.input.length && this.isNonLineBreakingWhitespace(this.getCurrentCharacter())) {
-      this.pos++;
+      this.advance(false);
     }
 
     let textContent = "";
@@ -948,7 +948,7 @@ export class USFMParser {
         break;
       } else {
         textContent += char;
-        this.pos++;
+        this.advance(false);
       }
     }
 
@@ -1092,9 +1092,9 @@ export class USFMParser {
 
     // Skip to closing *
     while (this.pos < this.input.length && this.input[this.pos] !== "*") {
-      this.pos++;
+      this.advance(false);
     }
-    this.pos++; // Skip *
+    this.advance(false); // Skip *
 
     return this.createNode<MilestoneNode>({
       type: "milestone" as const,
@@ -1112,14 +1112,14 @@ export class USFMParser {
     let title = "";
     while (this.pos < this.input.length && this.input[this.pos] !== "|") {
       title += this.input[this.pos];
-      this.pos++;
+      this.advance(false);
     }
     title = title.trim();
 
     // Parse attributes
     let attributes: PeripheralAttributes = { id: "" };
     if (this.pos < this.input.length && this.input[this.pos] === "|") {
-      this.pos++; // Skip |
+      this.advance(false); // Skip |
       attributes = this.parseAttributes("periph") as PeripheralAttributes;
 
       // Validate peripheral id
