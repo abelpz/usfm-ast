@@ -1,13 +1,14 @@
 import { 
-  USFMVisitor,
-  ParagraphNode, 
-  CharacterNode, 
-  NoteNode, 
-  TextNode, 
-  MilestoneNode, 
-  PeripheralNode, 
-  USFMNode 
+  BaseUSFMVisitor,
 } from '../interfaces/USFMNodes';
+import { 
+  ParagraphUSFMNode, 
+  CharacterUSFMNode, 
+  NoteUSFMNode, 
+  TextUSFMNode, 
+  MilestoneUSFMNode, 
+  PeripheralUSFMNode, 
+} from '../nodes';
 
 interface USJNode {
   type: string;
@@ -20,11 +21,11 @@ interface USJNode {
   title?: string;
 }
 
-export class USJVisitor implements USFMVisitor<USJNode> {
+export class USJVisitor implements BaseUSFMVisitor<USJNode> {
   private result: USJNode[] = [];
   private currentNode: USJNode | null = null;
 
-  visitParagraph(node: ParagraphNode): USJNode {
+  visitParagraph(node: ParagraphUSFMNode): USJNode {
     const paraNode: USJNode = {
       type: 'paragraph',
       marker: node.marker,
@@ -32,7 +33,7 @@ export class USJVisitor implements USFMVisitor<USJNode> {
     };
     const prevNode = this.currentNode;
     this.currentNode = paraNode;
-    node.content.forEach((child: USFMNode) => child.accept(this));
+    node.content.forEach((child) => child.accept(this));
     this.currentNode = prevNode;
     
     if (prevNode && prevNode.content) {
@@ -43,7 +44,7 @@ export class USJVisitor implements USFMVisitor<USJNode> {
     return paraNode;
   }
 
-  visitCharacter(node: CharacterNode): USJNode {
+  visitCharacter(node: CharacterUSFMNode): USJNode {
     const charNode: USJNode = {
       type: 'character',
       marker: node.marker,
@@ -51,7 +52,7 @@ export class USJVisitor implements USFMVisitor<USJNode> {
     };
     const prevNode = this.currentNode;
     this.currentNode = charNode;
-    node.content.forEach((child: USFMNode) => child.accept(this));
+    node.content.forEach((child) => child.accept(this));
     this.currentNode = prevNode;
     
     if (prevNode && prevNode.content) {
@@ -62,7 +63,7 @@ export class USJVisitor implements USFMVisitor<USJNode> {
     return charNode;
   }
 
-  visitNote(node: NoteNode): USJNode {
+  visitNote(node: NoteUSFMNode): USJNode {
     const noteNode: USJNode = {
       type: 'note',
       marker: node.marker,
@@ -71,7 +72,7 @@ export class USJVisitor implements USFMVisitor<USJNode> {
     };
     const prevNode = this.currentNode;
     this.currentNode = noteNode;
-    node.content.forEach((child: USFMNode) => child.accept(this));
+    node.content.forEach((child) => child.accept(this));
     this.currentNode = prevNode;
     
     if (prevNode && prevNode.content) {
@@ -82,7 +83,7 @@ export class USJVisitor implements USFMVisitor<USJNode> {
     return noteNode;
   }
 
-  visitText(node: TextNode): USJNode {
+  visitText(node: TextUSFMNode): USJNode {
     const textNode: USJNode = {
       type: 'text',
       text: node.content
@@ -96,7 +97,7 @@ export class USJVisitor implements USFMVisitor<USJNode> {
     return textNode;
   }
 
-  visitMilestone(node: MilestoneNode): USJNode {
+  visitMilestone(node: MilestoneUSFMNode): USJNode {
     const msNode: USJNode = {
       type: 'milestone',
       marker: node.marker,
@@ -111,7 +112,7 @@ export class USJVisitor implements USFMVisitor<USJNode> {
     return msNode;
   }
 
-  visitPeripheral(node: PeripheralNode): USJNode {
+  visitPeripheral(node: PeripheralUSFMNode): USJNode {
     const periphNode: USJNode = {
       type: 'peripheral',
       marker: node.marker,
@@ -120,7 +121,7 @@ export class USJVisitor implements USFMVisitor<USJNode> {
     };
     const prevNode = this.currentNode;
     this.currentNode = periphNode;
-    node.content.forEach((child: USFMNode) => child.accept(this));
+    node.content.forEach((child) => child.accept(this));
     this.currentNode = prevNode;
     
     if (prevNode && prevNode.content) {

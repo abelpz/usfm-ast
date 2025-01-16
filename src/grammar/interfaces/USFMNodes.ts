@@ -1,10 +1,10 @@
 import { CharacterUSFMNode, MilestoneUSFMNode, NoteUSFMNode, ParagraphUSFMNode, PeripheralUSFMNode, TextUSFMNode } from "../nodes";
 
 // Node types and interfaces
-export type USFMNodeType = "paragraph" | "character" | "note" | "text" | "milestone" | "peripheral";
+export type USFMNodeType = "paragraph" | "character" | "note" | "text" | "milestone" | "peripheral" | "root";
 
 // Visitor interfaces
-export interface USFMVisitor<T = void> {
+export interface BaseUSFMVisitor<T = void> {
   visitParagraph(node: ParagraphUSFMNode): T;
   visitCharacter(node: CharacterUSFMNode): T;
   visitNote(node: NoteUSFMNode): T;
@@ -28,55 +28,60 @@ export interface MilestoneAttributes {
   eid?: string;
   who?: string;
   level?: string;
-  [key: string]: string | string[] | undefined;
+  [key: string]: string | undefined;
 }
 
 export interface LinkAttributes {
   "link-href"?: string;
   "link-title"?: string;
   "link-id"?: string;
-  [key: string]: string | string[] | undefined;
+  [key: string]: string | undefined;
 }
 
 export interface PeripheralAttributes {
   id: string;
-  [key: string]: string | string[] | undefined;
+  [key: string]: string | undefined;
 }
 
 // Base node interface
 export interface USFMNode {
   type: USFMNodeType;
   marker?: string;
-  content?: string | USFMNode[];
+  content?: string | HydratedUSFMNode[];
   attributes?: MilestoneAttributes;
 }
+
+export type HydratedUSFMNode = HydratedNode & Omit<USFMNode, 'content'> & {
+  content?: Array<HydratedUSFMNode> | string;
+};
+
 
 export type HydratedNode = {
   getChildren(): USFMNode[] | string;
   getParent(): USFMNode | undefined;
   getNextSibling(): USFMNode | string | undefined;
   getPreviousSibling(): USFMNode | string | undefined;
-  accept<R>(visitor: USFMVisitor<R>): R;
+  accept<R>(visitor: BaseUSFMVisitor<R>): R;
   acceptWithContext<R, C>(visitor: USFMVisitorWithContext<R, C>, context: C): R;
 }
 
 export type BaseUSFMNode = {
-  type: 'paragraph' | 'character' | 'text' | 'note' | 'milestone' | 'peripheral';
+  type: 'paragraph' | 'character' | 'text' | 'note' | 'milestone' | 'peripheral' | 'root';
 } & Omit<USFMNode, 'accept' | 'acceptWithContext' | 'getChildren' | 'getParent' | 'getNextSibling' | 'getPreviousSibling'>;
 
 export function isParagraphNode(node: BaseUSFMNode): node is ParagraphNode {
   return node.type === 'paragraph';
 }
 
-export function isCharacterNode(node: BaseUSFMNode): node is Omit<CharacterNode, 'accept' | 'acceptWithContext'> {
+export function isCharacterNode(node: BaseUSFMNode): node is CharacterNode {
   return node.type === 'character';
 }
 
-export function isTextNode(node: BaseUSFMNode): node is Omit<TextNode, 'accept' | 'acceptWithContext'> {
+export function isTextNode(node: BaseUSFMNode): node is TextNode {
   return node.type === 'text';
 }
 
-export function isNoteNode(node: BaseUSFMNode): node is Omit<NoteNode, 'accept' | 'acceptWithContext'> {
+export function isNoteNode(node: BaseUSFMNode): node is NoteNode {
   return node.type === 'note';
 }
 
@@ -84,23 +89,27 @@ export function isMilestoneNode(node: BaseUSFMNode): node is MilestoneNode {
   return node.type === 'milestone';
 }
 
-export function isPeripheralNode(node: BaseUSFMNode): node is Omit<PeripheralNode, 'accept' | 'acceptWithContext'> {
+export function isPeripheralNode(node: BaseUSFMNode): node is PeripheralNode {
   return node.type === 'peripheral';
 }
 
 
+export interface RootNode extends USFMNode {
+  type: 'root';
+  content: HydratedUSFMNode[];
+}
 
 // Specific node types
 export interface ParagraphNode extends USFMNode {
   type: "paragraph";
   marker: string;
-  content: USFMNode[];
+  content: HydratedUSFMNode[];
 }
 
 export interface CharacterNode extends USFMNode {
   type: "character";
   marker: string;
-  content: USFMNode[];
+  content: HydratedUSFMNode[];
   attributes?: MilestoneAttributes | LinkAttributes;
 }
 
@@ -108,7 +117,7 @@ export interface NoteNode extends USFMNode {
   type: "note";
   marker: string;
   caller?: string;
-  content: USFMNode[];
+  content: HydratedUSFMNode[];
 }
 
 export interface TextNode extends USFMNode {
@@ -128,7 +137,7 @@ export interface PeripheralNode extends USFMNode {
   marker: string;
   title: string;
   attributes: PeripheralAttributes;
-  content: USFMNode[];
+  content: HydratedUSFMNode[];
 }
 
 export interface ListKeyNode extends CharacterNode {

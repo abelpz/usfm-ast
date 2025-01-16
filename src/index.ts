@@ -1,6 +1,6 @@
 // Core interfaces and types
 export { 
-  USFMVisitor,
+  BaseUSFMVisitor,
   USFMVisitorWithContext,
   USFMNodeType,
   MilestoneAttributes,
@@ -27,3 +27,4 @@ export { HTMLVisitor } from './grammar/visitors/HTMLVisitor';
 export { USXVisitor } from './grammar/visitors/USXVisitor';
 export { USJVisitor } from './grammar/visitors/USJVisitor'; 
 export { TextVisitor } from './grammar/visitors/TextVisitor';
+export { USFMVisitor } from './grammar/visitors/USFMVisitor';

@@ -1,5 +1,5 @@
 import { 
-  USFMVisitor,
+  BaseUSFMVisitor,
   ParagraphNode, 
   CharacterNode, 
   NoteNode, 
@@ -8,41 +8,49 @@ import {
   PeripheralNode, 
   USFMNode 
 } from '../interfaces/USFMNodes';
+import { 
+  ParagraphUSFMNode, 
+  CharacterUSFMNode, 
+  NoteUSFMNode, 
+  TextUSFMNode, 
+  MilestoneUSFMNode, 
+  PeripheralUSFMNode, 
+} from '../nodes';
 
-export class TextVisitor implements USFMVisitor<string> {
+export class TextVisitor implements BaseUSFMVisitor<string> {
   private result: string[] = [];
 
-  visitParagraph(node: ParagraphNode): string {
+  visitParagraph(node: ParagraphUSFMNode): string {
     if(!['m', 'p'].includes(node.marker)) {
       return "";
     }
     this.result.push('\n');
-    node.content.forEach((child: USFMNode) => child.accept(this));
+    node.content.forEach((child) => child.accept(this));
     return this.result.join('');
   }
 
-  visitCharacter(node: CharacterNode): string {
+  visitCharacter(node: CharacterUSFMNode): string {
     if(['v'].includes(node.marker)) {
       return "";
     }
-    node.content.forEach((child: USFMNode) => child.accept(this));
+    node.content.forEach((child) => child.accept(this));
     return this.result.join('');
   }
 
-  visitNote(node: NoteNode): string {
+  visitNote(node: NoteUSFMNode): string {
     return "";
   }
 
-  visitText(node: TextNode): string {
+  visitText(node: TextUSFMNode): string {
     this.result.push(node.content);
     return this.result.join('');
   }
 
-  visitMilestone(node: MilestoneNode): string {
+  visitMilestone(node: MilestoneUSFMNode): string {
     return "";
   }
 
-  visitPeripheral(node: PeripheralNode): string {
+  visitPeripheral(node: PeripheralUSFMNode): string {
     return "";
   }
 

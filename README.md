@@ -1,5 +1,10 @@
 # usfm-ast
 
+## Todo
+
+- [ ] Fill in default attributes for character and milestone markers (./src/grammar/constants/markers.ts)
+- [ ] Handle case where marker has both -s or -e, and a digit termination e.g. `qt1-s` or `qt1-e` (./src/grammar/index.ts > USFMParser > cleanMarkerSuffix)
+
 ## Performance Testing
 
 The USFM parser includes a performance monitoring system to track and compare performance across different versions and implementations. This helps identify performance regressions and validate optimizations.

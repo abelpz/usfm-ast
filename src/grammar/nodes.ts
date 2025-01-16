@@ -1,4 +1,4 @@
-import { USFMVisitor, USFMVisitorWithContext } from './interfaces/USFMNodes';
+import { BaseUSFMVisitor, USFMVisitorWithContext } from './interfaces/USFMNodes';
 import type { 
   USFMNode, 
   ParagraphNode, 
@@ -10,17 +10,16 @@ import type {
   MilestoneAttributes,
   PeripheralAttributes,
   USFMNodeType,
-  HydratedNode
+  HydratedUSFMNode,
+  RootNode
 } from './interfaces/USFMNodes';
-
-type HydratedUSFMNode = USFMNode & HydratedNode;
 
 abstract class BaseUSFMNode<T extends USFMNodeType = USFMNodeType> implements HydratedUSFMNode {
   abstract type: T;
   marker?: T extends 'text' ? never : string;
-  content?: T extends 'text' ? string : USFMNode[];
+  content?: T extends 'text' ? string : HydratedUSFMNode[];
 
-  constructor(index: number, parent?: USFMNode) {
+  constructor(index: number, parent?: HydratedUSFMNode | RootNode) {
     const _index = index;
     const _parent = parent;
 
@@ -29,29 +28,29 @@ abstract class BaseUSFMNode<T extends USFMNodeType = USFMNodeType> implements Hy
     this.getPreviousSibling = () => _parent?.content?.[_index - 1];
   }
 
-  getChildren(): USFMNode[] | string {
+  getChildren(): HydratedUSFMNode[] | string {
     return this.content || [];
   }
 
-  getParent!: () => USFMNode | undefined;
-  getNextSibling!: () => USFMNode | string | undefined;
-  getPreviousSibling!: () => USFMNode | string | undefined;
+  getParent!: () => HydratedUSFMNode | RootNode | undefined;
+  getNextSibling!: () => HydratedUSFMNode | string | undefined;
+  getPreviousSibling!: () => HydratedUSFMNode | string | undefined;
 
-  abstract accept<R>(visitor: USFMVisitor<R>): R;
+  abstract accept<R>(visitor: BaseUSFMVisitor<R>): R;
   abstract acceptWithContext<R, C>(visitor: USFMVisitorWithContext<R, C>, context: C): R;
 }
 
 export class ParagraphUSFMNode extends BaseUSFMNode<'paragraph'> {
   readonly type = 'paragraph' as const;
   public marker: string;
-  public content: USFMNode[];
+  public content: HydratedUSFMNode[];
 
   constructor(
     props: {
       marker: string;
-      content: USFMNode[];
+      content: HydratedUSFMNode[];
       index: number;
-      parent?: USFMNode;
+      parent?: HydratedUSFMNode | RootNode;
     }
   ) {
     super(props.index, props.parent);
@@ -59,7 +58,7 @@ export class ParagraphUSFMNode extends BaseUSFMNode<'paragraph'> {
     this.content = props.content;
   }
 
-  accept<R>(visitor: USFMVisitor<R>): R {
+  accept<R>(visitor: BaseUSFMVisitor<R>): R {
     return visitor.visitParagraph(this);
   }
 
@@ -71,15 +70,15 @@ export class ParagraphUSFMNode extends BaseUSFMNode<'paragraph'> {
 export class CharacterUSFMNode extends BaseUSFMNode implements CharacterNode {
   readonly type = 'character';
   public marker: string;
-  public content: USFMNode[];
+  public content: HydratedUSFMNode[];
   public attributes?: CharacterNode['attributes']; 
 
   constructor(props: {
     marker: string;
-    content: USFMNode[];
+    content: HydratedUSFMNode[];
     attributes?: CharacterNode['attributes'];
     index: number;
-    parent?: USFMNode;
+    parent?: HydratedUSFMNode | RootNode;
   }) {
     super(props.index, props.parent);
     this.marker = props.marker;
@@ -87,7 +86,7 @@ export class CharacterUSFMNode extends BaseUSFMNode implements CharacterNode {
     this.attributes = props.attributes;
   }
 
-  accept<R>(visitor: USFMVisitor<R>): R {
+  accept<R>(visitor: BaseUSFMVisitor<R>): R {
     return visitor.visitCharacter(this);
   }
 
@@ -104,14 +103,14 @@ export class TextUSFMNode extends BaseUSFMNode implements TextNode {
     props: {
       content: string;
       index: number;
-      parent?: USFMNode;
+      parent?: HydratedUSFMNode | RootNode;
     }
   ) {
     super(props.index, props.parent);
     this.content = props.content;
   }
 
-  accept<R>(visitor: USFMVisitor<R>): R {
+  accept<R>(visitor: BaseUSFMVisitor<R>): R {
     return visitor.visitText(this);
   }
 
@@ -123,16 +122,16 @@ export class TextUSFMNode extends BaseUSFMNode implements TextNode {
 export class NoteUSFMNode extends BaseUSFMNode implements NoteNode {
   readonly type = 'note';
   public marker: string;
-  public content: USFMNode[];
+  public content: HydratedUSFMNode[];
   public caller?: string;
 
   constructor(
     props: {
       marker: string;
-      content: USFMNode[];
+      content: HydratedUSFMNode[];
       index: number;
       caller?: string;
-      parent?: USFMNode;
+      parent?: HydratedUSFMNode | RootNode;
     }
   ) {
     super(props.index, props.parent);
@@ -141,7 +140,7 @@ export class NoteUSFMNode extends BaseUSFMNode implements NoteNode {
     this.caller = props.caller;
   }
 
-  accept<R>(visitor: USFMVisitor<R>): R {
+  accept<R>(visitor: BaseUSFMVisitor<R>): R {
     return visitor.visitNote(this);
   }
 
@@ -162,7 +161,7 @@ export class MilestoneUSFMNode extends BaseUSFMNode implements MilestoneNode {
       milestoneType: 'start' | 'end' | 'standalone';
       attributes?: MilestoneAttributes;
       index: number;
-      parent?: USFMNode;
+      parent?: HydratedUSFMNode | RootNode;
     }
   ) {
     super(props.index, props.parent);
@@ -171,7 +170,7 @@ export class MilestoneUSFMNode extends BaseUSFMNode implements MilestoneNode {
     this.attributes = props.attributes;
   }
 
-  accept<R>(visitor: USFMVisitor<R>): R {
+  accept<R>(visitor: BaseUSFMVisitor<R>): R {
     return visitor.visitMilestone(this);
   }
 
@@ -185,16 +184,16 @@ export class PeripheralUSFMNode extends BaseUSFMNode implements PeripheralNode {
   public marker: string;
   public title: string;
   public attributes: PeripheralAttributes;
-  public content: USFMNode[];
+  public content: HydratedUSFMNode[];
 
   constructor(
     props: {
       marker: string;
       title: string;
       attributes: PeripheralAttributes;
-      content: USFMNode[];
+      content: HydratedUSFMNode[];
       index: number;
-      parent?: USFMNode;
+      parent?: HydratedUSFMNode | RootNode;
     }
   ) {
     super(props.index, props.parent);
@@ -204,7 +203,7 @@ export class PeripheralUSFMNode extends BaseUSFMNode implements PeripheralNode {
     this.content = props.content;
   }
 
-  accept<R>(visitor: USFMVisitor<R>): R {
+  accept<R>(visitor: BaseUSFMVisitor<R>): R {
     return visitor.visitPeripheral(this);
   }
 
@@ -220,4 +219,5 @@ export type NodeInstanceType<T extends USFMNode> =
   T extends NoteNode ? NoteUSFMNode :
   T extends MilestoneNode ? MilestoneUSFMNode :
   T extends PeripheralNode ? PeripheralUSFMNode :
-  T;
+  T extends RootNode ? RootNode :
+  never;

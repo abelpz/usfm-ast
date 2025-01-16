@@ -1,52 +1,53 @@
 import { 
-  USFMVisitor,
-  ParagraphNode, 
-  CharacterNode, 
-  NoteNode, 
-  TextNode, 
-  MilestoneNode, 
-  PeripheralNode, 
-  USFMNode 
+  BaseUSFMVisitor,
 } from '../interfaces/USFMNodes';
+import { 
+  ParagraphUSFMNode, 
+  CharacterUSFMNode, 
+  NoteUSFMNode, 
+  TextUSFMNode, 
+  MilestoneUSFMNode, 
+  PeripheralUSFMNode, 
+} from '../nodes';
 
-export class HTMLVisitor implements USFMVisitor<string> {
+export class HTMLVisitor implements BaseUSFMVisitor<string> {
   private result: string[] = [];
 
-  visitParagraph(node: ParagraphNode): string {
+  visitParagraph(node: ParagraphUSFMNode): string {
     this.result.push('<p>');
-    node.content.forEach((child: USFMNode) => child.accept(this));
+    node.content.forEach((child) => child.accept(this));
     this.result.push('</p>');
     return this.result.join('');
   }
 
-  visitCharacter(node: CharacterNode): string {
+  visitCharacter(node: CharacterUSFMNode): string {
     const tag = this.getHTMLTag(node.marker);
     this.result.push(`<${tag}>`);
-    node.content.forEach((child: USFMNode) => child.accept(this));
+    node.content.forEach((child) => child.accept(this));
     this.result.push(`</${tag}>`);
     return this.result.join('');
   }
 
-  visitNote(node: NoteNode): string {
+  visitNote(node: NoteUSFMNode): string {
     this.result.push('<sup class="footnote">');
-    node.content.forEach((child: USFMNode) => child.accept(this));
+    node.content.forEach((child) => child.accept(this));
     this.result.push('</sup>');
     return this.result.join('');
   }
 
-  visitText(node: TextNode): string {
+  visitText(node: TextUSFMNode): string {
     this.result.push(this.escapeHTML(node.content));
     return this.result.join('');
   }
 
-  visitMilestone(node: MilestoneNode): string {
+  visitMilestone(node: MilestoneUSFMNode): string {
     this.result.push(`<milestone type="${node.marker}"/>`);
     return this.result.join('');
   }
 
-  visitPeripheral(node: PeripheralNode): string {
+  visitPeripheral(node: PeripheralUSFMNode): string {
     this.result.push(`<div class="peripheral ${node.marker}">`);
-    node.content.forEach((child: USFMNode) => child.accept(this));
+    node.content.forEach((child) => child.accept(this));
     this.result.push('</div>');
     return this.result.join('');
   }

@@ -1,0 +1,8 @@
+\id REV 
+\ts\*
+\c 1
+\p
+\v 1 Lorem \w word with attributes|x-occurrence="1"\w* dolor sit amet, consectetur adipiscing elit, \zaln-s |x-id="id"\*
+\v 2 ac gravida risus.
+\p Cras scelerisque porta nulla,
+\v 3 vitae posuere ligula elementum sit amet.

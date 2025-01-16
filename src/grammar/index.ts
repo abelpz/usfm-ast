@@ -14,9 +14,11 @@ import {
   isTextNode,
   isNoteNode,
   isMilestoneNode,
-  isPeripheralNode
+  isPeripheralNode,
+  RootNode,
+  HydratedUSFMNode
 } from './interfaces/USFMNodes';
-import { USFMVisitor, USFMVisitorWithContext } from './interfaces/USFMNodes';
+import { BaseUSFMVisitor, USFMVisitorWithContext } from './interfaces/USFMNodes';
 import {
   paragraphMarkers,
   characterMarkers,
@@ -31,7 +33,7 @@ import { CharacterUSFMNode, MilestoneUSFMNode, NodeInstanceType, NoteUSFMNode, P
 
 export type MarkerType = "paragraph" | "character" | "note" | "noteContent" | "milestone";
 
-export type HydratedUSFMNode = CharacterUSFMNode | NoteUSFMNode | MilestoneUSFMNode | PeripheralUSFMNode | TextUSFMNode | ParagraphUSFMNode
+export type USFMNodeUnion = CharacterUSFMNode | NoteUSFMNode | MilestoneUSFMNode | PeripheralUSFMNode | TextUSFMNode | ParagraphUSFMNode
 
 export interface CustomMarkerRule {
   type: MarkerType;
@@ -110,7 +112,7 @@ export class USFMParser {
     return this;
   }
 
-  getNodes(): USFMNode[] {
+  getNodes(): HydratedUSFMNode[] {
     return this.nodes;
   }
 
@@ -367,7 +369,7 @@ export class USFMParser {
   }
 
   private parseNodes(isInsideParagraph: boolean = false): HydratedUSFMNode[] {
-    const nodes: HydratedUSFMNode[] = [];
+    const rootNode = this.createNode<RootNode>({ type: "root", content: [] }, 0);
     let lastWasLineBreak = false;
     
     while (this.pos < this.input.length) {
@@ -378,29 +380,29 @@ export class USFMParser {
         const { marker, isNested, cleanMarker } = this.parseMarker();
 
         if (marker === "periph") {
-          nodes.push(this.parsePeripheral(nodes.length));
+          rootNode.content.push(this.parsePeripheral(rootNode.content.length, rootNode));
         } else if (this.paragraphMarkers.has(cleanMarker) || lastWasLineBreak) {
-          nodes.push(this.parseParagraph(marker, nodes.length));
+          rootNode.content.push(this.parseParagraph(marker, rootNode.content.length, rootNode));
         } else if (this.characterMarkers.has(cleanMarker)) {
-          nodes.push(this.parseCharacter(marker, isNested, nodes.length));
+          rootNode.content.push(this.parseCharacter(marker, isNested, rootNode.content.length, rootNode));
         } else if (this.noteMarkers.has(cleanMarker)) {
-          nodes.push(this.parseNote(marker, nodes.length));
+          rootNode.content.push(this.parseNote(marker, rootNode.content.length, rootNode));
         } else if (this.milestoneMarkers.has(cleanMarker)) {
-          nodes.push(this.parseMilestone(marker, nodes.length));
+          rootNode.content.push(this.parseMilestone(marker, rootNode.content.length, rootNode));
         } else {
           const markerType = this.determineCustomMarkerType(marker);
           switch (markerType) {
             case "character":
               this.characterMarkers.add(this.cleanMarkerSuffix(marker));
-              nodes.push(this.parseCharacter(marker, isNested, nodes.length));
+              rootNode.content.push(this.parseCharacter(marker, isNested, rootNode.content.length, rootNode));
               break;
             case "milestone":
               this.milestoneMarkers.add(this.cleanMarkerSuffix(marker));
-              nodes.push(this.parseMilestone(marker, nodes.length));
+              rootNode.content.push(this.parseMilestone(marker, rootNode.content.length, rootNode));
               break;
             case "paragraph":
               this.paragraphMarkers.add(this.cleanMarkerSuffix(marker));
-              nodes.push(this.parseParagraph(marker, nodes.length));
+              rootNode.content.push(this.parseParagraph(marker, rootNode.content.length, rootNode));
               break;
           }
           this.logWarning(`Unsupported marker in USFM: '\\${marker}', inferred as ${markerType}, please add it to the customMarkerRules object in the USFMParser constructor to stop seeing this warning`);
@@ -418,11 +420,11 @@ export class USFMParser {
           `Context: ${context}\n` +
           `         ${pointer}`
         );
-        nodes.push(this.parseText(false, nodes.length));
+        rootNode.content.push(this.parseText(false, rootNode.content.length, rootNode));
       }
     }
-
-    return nodes;
+    
+    return rootNode.content;
   }
 
   private determineCustomMarkerType(marker: string): MarkerType {
@@ -551,9 +553,9 @@ export class USFMParser {
     return this.input[this.pos];
   }
 
-  private parseAttributes(currentMarker: string): Record<string, string | string[]> {
+  private parseAttributes(currentMarker: string): Record<string, string> {
     this.advance(false); // Skip |
-    const attributes: Record<string, string | string[]> = {};
+    const attributes: Record<string, string> = {};
     let currentAttr = "";
     let currentValue = "";
     let inValue = false;
@@ -666,7 +668,7 @@ export class USFMParser {
     return attributes;
   }
 
-  private parseNoteContent(marker: string, index: number, parent?: HydratedUSFMNode ): CharacterUSFMNode {
+  private parseNoteContent(marker: string, index: number, parent?: USFMNodeUnion ): CharacterUSFMNode {
     const node = this.createNode<CharacterNode>({ type: "character", marker, content: [] }, index, parent);
 
     // Skip whitespace after marker
@@ -738,8 +740,12 @@ export class USFMParser {
   private createNode<T extends USFMNode>(
     baseNode: T, 
     index: number,
-    parent?: HydratedUSFMNode
+    parent?: USFMNodeUnion | RootNode
   ): NodeInstanceType<T> {
+    if(baseNode.type === 'root') {
+      return baseNode as unknown as NodeInstanceType<T>;
+    }
+
     if (isParagraphNode(baseNode)) {
       return new ParagraphUSFMNode(
         {
@@ -811,11 +817,11 @@ export class USFMParser {
     throw new Error(`Unknown node type: ${(baseNode as any).type}`);
   }
 
-  private parseParagraph(marker: string, index: number, parent?: HydratedUSFMNode): ParagraphUSFMNode {
+  private parseParagraph(marker: string, index: number, parent?: USFMNodeUnion | RootNode): ParagraphUSFMNode {
     const node = this.createNode<ParagraphNode>({
       type: "paragraph" as const,
       marker,
-      content: [] as USFMNode[],
+      content: [],
     }, index, parent);
 
     const initialChar = this.input[this.pos];
@@ -888,7 +894,7 @@ export class USFMParser {
     return node;
   }
 
-  private parseCharacter(marker: string, isNested: boolean = false, index: number, parent?: HydratedUSFMNode): CharacterUSFMNode {
+  private parseCharacter(marker: string, isNested: boolean = false, index: number, parent?: USFMNodeUnion | RootNode): CharacterUSFMNode {
     const node = this.createNode<CharacterNode>({
       type: "character",
       marker,
@@ -990,7 +996,7 @@ export class USFMParser {
     return node;
   }
 
-  private parseNote(marker: string, index: number, parent?: HydratedUSFMNode): NoteUSFMNode {
+  private parseNote(marker: string, index: number, parent?: USFMNodeUnion | RootNode): NoteUSFMNode {
     const node = this.createNode<NoteNode>({
       type: "note",
       marker,
@@ -1080,7 +1086,7 @@ export class USFMParser {
     return node;
   }
 
-  private parseText(isInsideParagraph: boolean = false, index: number, parent?: HydratedUSFMNode): TextUSFMNode {
+  private parseText(isInsideParagraph: boolean = false, index: number, parent?: USFMNodeUnion | RootNode): TextUSFMNode {
     let content = "";
 
     while (this.pos < this.input.length) {
@@ -1104,7 +1110,7 @@ export class USFMParser {
     }, index, parent);
   }
 
-  private parseMilestone(marker: string, index: number, parent?: HydratedUSFMNode): MilestoneUSFMNode {
+  private parseMilestone(marker: string, index: number, parent?: USFMNodeUnion | RootNode): MilestoneUSFMNode {
     // Determine milestone type
     let milestoneType: "start" | "end" | "standalone" = "standalone";
     if (marker.endsWith("-s")) {
@@ -1135,7 +1141,7 @@ export class USFMParser {
     }, index, parent);
   }
 
-  private parsePeripheral(index: number, parent?: HydratedUSFMNode): PeripheralUSFMNode {
+  private parsePeripheral(index: number, parent?: USFMNodeUnion | RootNode): PeripheralUSFMNode {
     // Skip \periph marker
     this.pos += 7;
 
@@ -1172,7 +1178,7 @@ export class USFMParser {
   }
 
   // Add visitor methods to the parser
-  visit<T>(visitor: USFMVisitor<T>): T[] {
+  visit<T>(visitor: BaseUSFMVisitor<T>): T[] {
     return this.nodes.map(node => node.accept(visitor));
   }
 
