@@ -1,12 +1,12 @@
-import { noteContentMarkers } from '../constants/markers';
-import { BaseUSFMVisitor, NoteNode } from '../interfaces/USFMNodes';
+import { noteContentMarkers } from '../../constants/markers';
+import { BaseUSFMVisitor, NoteNode } from '../../interfaces/USFMNodes';
 import { 
   CharacterUSFMNode, 
   MilestoneUSFMNode, 
   ParagraphUSFMNode, 
   PeripheralUSFMNode, 
   TextUSFMNode 
-} from '../nodes';
+} from '../../nodes';
 
 /**
  * USFMVisitor implements the visitor pattern to convert USFM AST nodes back into USFM text.

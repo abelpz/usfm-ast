@@ -2,7 +2,7 @@ import {
   BaseUSFMVisitor,
   MilestoneAttributes,
   LinkAttributes
-} from '../interfaces/USFMNodes';
+} from '../../interfaces/USFMNodes';
 import { 
   ParagraphUSFMNode, 
   CharacterUSFMNode, 
@@ -10,7 +10,45 @@ import {
   TextUSFMNode, 
   MilestoneUSFMNode, 
   PeripheralUSFMNode, 
-} from '../nodes';
+} from '../../nodes';
+
+const getMarkerInfo = (marker: string) => {
+  //marker categories:
+  const bookIdentificationMarkers = new Set([
+    'id', 'usfm'
+  ]);
+
+  const paragraphIdentificationMarkers = new Set([
+    'ide', 'sts', 'rem', 'h', 'toc', 'toca'
+  ]);
+
+  const paragraphIntroductionMarkers = new Set([
+    'imt', 'imte', 'ib', 'ie', 'ili', 'imi', 'imq',
+    'im', 'io', 'iot', 'ipi', 'ipq', 'ipr', 'ip',
+    'iq', 'is', 'iex',
+  ]);
+
+  const titlesAndSectionsMarkers = new Set([
+    'cd', 'cl', 'iex', 'ip', 'mr', 'ms', 'mte',
+    'r', 's', 'sp', 'sd', 'sr'
+  ]);
+  
+  const bodyParagraphMarkers = new Set([  
+    'b', 'cls', 'm', 'mi', 'nb', 'p', 'pc', 'ph',
+    'pi', 'pm', 'pmc', 'pmo', 'pmr', 'po', 'pr'
+  ]);
+
+  const poetryParagraphMarkers = new Set([
+    'q#', 'qa', 'qc', 'qd', 'qm#', 'qr'
+  ]);
+
+  const breakMarkers = new Set([
+    'br', 'pb'
+  ]);
+
+}
+
+
 
 /**
  * USXVisitor implements the visitor pattern to convert USFM AST nodes into USX 3.0 XML.
@@ -24,11 +62,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
   private inTable: boolean = false;
   private inRow: boolean = false;
   private inSidebar: boolean = false;
-  private quoteLevel: number = 0;
   private verseSegments: Set<string> = new Set();
-  private inNote: boolean = false;  // Track if we're inside a note
-  private bookStarted: boolean = false;  // Track if we've started the book element
-  private bookEnded: boolean = false;  // Track if we've ended the book element
 
   visitParagraph(node: ParagraphUSFMNode): string {
     // Handle special markers
@@ -45,8 +79,6 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
           style: 'id'
         });
         this.result.push(`<book${attrs}>${rest.join(' ')}</book>`);
-        this.bookStarted = true;
-        this.bookEnded = true;
         return this.result.join('');
       }
     }
@@ -65,7 +97,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
         }
 
         this.currentChapter = chapterContent.content;
-        const sid = `${this.bookCode} ${this.currentChapter}`;
+        const sid = `${this.bookCode.trim()} ${this.currentChapter.trim()}`;
         const attrs = this.buildAttributes({
           number: this.currentChapter,
           style: 'c',
@@ -191,6 +223,15 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     node.content.forEach((child) => child.accept(this));
 
     const nextParagraph = node.getNextSibling();
+    const getNextContentSibling = (node: ParagraphUSFMNode): ParagraphUSFMNode | null => {
+      let next = node.getNextSibling();
+      while (next && next instanceof ParagraphUSFMNode && next.content.length === 0) {
+        next = next.getNextSibling();
+      }
+      return next as ParagraphUSFMNode | null;
+    };
+    
+    const nextContentParagraph = getNextContentSibling(node);
     
     // Only close verse if this paragraph doesn't contain any verse markers
     // and the next content isn't a verse marker
@@ -205,6 +246,15 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
   }
 
   visitCharacter(node: CharacterUSFMNode): string {
+
+    const getElementName = (marker: string) => {
+      const elementNames: { [key: string]: string } = {
+        'fig': 'figure',
+        'v': 'verse',
+      }
+      return elementNames[marker] || 'char';
+    }
+
     // Handle verse markers
     if (node.marker === 'v') {
       const verseContent = node.content[0] as TextUSFMNode;
@@ -218,7 +268,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
         const verseNum = verseContent.content.trim();
         this.currentVerse = verseNum;
 
-        const sid = `${this.bookCode} ${this.currentChapter}:${verseNum}`;
+        const sid = `${this.bookCode} ${this.currentChapter.trim()}:${verseNum.trim()}`;
         const attrs = this.buildAttributes({
           number: verseNum,
           style: 'v',
@@ -237,7 +287,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     if (node.marker.startsWith('va')) {
       const segmentId = node.marker.slice(2);  // Extract segment ID from va1, va2, etc.
       const currentVerse = this.getCurrentVerse();
-      const segmentSid = `${this.bookCode} ${this.currentChapter}:${currentVerse}/${segmentId}`;
+      const segmentSid = `${this.bookCode} ${this.currentChapter.trim()}:${currentVerse.trim()}/${segmentId}`;
       this.verseSegments.add(segmentSid);  // Track the verse segment
       const attrs = this.buildAttributes({
         style: 'va',
@@ -291,13 +341,22 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     // Handle cross reference markers
     if (node.getParent()?.marker === 'x' || node.getParent()?.marker === 'f') {
       
-      const targetAttrs = node.attributes ? this.buildAttributes(node.attributes) : "";
+      const targetAttrs = this.buildAttributes({
+        style: node.marker,
+        ...(node.attributes || {}),
+      });
       switch (node.marker) {
         case 'xo':  // Cross reference origin
-          this.result.push(`<char style="xo" ${targetAttrs} closed="false">`);
+          this.result.push(`<char${targetAttrs} closed="false">`);
           break;
         case 'xt':  // Cross reference target
-          this.result.push(`<char style="xt"${targetAttrs} closed="false">`);
+          this.result.push(`<char${targetAttrs} closed="false">`);
+          break;
+        case 'fr':  // Footnote reference
+          this.result.push(`<char${targetAttrs} closed="false">`);
+          break;
+        case 'ft':  // Footnote target
+          this.result.push(`<char${targetAttrs} closed="false">`);
           break;
         default:
            this.result.push(`<char${targetAttrs}>`);
@@ -376,7 +435,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     });
 
     this.result.push(`<note${attrs}>`);
-    this.inNote = true;  // Set note context
+
     
     // Special handling for note content markers
     node.content.forEach((child) => {
@@ -387,7 +446,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       }
     });
 
-    this.inNote = false;  // Reset note context
+
     this.result.push('</note>');
     return this.result.join('');
   }
@@ -401,7 +460,6 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
 
   visitText(node: TextUSFMNode): string {
 
-    const parent = node.getParent();
     // Check if we need to preserve whitespace
     const preserveWhitespace = this.shouldPreserveWhitespace();
     const content = preserveWhitespace ? 
@@ -414,57 +472,6 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
 
   visitMilestone(node: MilestoneUSFMNode): string {
     let elementName = 'ms';
-    
-    // Handle special milestone types
-    if (node.marker === 'c') {
-      // Handle chapter milestone
-      const attrs = this.buildAttributes({
-        style: 'c',
-        number: this.getStringAttribute(node.attributes, 'number'),
-        sid: `${this.bookCode} ${this.getStringAttribute(node.attributes, 'number')}`,
-        altnumber: this.getStringAttribute(node.attributes, 'altnumber'),
-        pubnumber: this.getStringAttribute(node.attributes, 'pubnumber')
-      });
-      this.result.push(`<chapter${attrs} />`);
-      return this.result.join('');
-    } else if (node.marker.startsWith('qt')) {
-      elementName = 'qt';
-      const level = parseInt(node.marker.charAt(2)) || 1;
-      this.quoteLevel = level;
-      const attrs = this.buildAttributes({
-        style: node.marker,
-        level: this.quoteLevel.toString(),
-        who: this.getStringAttribute(node.attributes, 'who'),
-        ...(node.attributes || {})
-      });
-      
-      if (node.milestoneType === 'start') {
-        this.result.push(`<${elementName}${attrs}>`);
-      } else if (node.milestoneType === 'end') {
-        this.quoteLevel = Math.max(0, this.quoteLevel - 1);
-        this.result.push(`</${elementName}>`);
-      }
-      return this.result.join('');
-    } else if (node.marker.startsWith('fig')) {
-      elementName = 'figure';
-    } else if (node.marker.startsWith('rb')) {
-      elementName = 'rb';
-    } else if (node.marker.startsWith('tc')) {
-      // Handle table cell milestones
-      const attrs = this.buildAttributes({
-        style: node.marker,
-        align: this.getCellAlignment(node.marker),
-        colspan: this.getStringAttribute(node.attributes, 'colspan'),
-        rowspan: this.getStringAttribute(node.attributes, 'rowspan')
-      });
-      
-      if (node.milestoneType === 'start') {
-        this.result.push(`<cell${attrs}>`);
-      } else if (node.milestoneType === 'end') {
-        this.result.push('</cell>');
-      }
-      return this.result.join('');
-    }
 
     const attrs = this.buildAttributes({
       style: node.marker,
@@ -473,12 +480,12 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
 
     // Handle milestone types (start/end)
     if (node.milestoneType === 'start') {
-      this.result.push(`<${elementName}${attrs}>`);
+      this.result.push(`<${elementName}${attrs} />`);
     } else if (node.milestoneType === 'end') {
-      this.result.push(`</${elementName}>`);
+      this.result.push(`<${elementName}${attrs} />`);
     } else {
       // Self-closing milestone
-      this.result.push(`<${elementName}${attrs}/>`);
+      this.result.push(`<${elementName}${attrs} />`);
     }
 
     return this.result.join('');
@@ -608,13 +615,6 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
   }
 
 
-  private getVidFromContent(content: string): string | undefined {
-    // Extract vid (alternate book code) from id line content
-    // Format is typically: GEN General title [VID]
-    const match = content.match(/\[([^\]]+)\]/);
-    return match ? match[1] : undefined;
-  }
-
   private getCurrentVerse(): string {
     // Extract current verse from verseSegments
     const currentVerseSegment = Array.from(this.verseSegments).pop();
@@ -628,12 +628,4 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     return true;
   }
 
-  private getCurrentMarker(): string | undefined {
-    // Get the current marker from the most recent element
-    const lastElement = this.result[this.result.length - 1];
-    if (!lastElement) return undefined;
-
-    const match = lastElement.match(/style="([^"]+)"/);
-    return match ? match[1] : undefined;
-  }
 } 

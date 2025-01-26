@@ -24,7 +24,7 @@ export type { MarkerType, CustomMarkerRule, USFMParserOptions } from './grammar'
 
 // Built-in visitors
 export { HTMLVisitor } from './grammar/visitors/HTMLVisitor';
-export { USXVisitor } from './grammar/visitors/USXVisitor';
-export { USJVisitor } from './grammar/visitors/USJVisitor'; 
+export { USXVisitor } from './grammar/visitors/USX';
+export { USJVisitor } from './grammar/visitors/USJ'; 
 export { TextVisitor } from './grammar/visitors/TextVisitor';
-export { USFMVisitor } from './grammar/visitors/USFMVisitor';
+export { USFMVisitor } from './grammar/visitors/USFM';

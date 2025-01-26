@@ -52,6 +52,106 @@
   {
     "method": "nest-50",
     "inputSize": 1649,
+    "time": 1.4853999614715576,
+    "operations": 50,
+    "opsPerMs": 33.660967616066145,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1737638668970
+  },
+  {
+    "method": "foot-50",
+    "inputSize": 1499,
+    "time": 2.4499999284744263,
+    "operations": 50,
+    "opsPerMs": 20.408163861104338,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1737638668968
+  },
+  {
+    "method": "char-100",
+    "inputSize": 1799,
+    "time": 2.1162999868392944,
+    "operations": 100,
+    "opsPerMs": 47.252280216355594,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1737638668965
+  },
+  {
+    "method": "para-100",
+    "inputSize": 2099,
+    "time": 3.333999991416931,
+    "operations": 100,
+    "opsPerMs": 29.99400127697678,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1737638668963
+  },
+  {
+    "method": "usj-vis",
+    "inputSize": 188,
+    "time": 0.5264999866485596,
+    "operations": 1,
+    "opsPerMs": 1.8993352808335457,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1737638668959
+  },
+  {
+    "method": "usx-vis",
+    "inputSize": 188,
+    "time": 3.0809000730514526,
+    "operations": 1,
+    "opsPerMs": 0.324580472033797,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1737638668958
+  },
+  {
+    "method": "html-vis",
+    "inputSize": 188,
+    "time": 0.8700000047683716,
+    "operations": 1,
+    "opsPerMs": 1.1494252810564518,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1737638668955
+  },
+  {
+    "method": "parse-lg",
+    "inputSize": 1889,
+    "time": 5.000200033187866,
+    "operations": 1,
+    "opsPerMs": 0.19999199899257875,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1737638668952
+  },
+  {
+    "method": "parse-md",
+    "inputSize": 188,
+    "time": 2.414199948310852,
+    "operations": 1,
+    "opsPerMs": 0.41421589819006993,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1737638668947
+  },
+  {
+    "method": "parse-sm",
+    "inputSize": 30,
+    "time": 1.9175000190734863,
+    "operations": 1,
+    "opsPerMs": 0.521512380731651,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1737638668944
+  },
+  {
+    "method": "nest-50",
+    "inputSize": 1649,
     "time": 1.5067999958992004,
     "operations": 50,
     "opsPerMs": 33.182904258080995,

@@ -31,18 +31,6 @@ export interface MilestoneAttributes {
   [key: string]: string | undefined;
 }
 
-export interface LinkAttributes {
-  "link-href"?: string;
-  "link-title"?: string;
-  "link-id"?: string;
-  [key: string]: string | undefined;
-}
-
-export interface PeripheralAttributes {
-  id: string;
-  [key: string]: string | undefined;
-}
-
 // Base node interface
 export interface USFMNode {
   type: USFMNodeType;
@@ -89,10 +77,6 @@ export function isMilestoneNode(node: BaseUSFMNode): node is MilestoneNode {
   return node.type === 'milestone';
 }
 
-export function isPeripheralNode(node: BaseUSFMNode): node is PeripheralNode {
-  return node.type === 'peripheral';
-}
-
 
 export interface RootNode extends USFMNode {
   type: 'root';
@@ -107,10 +91,10 @@ export interface ParagraphNode extends USFMNode {
 }
 
 export interface CharacterNode extends USFMNode {
-  type: "character";
+  type: 'character';
   marker: string;
   content: HydratedUSFMNode[];
-  attributes?: MilestoneAttributes | LinkAttributes;
+  attributes?: MilestoneAttributes;
 }
 
 export interface NoteNode extends USFMNode {
@@ -132,24 +116,6 @@ export interface MilestoneNode extends USFMNode {
   attributes?: MilestoneAttributes;
 }
 
-export interface PeripheralNode extends USFMNode {
-  type: "peripheral";
-  marker: string;
-  title: string;
-  attributes: PeripheralAttributes;
-  content: HydratedUSFMNode[];
-}
-
-export interface ListKeyNode extends CharacterNode {
-  type: "character";
-  marker: "lik";
-}
-
-export interface ListValueNode extends CharacterNode {
-  type: "character";
-  marker: string; // liv1, liv2, etc.
-}
-
 export interface AttributedNode extends USFMNode {
-  attributes?: MilestoneAttributes | LinkAttributes;
+  attributes?: MilestoneAttributes;
 } 

@@ -1,6 +1,6 @@
 import { 
   BaseUSFMVisitor,
-} from '../interfaces/USFMNodes';
+} from '../../interfaces/USFMNodes';
 import { 
   ParagraphUSFMNode, 
   CharacterUSFMNode, 
@@ -8,7 +8,7 @@ import {
   TextUSFMNode, 
   MilestoneUSFMNode, 
   PeripheralUSFMNode, 
-} from '../nodes';
+} from '../../nodes';
 
 interface USJNode {
   type: string;
@@ -138,5 +138,9 @@ export class USJVisitor implements BaseUSFMVisitor<USJNode> {
       version: '3.0',
       content: this.result
     };
+  }
+
+  getDocument(): USJNode {
+    return this.getResult();
   }
 } 

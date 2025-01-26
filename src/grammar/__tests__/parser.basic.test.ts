@@ -120,7 +120,7 @@ describe("USFMParser - Basic", () => {
     const input = String.raw`\ts-s |sid="ts_JUD_5-6"\*`;
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
-      { "type": "milestone", "marker": "ts", "milestoneType": "start", "attributes": { "sid": "ts_JUD_5-6" } }
+      { "type": "milestone", "marker": "ts-s", "milestoneType": "start", "attributes": { "sid": "ts_JUD_5-6" } }
     ]);
   });
 
@@ -128,7 +128,7 @@ describe("USFMParser - Basic", () => {
     const input = String.raw`\ts-s\*`;
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
-      { "type": "milestone", "marker": "ts", "milestoneType": "start" }
+      { "type": "milestone", "marker": "ts-s", "milestoneType": "start" }
     ]);
   });
 
@@ -142,7 +142,7 @@ describe("USFMParser - Basic", () => {
         content: [
           {
             type: "milestone",
-            marker: "ts",
+            marker: "ts-s",
             milestoneType: "start",
             attributes: {
               sid: "ts_JUD_5-6",
@@ -163,7 +163,7 @@ describe("USFMParser - Basic", () => {
         content: [
           {
             type: "milestone",
-            marker: "ts",
+            marker: "ts-s",
             milestoneType: "start",
             attributes: {
               sid: "ts_JUD_5-6",
@@ -202,13 +202,13 @@ describe("USFMParser - Basic", () => {
             "type": "text", "content": "this is some text "
           },
           {
-            "type": "milestone", "marker": "ts", "milestoneType": "start", "attributes": { "sid": "ts_JUD_5-6" }
+            "type": "milestone", "marker": "ts-s", "milestoneType": "start", "attributes": { "sid": "ts_JUD_5-6" }
           },
           {
             "type": "text", "content": " this is some text "
           },
           {
-            "type": "milestone", "marker": "ts", "milestoneType": "end"
+            "type": "milestone", "marker": "ts-e", "milestoneType": "end"
           }
         ]
       }
@@ -219,7 +219,7 @@ describe("USFMParser - Basic", () => {
     const input = String.raw`\zCustomMilestone-s |sid="ts_JUD_5-6"\*`;
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
-      { "type": "milestone", "marker": "zCustomMilestone", "milestoneType": "start", "attributes": { "sid": "ts_JUD_5-6" } }
+      { "type": "milestone", "marker": "zCustomMilestone-s", "milestoneType": "start", "attributes": { "sid": "ts_JUD_5-6" } }
     ]);
   });
 

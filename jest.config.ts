@@ -3,7 +3,7 @@ const config = {
   testEnvironment: 'node',
   verbose: true,
   testMatch: [
-    "**/__tests__/**/*test.ts"
+    "**/*.test.ts"
   ]
 }; 
 

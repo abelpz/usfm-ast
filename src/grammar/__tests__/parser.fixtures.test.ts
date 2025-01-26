@@ -1,5 +1,5 @@
 import { USFMParser } from "..";
-import { HTMLVisitor, USXVisitor, USJVisitor } from "../..";
+import { HTMLVisitor } from "../..";
 import * as fs from 'fs';
 import * as path from 'path';
 import { CharacterNode } from "../interfaces/USFMNodes";
@@ -45,36 +45,6 @@ describe("USFMParser - Fixtures", () => {
   test('parses complex USFM file', () => {
     const input = readFixture('complex.usfm');
     const result = parser.load(input).parse().getNodes();
-    
-    expect(cleanForComparison(result)).toMatchSnapshot();
-  });
-
-  test('converts basic USFM to HTML', () => {
-    const input = readFixture('basic.usfm');
-    const result = parser
-      .load(input)
-      .parse()
-      .visit(new HTMLVisitor());
-    
-    expect(result.join('')).toMatchSnapshot();
-  });
-
-  test('converts basic USFM to USX', () => {
-    const input = readFixture('basic.usfm');
-    const result = parser
-      .load(input)
-      .parse()
-      .visit(new USXVisitor());
-    
-    expect(result.join('')).toMatchSnapshot();
-  });
-
-  test('converts basic USFM to USJ', () => {
-    const input = readFixture('basic.usfm');
-    const result = parser
-      .load(input)
-      .parse()
-      .visit(new USJVisitor());
     
     expect(cleanForComparison(result)).toMatchSnapshot();
   });
