@@ -3,52 +3,77 @@ import {
   MilestoneAttributes,
   LinkAttributes
 } from '../../interfaces/USFMNodes';
-import { 
-  ParagraphUSFMNode, 
-  CharacterUSFMNode, 
-  NoteUSFMNode, 
-  TextUSFMNode, 
-  MilestoneUSFMNode, 
-  PeripheralUSFMNode, 
+import {
+  ParagraphUSFMNode,
+  CharacterUSFMNode,
+  NoteUSFMNode,
+  TextUSFMNode,
+  MilestoneUSFMNode,
 } from '../../nodes';
 
 const getMarkerInfo = (marker: string) => {
   //marker categories:
-  const bookIdentificationMarkers = new Set([
-    'id', 'usfm'
-  ]);
+  const bookIdentificationMarkers = new Set(['id', 'usfm']);
 
-  const paragraphIdentificationMarkers = new Set([
-    'ide', 'sts', 'rem', 'h', 'toc', 'toca'
-  ]);
+  const paragraphIdentificationMarkers = new Set(['ide', 'sts', 'rem', 'h', 'toc', 'toca']);
 
   const paragraphIntroductionMarkers = new Set([
-    'imt', 'imte', 'ib', 'ie', 'ili', 'imi', 'imq',
-    'im', 'io', 'iot', 'ipi', 'ipq', 'ipr', 'ip',
-    'iq', 'is', 'iex',
+    'imt',
+    'imte',
+    'ib',
+    'ie',
+    'ili',
+    'imi',
+    'imq',
+    'im',
+    'io',
+    'iot',
+    'ipi',
+    'ipq',
+    'ipr',
+    'ip',
+    'iq',
+    'is',
+    'iex',
   ]);
 
   const titlesAndSectionsMarkers = new Set([
-    'cd', 'cl', 'iex', 'ip', 'mr', 'ms', 'mte',
-    'r', 's', 'sp', 'sd', 'sr'
-  ]);
-  
-  const bodyParagraphMarkers = new Set([  
-    'b', 'cls', 'm', 'mi', 'nb', 'p', 'pc', 'ph',
-    'pi', 'pm', 'pmc', 'pmo', 'pmr', 'po', 'pr'
-  ]);
-
-  const poetryParagraphMarkers = new Set([
-    'q#', 'qa', 'qc', 'qd', 'qm#', 'qr'
-  ]);
-
-  const breakMarkers = new Set([
-    'br', 'pb'
+    'cd',
+    'cl',
+    'iex',
+    'ip',
+    'mr',
+    'ms',
+    'mte',
+    'r',
+    's',
+    'sp',
+    'sd',
+    'sr',
   ]);
 
-}
+  const bodyParagraphMarkers = new Set([
+    'b',
+    'cls',
+    'm',
+    'mi',
+    'nb',
+    'p',
+    'pc',
+    'ph',
+    'pi',
+    'pm',
+    'pmc',
+    'pmo',
+    'pmr',
+    'po',
+    'pr',
+  ]);
 
+  const poetryParagraphMarkers = new Set(['q#', 'qa', 'qc', 'qd', 'qm#', 'qr']);
 
+  const breakMarkers = new Set(['br', 'pb']);
+};
 
 /**
  * USXVisitor implements the visitor pattern to convert USFM AST nodes into USX 3.0 XML.
@@ -72,11 +97,11 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       if (idContent) {
         const [code, ...rest] = idContent.content.split(' ');
         this.bookCode = code;
-        
+
         // Add book element with required and optional attributes
         const attrs = this.buildAttributes({
           code: this.bookCode,
-          style: 'id'
+          style: 'id',
         });
         this.result.push(`<book${attrs}>${rest.join(' ')}</book>`);
         return this.result.join('');
@@ -91,7 +116,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
         if (this.currentChapter) {
           const prevEid = `${this.bookCode} ${this.currentChapter}`;
           const closeAttrs = this.buildAttributes({
-            eid: prevEid
+            eid: prevEid,
           });
           this.result.push(`<chapter${closeAttrs} />`);
         }
@@ -101,7 +126,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
         const attrs = this.buildAttributes({
           number: this.currentChapter,
           style: 'c',
-          sid
+          sid,
         });
         this.result.push(`<chapter${attrs} />`);
       }
@@ -111,9 +136,9 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     // Handle special paragraph types
     if (this.isSpecialParagraph(node.marker)) {
       const attrs = this.buildAttributes({
-        style: node.marker
+        style: node.marker,
       });
-      const elementName = "para";
+      const elementName = 'para';
       this.result.push(`<${elementName}${attrs}>`);
       node.content.forEach((child) => child.accept(this));
       this.result.push(`</${elementName}>`);
@@ -125,7 +150,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       if (!this.inTable) {
         // Start a new table if not already in one
         const tableAttrs = this.buildAttributes({
-          style: 'table'  // Default table style
+          style: 'table', // Default table style
         });
         this.result.push(`<table${tableAttrs}>`);
         this.inTable = true;
@@ -139,11 +164,16 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     }
 
     // Handle table cells
-    if (node.marker === 'tc1' || node.marker === 'tc2' || node.marker === 'tc3' || node.marker === 'tc4') {
+    if (
+      node.marker === 'tc1' ||
+      node.marker === 'tc2' ||
+      node.marker === 'tc3' ||
+      node.marker === 'tc4'
+    ) {
       if (this.inRow) {
         const attrs = this.buildAttributes({
           style: node.marker,
-          align: this.getCellAlignment(node.marker)
+          align: this.getCellAlignment(node.marker),
         });
         this.result.push(`<cell${attrs}>`);
         node.content.forEach((child) => child.accept(this));
@@ -156,7 +186,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     if (node.marker === 'bk') {
       const attrs = this.buildAttributes({
         style: node.marker,
-        'xml:space': 'preserve'  // Preserve whitespace in book names
+        'xml:space': 'preserve', // Preserve whitespace in book names
       });
       this.result.push(`<char${attrs}>`);
       node.content.forEach((child) => child.accept(this));
@@ -168,7 +198,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     if (node.marker.startsWith('pub')) {
       const attrs = this.buildAttributes({
         style: node.marker,
-        'xml:space': 'preserve'  // Preserve whitespace in publication data
+        'xml:space': 'preserve', // Preserve whitespace in publication data
       });
       this.result.push(`<para${attrs}>`);
       node.content.forEach((child) => child.accept(this));
@@ -180,7 +210,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     if (node.marker === 'esb') {
       if (!this.inSidebar) {
         const attrs = this.buildAttributes({
-          style: node.marker
+          style: node.marker,
         });
         this.result.push(`<sidebar${attrs}>`);
         this.inSidebar = true;
@@ -193,23 +223,26 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       return this.result.join('');
     }
 
-     // Close table if starting a new paragraph outside table context
+    // Close table if starting a new paragraph outside table context
     if (this.inTable && !['tr', 'tc1', 'tc2', 'tc3', 'tc4'].includes(node.marker)) {
       const tableAttrs = this.buildAttributes({
-        style: 'table'
+        style: 'table',
       });
       this.result.push(`</table>`);
       this.inTable = false;
     }
 
     // Check if paragraph starts with a verse marker
-    const startsWithVerse = (node: ParagraphUSFMNode) => node.content[0] instanceof CharacterUSFMNode &&
+    const startsWithVerse = (node: ParagraphUSFMNode) =>
+      node.content[0] instanceof CharacterUSFMNode &&
       (node.content[0] as CharacterUSFMNode).marker === 'v';
 
-        // Handle regular paragraphs
+    // Handle regular paragraphs
     const attrs = this.buildAttributes({
       style: node.marker,
-      ...(this.currentVerse && !startsWithVerse(node) ? { vid: `${this.bookCode} ${this.currentChapter}:${this.currentVerse}` } : {})
+      ...(this.currentVerse && !startsWithVerse(node)
+        ? { vid: `${this.bookCode} ${this.currentChapter}:${this.currentVerse}` }
+        : {}),
     });
 
     if (node.content.length === 0) {
@@ -218,7 +251,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     }
 
     this.result.push(`<para${attrs}>`);
-    
+
     // Process content
     node.content.forEach((child) => child.accept(this));
 
@@ -230,30 +263,35 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       }
       return next as ParagraphUSFMNode | null;
     };
-    
+
     const nextContentParagraph = getNextContentSibling(node);
-    
+
     // Only close verse if this paragraph doesn't contain any verse markers
     // and the next content isn't a verse marker
-    if (this.currentVerse && (!nextParagraph || !(nextParagraph instanceof ParagraphUSFMNode) || nextParagraph.marker === 'c' || startsWithVerse(nextParagraph))) {
+    if (
+      this.currentVerse &&
+      (!nextParagraph ||
+        !(nextParagraph instanceof ParagraphUSFMNode) ||
+        nextParagraph.marker === 'c' ||
+        startsWithVerse(nextParagraph))
+    ) {
       const verseEid = `${this.bookCode} ${this.currentChapter}:${this.currentVerse}`;
       this.result.push(`<verse eid="${verseEid}" />`);
       this.currentVerse = '';
     }
-    
+
     this.result.push('</para>');
     return this.result.join('');
   }
 
   visitCharacter(node: CharacterUSFMNode): string {
-
     const getElementName = (marker: string) => {
       const elementNames: { [key: string]: string } = {
-        'fig': 'figure',
-        'v': 'verse',
-      }
+        fig: 'figure',
+        v: 'verse',
+      };
       return elementNames[marker] || 'char';
-    }
+    };
 
     // Handle verse markers
     if (node.marker === 'v') {
@@ -274,9 +312,9 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
           style: 'v',
           sid,
           altnumber: this.getStringAttribute(node.attributes, 'altnumber'),
-          pubnumber: this.getStringAttribute(node.attributes, 'pubnumber')
+          pubnumber: this.getStringAttribute(node.attributes, 'pubnumber'),
         });
-        
+
         this.result.push(`<verse${attrs} />`);
         this.verseSegments.add(sid);
       }
@@ -285,14 +323,14 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
 
     // Handle verse segment milestones
     if (node.marker.startsWith('va')) {
-      const segmentId = node.marker.slice(2);  // Extract segment ID from va1, va2, etc.
+      const segmentId = node.marker.slice(2); // Extract segment ID from va1, va2, etc.
       const currentVerse = this.getCurrentVerse();
       const segmentSid = `${this.bookCode} ${this.currentChapter.trim()}:${currentVerse.trim()}/${segmentId}`;
-      this.verseSegments.add(segmentSid);  // Track the verse segment
+      this.verseSegments.add(segmentSid); // Track the verse segment
       const attrs = this.buildAttributes({
         style: 'va',
         sid: segmentSid,
-        ...(node.attributes || {})
+        ...(node.attributes || {}),
       });
       this.result.push(`<verse${attrs} />`);
       return this.result.join('');
@@ -303,7 +341,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       // Handle word attributes
       const attrs = this.buildAttributes({
         style: 'w',
-        ...(node.attributes || {})  // Pass through all attributes
+        ...(node.attributes || {}), // Pass through all attributes
       });
       this.result.push(`<char${attrs}>`);
       node.content.forEach((child) => child.accept(this));
@@ -315,7 +353,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       // Handle ruby glosses
       const attrs = this.buildAttributes({
         style: 'rb',
-        gloss: this.getStringAttribute(node.attributes, 'gloss')
+        gloss: this.getStringAttribute(node.attributes, 'gloss'),
       });
       this.result.push(`<char${attrs}>`);
       node.content.forEach((child) => child.accept(this));
@@ -323,14 +361,13 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       return this.result.join('');
     }
 
-    
-        // Handle quotations
+    // Handle quotations
     if (node.marker.startsWith('qt')) {
       const level = parseInt(node.marker.slice(2)) || 1;
       const attrs = this.buildAttributes({
         style: node.marker,
         level: level.toString(),
-        who: this.getStringAttribute(node.attributes, 'who')
+        who: this.getStringAttribute(node.attributes, 'who'),
       });
       this.result.push(`<qt${attrs}>`);
       node.content.forEach((child) => child.accept(this));
@@ -340,29 +377,28 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
 
     // Handle cross reference markers
     if (node.getParent()?.marker === 'x' || node.getParent()?.marker === 'f') {
-      
       const targetAttrs = this.buildAttributes({
         style: node.marker,
         ...(node.attributes || {}),
       });
       switch (node.marker) {
-        case 'xo':  // Cross reference origin
+        case 'xo': // Cross reference origin
           this.result.push(`<char${targetAttrs} closed="false">`);
           break;
-        case 'xt':  // Cross reference target
+        case 'xt': // Cross reference target
           this.result.push(`<char${targetAttrs} closed="false">`);
           break;
-        case 'fr':  // Footnote reference
+        case 'fr': // Footnote reference
           this.result.push(`<char${targetAttrs} closed="false">`);
           break;
-        case 'ft':  // Footnote target
+        case 'ft': // Footnote target
           this.result.push(`<char${targetAttrs} closed="false">`);
           break;
         default:
-           this.result.push(`<char${targetAttrs}>`);
+          this.result.push(`<char${targetAttrs}>`);
       }
 
-      node.content.forEach(child => child.accept(this));
+      node.content.forEach((child) => child.accept(this));
       this.result.push(`</char>`);
 
       return this.result.join('');
@@ -374,7 +410,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
         style: node.marker,
         loc: this.getReferenceLoc(node),
         gen: this.getStringAttribute(node.attributes, 'gen'),
-        ...(node.attributes as MilestoneAttributes | LinkAttributes || {})
+        ...((node.attributes as MilestoneAttributes | LinkAttributes) || {}),
       });
       this.result.push(`<ref${attrs}>`);
       node.content.forEach((child) => child.accept(this));
@@ -387,7 +423,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       const cellAttrs = this.buildAttributes({
         style: node.marker,
         align: this.getCellAlignment(node.marker),
-        colspan: this.getStringAttribute(node.attributes, 'colspan')
+        colspan: this.getStringAttribute(node.attributes, 'colspan'),
       });
       this.result.push(`<cell${cellAttrs}>`);
       node.content.forEach((child) => child.accept(this));
@@ -404,7 +440,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
         size: this.getStringAttribute(node.attributes, 'size'),
         loc: this.getStringAttribute(node.attributes, 'loc'),
         copy: this.getStringAttribute(node.attributes, 'copy'),
-        ref: this.getStringAttribute(node.attributes, 'ref')
+        ref: this.getStringAttribute(node.attributes, 'ref'),
       });
       this.result.push(`<figure${figureAttrs}>`);
       // Handle figure caption if present
@@ -419,7 +455,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     // Handle regular character styles (outside notes)
     const attrs = this.buildAttributes({
       style: node.marker,
-      ...(node.attributes as MilestoneAttributes | LinkAttributes || {})
+      ...((node.attributes as MilestoneAttributes | LinkAttributes) || {}),
     });
 
     this.result.push(`<char${attrs}>`);
@@ -436,7 +472,6 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
 
     this.result.push(`<note${attrs}>`);
 
-    
     // Special handling for note content markers
     node.content.forEach((child) => {
       if (child instanceof CharacterUSFMNode) {
@@ -446,7 +481,6 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       }
     });
 
-
     this.result.push('</note>');
     return this.result.join('');
   }
@@ -454,18 +488,15 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
   private getTextContent(node: CharacterUSFMNode): string {
     return node.content
       .filter((child): child is TextUSFMNode => child instanceof TextUSFMNode)
-      .map(child => child.content)
+      .map((child) => child.content)
       .join('');
   }
 
   visitText(node: TextUSFMNode): string {
-
     // Check if we need to preserve whitespace
     const preserveWhitespace = this.shouldPreserveWhitespace();
-    const content = preserveWhitespace ? 
-      node.content : 
-      node.content.replace(/\s+/g, ' ').trim();
-    
+    const content = preserveWhitespace ? node.content : node.content.replace(/\s+/g, ' ').trim();
+
     this.result.push(this.escapeXML(content));
     return this.result.join('');
   }
@@ -475,7 +506,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
 
     const attrs = this.buildAttributes({
       style: node.marker,
-      ...(node.attributes || {})
+      ...(node.attributes || {}),
     });
 
     // Handle milestone types (start/end)
@@ -488,21 +519,6 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       this.result.push(`<${elementName}${attrs} />`);
     }
 
-    return this.result.join('');
-  }
-
-  visitPeripheral(node: PeripheralUSFMNode): string {
-    const attrs = this.buildAttributes({
-      style: node.marker,
-      ...(node.attributes || {})
-    });
-
-    this.result.push(`<periph${attrs}>`);
-    if (node.title) {
-      this.result.push(`<title>${this.escapeXML(node.title)}</title>`);
-    }
-    node.content.forEach((child) => child.accept(this));
-    this.result.push('</periph>');
     return this.result.join('');
   }
 
@@ -531,27 +547,27 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
   }
 
   getDocument(): string {
-     const xmlDecl = '<?xml version="1.0" encoding="utf-8"?>';
+    const xmlDecl = '<?xml version="1.0" encoding="utf-8"?>';
     const usxStart = '<usx version="3.0">';
     const usxEnd = '</usx>';
 
-    return `${xmlDecl}\n${usxStart}\n${this.getResult()}\n${usxEnd}`
+    return `${xmlDecl}\n${usxStart}\n${this.getResult()}\n${usxEnd}`;
   }
 
   private buildAttributes(attrs: Record<string, string | undefined>): string {
     // Preserve order of attributes by using Object.keys
     const validAttrs = Object.keys(attrs)
-      .map(key => {
+      .map((key) => {
         const value = attrs[key];
         if (value === undefined) return undefined;
-        
+
         // Special handling for boolean attributes
         if (value === 'true' || value === 'false') {
           return value === 'true' ? key : undefined;
         }
         return `${key}="${this.escapeXML(value)}"`;
       })
-      .filter(attr => attr !== undefined)
+      .filter((attr) => attr !== undefined)
       .join(' ');
 
     return validAttrs ? ` ${validAttrs}` : '';
@@ -564,9 +580,9 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       '>': '&gt;',
       '"': '&quot;',
       "'": '&apos;',
-      '\u00A0': '&#160;'  // Non-breaking space
+      '\u00A0': '&#160;', // Non-breaking space
     };
-    return text.replace(/[&<>"'\u00A0]/g, char => xmlEscapes[char]);
+    return text.replace(/[&<>"'\u00A0]/g, (char) => xmlEscapes[char]);
   }
 
   private getCellAlignment(marker: string): string | undefined {
@@ -575,7 +591,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       tc1: 'start',
       tc2: 'start',
       tc3: 'center',
-      tc4: 'end'
+      tc4: 'end',
     };
     return alignments[marker];
   }
@@ -603,7 +619,10 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     return textContent;
   }
 
-  private getStringAttribute(attrs: MilestoneAttributes | undefined, key: string): string | undefined {
+  private getStringAttribute(
+    attrs: MilestoneAttributes | undefined,
+    key: string
+  ): string | undefined {
     if (!attrs) return undefined;
     const value = attrs[key];
     return typeof value === 'string' ? value : undefined;
@@ -611,14 +630,15 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
 
   private isSpecialParagraph(marker: string): boolean {
     // Check for special paragraph types including introductions and poetry
-    return /^(mt[1-4]|h[1-6]|s[1-4]|li[1-4]|q[1-3]|d|sp|cl|imt[1-4]|ip|ipi|ipq|imq|iq[1-3]|io[1-2]|ili[1-4]|pc|pr|ph[1-4]|m)$/.test(marker);
+    return /^(mt[1-4]|h[1-6]|s[1-4]|li[1-4]|q[1-3]|d|sp|cl|imt[1-4]|ip|ipi|ipq|imq|iq[1-3]|io[1-2]|ili[1-4]|pc|pr|ph[1-4]|m)$/.test(
+      marker
+    );
   }
-
 
   private getCurrentVerse(): string {
     // Extract current verse from verseSegments
     const currentVerseSegment = Array.from(this.verseSegments).pop();
-    if (!currentVerseSegment) return '1';  // Default to verse 1 if no verse found
+    if (!currentVerseSegment) return '1'; // Default to verse 1 if no verse found
     const match = currentVerseSegment.match(/:(\d+)/);
     return match ? match[1] : '1';
   }
@@ -627,5 +647,4 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     // true until we find a case for false
     return true;
   }
-
 } 

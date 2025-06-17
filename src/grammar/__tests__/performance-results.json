@@ -52,6 +52,206 @@
   {
     "method": "nest-50",
     "inputSize": 1649,
+    "time": 4.237599999999475,
+    "operations": 50,
+    "opsPerMs": 11.799131583916887,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197908353
+  },
+  {
+    "method": "foot-50",
+    "inputSize": 1499,
+    "time": 3.339299999999639,
+    "operations": 50,
+    "opsPerMs": 14.973197975625252,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197908349
+  },
+  {
+    "method": "char-100",
+    "inputSize": 1799,
+    "time": 1.8238000000001193,
+    "operations": 100,
+    "opsPerMs": 54.830573527795515,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197908346
+  },
+  {
+    "method": "para-100",
+    "inputSize": 2099,
+    "time": 3.0846999999994296,
+    "operations": 100,
+    "opsPerMs": 32.41806334490177,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197908344
+  },
+  {
+    "method": "usj-vis",
+    "inputSize": 188,
+    "time": 0.6204999999999927,
+    "operations": 1,
+    "opsPerMs": 1.611603545527819,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197908339
+  },
+  {
+    "method": "usx-vis",
+    "inputSize": 188,
+    "time": 3.144999999999527,
+    "operations": 1,
+    "opsPerMs": 0.3179650238474246,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197908338
+  },
+  {
+    "method": "html-vis",
+    "inputSize": 188,
+    "time": 0.9093000000002576,
+    "operations": 1,
+    "opsPerMs": 1.0997470581763078,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197908335
+  },
+  {
+    "method": "parse-lg",
+    "inputSize": 1889,
+    "time": 4.856999999999971,
+    "operations": 1,
+    "opsPerMs": 0.20588840848260367,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197908332
+  },
+  {
+    "method": "parse-md",
+    "inputSize": 188,
+    "time": 3.470600000000559,
+    "operations": 1,
+    "opsPerMs": 0.28813461649277905,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197908327
+  },
+  {
+    "method": "parse-sm",
+    "inputSize": 30,
+    "time": 1.842200000000048,
+    "operations": 1,
+    "opsPerMs": 0.5428292259255096,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197908323
+  },
+  {
+    "method": "nest-50",
+    "inputSize": 1649,
+    "time": 1.216099999999642,
+    "operations": 50,
+    "opsPerMs": 41.11503988160079,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197861412
+  },
+  {
+    "method": "foot-50",
+    "inputSize": 1499,
+    "time": 2.7807000000011612,
+    "operations": 50,
+    "opsPerMs": 17.981083899729967,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197861411
+  },
+  {
+    "method": "char-100",
+    "inputSize": 1799,
+    "time": 1.117500000000291,
+    "operations": 100,
+    "opsPerMs": 89.48545861295209,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197861408
+  },
+  {
+    "method": "para-100",
+    "inputSize": 2099,
+    "time": 1.3042999999997846,
+    "operations": 100,
+    "opsPerMs": 76.66947788086829,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197861407
+  },
+  {
+    "method": "usx-vis",
+    "inputSize": 188,
+    "time": 2.070399999998699,
+    "operations": 1,
+    "opsPerMs": 0.4829984544052494,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197861405
+  },
+  {
+    "method": "usj-vis",
+    "inputSize": 188,
+    "time": 0.43360000000029686,
+    "operations": 1,
+    "opsPerMs": 2.306273062729048,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197861405
+  },
+  {
+    "method": "html-vis",
+    "inputSize": 188,
+    "time": 0.7672999999995227,
+    "operations": 1,
+    "opsPerMs": 1.3032712107397655,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197861402
+  },
+  {
+    "method": "parse-lg",
+    "inputSize": 1889,
+    "time": 4.289000000000669,
+    "operations": 1,
+    "opsPerMs": 0.23315458148748985,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197861399
+  },
+  {
+    "method": "parse-md",
+    "inputSize": 188,
+    "time": 1.6627000000007683,
+    "operations": 1,
+    "opsPerMs": 0.6014314067477825,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197861395
+  },
+  {
+    "method": "parse-sm",
+    "inputSize": 30,
+    "time": 1.4094999999997526,
+    "operations": 1,
+    "opsPerMs": 0.7094714437745127,
+    "version": "current",
+    "isImportant": false,
+    "timestamp": 1750197861393
+  },
+  {
+    "method": "nest-50",
+    "inputSize": 1649,
     "time": 1.4853999614715576,
     "operations": 50,
     "opsPerMs": 33.660967616066145,

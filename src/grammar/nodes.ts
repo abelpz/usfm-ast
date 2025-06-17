@@ -1,17 +1,15 @@
 import { BaseUSFMVisitor, USFMVisitorWithContext } from './interfaces/USFMNodes';
-import type { 
-  USFMNode, 
-  ParagraphNode, 
-  CharacterNode, 
-  NoteNode, 
-  TextNode, 
-  MilestoneNode, 
-  PeripheralNode,
+import type {
+  USFMNode,
+  ParagraphNode,
+  CharacterNode,
+  NoteNode,
+  TextNode,
+  MilestoneNode,
   MilestoneAttributes,
-  PeripheralAttributes,
   USFMNodeType,
   HydratedUSFMNode,
-  RootNode
+  RootNode,
 } from './interfaces/USFMNodes';
 
 abstract class BaseUSFMNode<T extends USFMNodeType = USFMNodeType> implements HydratedUSFMNode {
@@ -45,14 +43,12 @@ export class ParagraphUSFMNode extends BaseUSFMNode<'paragraph'> {
   public marker: string;
   public content: HydratedUSFMNode[];
 
-  constructor(
-    props: {
-      marker: string;
-      content: HydratedUSFMNode[];
-      index: number;
-      parent?: HydratedUSFMNode | RootNode;
-    }
-  ) {
+  constructor(props: {
+    marker: string;
+    content: HydratedUSFMNode[];
+    index: number;
+    parent?: HydratedUSFMNode | RootNode;
+  }) {
     super(props.index, props.parent);
     this.marker = props.marker;
     this.content = props.content;
@@ -71,7 +67,7 @@ export class CharacterUSFMNode extends BaseUSFMNode implements CharacterNode {
   readonly type = 'character';
   public marker: string;
   public content: HydratedUSFMNode[];
-  public attributes?: CharacterNode['attributes']; 
+  public attributes?: CharacterNode['attributes'];
 
   constructor(props: {
     marker: string;
@@ -99,13 +95,7 @@ export class TextUSFMNode extends BaseUSFMNode implements TextNode {
   readonly type = 'text';
   public content: string;
 
-  constructor(
-    props: {
-      content: string;
-      index: number;
-      parent?: HydratedUSFMNode | RootNode;
-    }
-  ) {
+  constructor(props: { content: string; index: number; parent?: HydratedUSFMNode | RootNode }) {
     super(props.index, props.parent);
     this.content = props.content;
   }
@@ -125,15 +115,13 @@ export class NoteUSFMNode extends BaseUSFMNode implements NoteNode {
   public content: HydratedUSFMNode[];
   public caller?: string;
 
-  constructor(
-    props: {
-      marker: string;
-      content: HydratedUSFMNode[];
-      index: number;
-      caller?: string;
-      parent?: HydratedUSFMNode | RootNode;
-    }
-  ) {
+  constructor(props: {
+    marker: string;
+    content: HydratedUSFMNode[];
+    index: number;
+    caller?: string;
+    parent?: HydratedUSFMNode | RootNode;
+  }) {
     super(props.index, props.parent);
     this.marker = props.marker;
     this.content = props.content;
@@ -155,15 +143,13 @@ export class MilestoneUSFMNode extends BaseUSFMNode implements MilestoneNode {
   public milestoneType: 'start' | 'end' | 'standalone';
   public attributes?: MilestoneAttributes;
 
-  constructor(
-    props: {
-      marker: string;
-      milestoneType: 'start' | 'end' | 'standalone';
-      attributes?: MilestoneAttributes;
-      index: number;
-      parent?: HydratedUSFMNode | RootNode;
-    }
-  ) {
+  constructor(props: {
+    marker: string;
+    milestoneType: 'start' | 'end' | 'standalone';
+    attributes?: MilestoneAttributes;
+    index: number;
+    parent?: HydratedUSFMNode | RootNode;
+  }) {
     super(props.index, props.parent);
     this.marker = props.marker;
     this.milestoneType = props.milestoneType;
@@ -179,45 +165,17 @@ export class MilestoneUSFMNode extends BaseUSFMNode implements MilestoneNode {
   }
 }
 
-export class PeripheralUSFMNode extends BaseUSFMNode implements PeripheralNode {
-  readonly type = 'peripheral';
-  public marker: string;
-  public title: string;
-  public attributes: PeripheralAttributes;
-  public content: HydratedUSFMNode[];
 
-  constructor(
-    props: {
-      marker: string;
-      title: string;
-      attributes: PeripheralAttributes;
-      content: HydratedUSFMNode[];
-      index: number;
-      parent?: HydratedUSFMNode | RootNode;
-    }
-  ) {
-    super(props.index, props.parent);
-    this.marker = props.marker;
-    this.title = props.title;
-    this.attributes = props.attributes;
-    this.content = props.content;
-  }
-
-  accept<R>(visitor: BaseUSFMVisitor<R>): R {
-    return visitor.visitPeripheral(this);
-  }
-
-  acceptWithContext<R, C>(visitor: USFMVisitorWithContext<R, C>, context: C): R {
-    return visitor.visitPeripheral(this, context);
-  }
-} 
-
-export type NodeInstanceType<T extends USFMNode> = 
-  T extends CharacterNode ? CharacterUSFMNode :
-  T extends ParagraphNode ? ParagraphUSFMNode :
-  T extends TextNode ? TextUSFMNode :
-  T extends NoteNode ? NoteUSFMNode :
-  T extends MilestoneNode ? MilestoneUSFMNode :
-  T extends PeripheralNode ? PeripheralUSFMNode :
-  T extends RootNode ? RootNode :
-  never;
+export type NodeInstanceType<T extends USFMNode> = T extends CharacterNode
+  ? CharacterUSFMNode
+  : T extends ParagraphNode
+    ? ParagraphUSFMNode
+    : T extends TextNode
+      ? TextUSFMNode
+      : T extends NoteNode
+        ? NoteUSFMNode
+        : T extends MilestoneNode
+          ? MilestoneUSFMNode
+          : T extends RootNode
+            ? RootNode
+            : never;

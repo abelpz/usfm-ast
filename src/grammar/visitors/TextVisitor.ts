@@ -1,28 +1,26 @@
-import { 
+import {
   BaseUSFMVisitor,
-  ParagraphNode, 
-  CharacterNode, 
-  NoteNode, 
-  TextNode, 
-  MilestoneNode, 
-  PeripheralNode, 
-  USFMNode 
+  ParagraphNode,
+  CharacterNode,
+  NoteNode,
+  TextNode,
+  MilestoneNode,
+  USFMNode,
 } from '../interfaces/USFMNodes';
-import { 
-  ParagraphUSFMNode, 
-  CharacterUSFMNode, 
-  NoteUSFMNode, 
-  TextUSFMNode, 
-  MilestoneUSFMNode, 
-  PeripheralUSFMNode, 
+import {
+  ParagraphUSFMNode,
+  CharacterUSFMNode,
+  NoteUSFMNode,
+  TextUSFMNode,
+  MilestoneUSFMNode,
 } from '../nodes';
 
 export class TextVisitor implements BaseUSFMVisitor<string> {
   private result: string[] = [];
 
   visitParagraph(node: ParagraphUSFMNode): string {
-    if(!['m', 'p'].includes(node.marker)) {
-      return "";
+    if (!['m', 'p'].includes(node.marker)) {
+      return '';
     }
     this.result.push('\n');
     node.content.forEach((child) => child.accept(this));
@@ -30,15 +28,15 @@ export class TextVisitor implements BaseUSFMVisitor<string> {
   }
 
   visitCharacter(node: CharacterUSFMNode): string {
-    if(['v'].includes(node.marker)) {
-      return "";
+    if (['v'].includes(node.marker)) {
+      return '';
     }
     node.content.forEach((child) => child.accept(this));
     return this.result.join('');
   }
 
   visitNote(node: NoteUSFMNode): string {
-    return "";
+    return '';
   }
 
   visitText(node: TextUSFMNode): string {
@@ -47,14 +45,10 @@ export class TextVisitor implements BaseUSFMVisitor<string> {
   }
 
   visitMilestone(node: MilestoneUSFMNode): string {
-    return "";
-  }
-
-  visitPeripheral(node: PeripheralUSFMNode): string {
-    return "";
+    return '';
   }
 
   getResult(): string {
     return this.result.join('').trim();
   }
-} 
+}

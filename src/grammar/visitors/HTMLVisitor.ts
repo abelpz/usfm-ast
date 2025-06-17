@@ -1,13 +1,12 @@
 import { 
   BaseUSFMVisitor,
 } from '../interfaces/USFMNodes';
-import { 
-  ParagraphUSFMNode, 
-  CharacterUSFMNode, 
-  NoteUSFMNode, 
-  TextUSFMNode, 
-  MilestoneUSFMNode, 
-  PeripheralUSFMNode, 
+import {
+  ParagraphUSFMNode,
+  CharacterUSFMNode,
+  NoteUSFMNode,
+  TextUSFMNode,
+  MilestoneUSFMNode,
 } from '../nodes';
 
 export class HTMLVisitor implements BaseUSFMVisitor<string> {
@@ -42,13 +41,6 @@ export class HTMLVisitor implements BaseUSFMVisitor<string> {
 
   visitMilestone(node: MilestoneUSFMNode): string {
     this.result.push(`<milestone type="${node.marker}"/>`);
-    return this.result.join('');
-  }
-
-  visitPeripheral(node: PeripheralUSFMNode): string {
-    this.result.push(`<div class="peripheral ${node.marker}">`);
-    node.content.forEach((child) => child.accept(this));
-    this.result.push('</div>');
     return this.result.join('');
   }
 

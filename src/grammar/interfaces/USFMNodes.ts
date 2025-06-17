@@ -1,7 +1,13 @@
-import { CharacterUSFMNode, MilestoneUSFMNode, NoteUSFMNode, ParagraphUSFMNode, PeripheralUSFMNode, TextUSFMNode } from "../nodes";
+import {
+  CharacterUSFMNode,
+  MilestoneUSFMNode,
+  NoteUSFMNode,
+  ParagraphUSFMNode,
+  TextUSFMNode,
+} from '../nodes';
 
 // Node types and interfaces
-export type USFMNodeType = "paragraph" | "character" | "note" | "text" | "milestone" | "peripheral" | "root";
+export type USFMNodeType = 'paragraph' | 'character' | 'note' | 'text' | 'milestone' | 'root';
 
 // Visitor interfaces
 export interface BaseUSFMVisitor<T = void> {
@@ -10,7 +16,6 @@ export interface BaseUSFMVisitor<T = void> {
   visitNote(node: NoteUSFMNode): T;
   visitText(node: TextUSFMNode): T;
   visitMilestone(node: MilestoneUSFMNode): T;
-  visitPeripheral(node: PeripheralUSFMNode): T;
 }
 
 export interface USFMVisitorWithContext<T = void, C = any> {
@@ -19,7 +24,6 @@ export interface USFMVisitorWithContext<T = void, C = any> {
   visitNote(node: NoteUSFMNode, context: C): T;
   visitText(node: TextUSFMNode, context: C): T;
   visitMilestone(node: MilestoneUSFMNode, context: C): T;
-  visitPeripheral(node: PeripheralUSFMNode, context: C): T;
 }
 
 // Node attributes
@@ -39,10 +43,10 @@ export interface USFMNode {
   attributes?: MilestoneAttributes;
 }
 
-export type HydratedUSFMNode = HydratedNode & Omit<USFMNode, 'content'> & {
-  content?: Array<HydratedUSFMNode> | string;
-};
-
+export type HydratedUSFMNode = HydratedNode &
+  Omit<USFMNode, 'content'> & {
+    content?: Array<HydratedUSFMNode> | string;
+  };
 
 export type HydratedNode = {
   getChildren(): USFMNode[] | string;
@@ -51,11 +55,19 @@ export type HydratedNode = {
   getPreviousSibling(): USFMNode | string | undefined;
   accept<R>(visitor: BaseUSFMVisitor<R>): R;
   acceptWithContext<R, C>(visitor: USFMVisitorWithContext<R, C>, context: C): R;
-}
+};
 
 export type BaseUSFMNode = {
-  type: 'paragraph' | 'character' | 'text' | 'note' | 'milestone' | 'peripheral' | 'root';
-} & Omit<USFMNode, 'accept' | 'acceptWithContext' | 'getChildren' | 'getParent' | 'getNextSibling' | 'getPreviousSibling'>;
+  type: 'paragraph' | 'character' | 'text' | 'note' | 'milestone' | 'root';
+} & Omit<
+  USFMNode,
+  | 'accept'
+  | 'acceptWithContext'
+  | 'getChildren'
+  | 'getParent'
+  | 'getNextSibling'
+  | 'getPreviousSibling'
+>;
 
 export function isParagraphNode(node: BaseUSFMNode): node is ParagraphNode {
   return node.type === 'paragraph';
@@ -77,7 +89,6 @@ export function isMilestoneNode(node: BaseUSFMNode): node is MilestoneNode {
   return node.type === 'milestone';
 }
 
-
 export interface RootNode extends USFMNode {
   type: 'root';
   content: HydratedUSFMNode[];
@@ -85,7 +96,7 @@ export interface RootNode extends USFMNode {
 
 // Specific node types
 export interface ParagraphNode extends USFMNode {
-  type: "paragraph";
+  type: 'paragraph';
   marker: string;
   content: HydratedUSFMNode[];
 }
@@ -98,24 +109,24 @@ export interface CharacterNode extends USFMNode {
 }
 
 export interface NoteNode extends USFMNode {
-  type: "note";
+  type: 'note';
   marker: string;
   caller?: string;
   content: HydratedUSFMNode[];
 }
 
 export interface TextNode extends USFMNode {
-  type: "text";
+  type: 'text';
   content: string;
 }
 
 export interface MilestoneNode extends USFMNode {
-  type: "milestone";
+  type: 'milestone';
   marker: string;
-  milestoneType: "start" | "end" | "standalone";
+  milestoneType: 'start' | 'end' | 'standalone';
   attributes?: MilestoneAttributes;
 }
 
 export interface AttributedNode extends USFMNode {
   attributes?: MilestoneAttributes;
-} 
+}

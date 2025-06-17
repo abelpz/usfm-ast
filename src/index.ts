@@ -1,21 +1,18 @@
 // Core interfaces and types
-export { 
+export {
   BaseUSFMVisitor,
   USFMVisitorWithContext,
   USFMNodeType,
   MilestoneAttributes,
-  LinkAttributes,
-  PeripheralAttributes,
   USFMNode,
   ParagraphNode,
   CharacterNode,
   NoteNode,
   TextNode,
   MilestoneNode,
-  PeripheralNode,
   ListKeyNode,
   ListValueNode,
-  AttributedNode
+  AttributedNode,
 } from './grammar/interfaces/USFMNodes';
 
 // Parser and options

@@ -1,13 +1,12 @@
 import { 
   BaseUSFMVisitor,
 } from '../../interfaces/USFMNodes';
-import { 
-  ParagraphUSFMNode, 
-  CharacterUSFMNode, 
-  NoteUSFMNode, 
-  TextUSFMNode, 
-  MilestoneUSFMNode, 
-  PeripheralUSFMNode, 
+import {
+  ParagraphUSFMNode,
+  CharacterUSFMNode,
+  NoteUSFMNode,
+  TextUSFMNode,
+  MilestoneUSFMNode,
 } from '../../nodes';
 
 interface USJNode {
@@ -110,26 +109,6 @@ export class USJVisitor implements BaseUSFMVisitor<USJNode> {
       this.result.push(msNode);
     }
     return msNode;
-  }
-
-  visitPeripheral(node: PeripheralUSFMNode): USJNode {
-    const periphNode: USJNode = {
-      type: 'peripheral',
-      marker: node.marker,
-      title: node.title,
-      content: []
-    };
-    const prevNode = this.currentNode;
-    this.currentNode = periphNode;
-    node.content.forEach((child) => child.accept(this));
-    this.currentNode = prevNode;
-    
-    if (prevNode && prevNode.content) {
-      prevNode.content.push(periphNode);
-    } else {
-      this.result.push(periphNode);
-    }
-    return periphNode;
   }
 
   getResult(): USJNode {
