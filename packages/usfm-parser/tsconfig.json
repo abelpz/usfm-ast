@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "module": "commonjs",
+    "noEmit": false
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "**/*.test.ts", "**/*.spec.ts"],
+  "references": [{ "path": "../shared-types" }]
+}

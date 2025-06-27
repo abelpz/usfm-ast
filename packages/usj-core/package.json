@@ -1,0 +1,46 @@
+{
+  "name": "@usj-tools/core",
+  "version": "0.1.0",
+  "description": "USJ manipulation and utilities",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "usfm",
+    "usj",
+    "scripture",
+    "bible",
+    "parser"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/usfm-usj-monorepo.git",
+    "directory": "packages/usj-core"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

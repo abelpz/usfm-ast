@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "module": "commonjs"
+  },
+  "include": ["src/**/*", "types/**/*"],
+  "exclude": ["dist", "**/*.test.ts", "**/*.spec.ts"],
+  "references": [
+    { "path": "../shared-types" },
+    { "path": "../usfm-parser" },
+    { "path": "../usfm-formatter" }
+  ]
+}
