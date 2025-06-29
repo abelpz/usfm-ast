@@ -67,23 +67,22 @@ function validateAllRulesCompliance(rules: USFMFormattingRule[]): void {
 export const coreUSFMFormattingRules: USFMFormattingRule[] = [
   // === SAME-LINE CONTENT MARKERS (HIGHEST PRIORITY) ===
 
-  // ID marker at document start - no newline before, space after
+  // ID marker
   {
-    id: 'id-document-start',
-    name: 'ID Marker at Document Start',
-    description: 'ID marker at document start requires content on same line',
+    id: 'id-marker',
+    name: 'ID Marker',
+    description: 'ID marker requires content on same line',
     priority: 200,
     applies: {
       marker: 'id',
-      context: { isDocumentStart: true },
     },
     whitespace: {
-      before: '', // No whitespace before document start
+      before: '', // No whitespace before ID marker
       after: ' ', // Single space after marker
     },
   },
 
-  // Chapter markers - newline before (except document start), space after, content on same line
+  // Chapter markers - newline before, space after, content on same line
   {
     id: 'chapter-marker',
     name: 'Chapter Marker',
@@ -92,22 +91,6 @@ export const coreUSFMFormattingRules: USFMFormattingRule[] = [
     applies: { marker: 'c' },
     whitespace: {
       before: '\n', // Newline before chapter
-      after: ' ', // Single space after marker
-    },
-  },
-
-  // Chapter marker at document start
-  {
-    id: 'chapter-document-start',
-    name: 'Chapter at Document Start',
-    description: 'Chapter marker at document start',
-    priority: 190,
-    applies: {
-      marker: 'c',
-      context: { isDocumentStart: true },
-    },
-    whitespace: {
-      before: '', // No newline before document start
       after: ' ', // Single space after marker
     },
   },
@@ -172,22 +155,6 @@ export const coreUSFMFormattingRules: USFMFormattingRule[] = [
   ),
 
   // === PARAGRAPH MARKERS ===
-
-  // Paragraph markers at document start
-  {
-    id: 'paragraph-document-start',
-    name: 'Paragraph at Document Start',
-    description: 'First paragraph has no newline before',
-    priority: 150,
-    applies: {
-      type: MarkerTypeEnum.PARAGRAPH,
-      context: { isDocumentStart: true },
-    },
-    whitespace: {
-      before: '', // No newline before first paragraph
-      after: ' ', // Space after for content
-    },
-  },
 
   // Paragraph markers - general rule (can have content on new line)
   {

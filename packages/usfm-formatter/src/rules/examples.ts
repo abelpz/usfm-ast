@@ -101,9 +101,7 @@ export const documentStartRule: USFMFormattingRule = {
   applies: {
     marker: 'id',
     type: MarkerTypeEnum.PARAGRAPH,
-    context: {
-      isDocumentStart: true,
-    },
+    context: {},
   },
   whitespace: {
     before: '', // No whitespace before document start

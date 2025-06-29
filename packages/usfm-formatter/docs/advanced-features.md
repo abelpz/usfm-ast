@@ -1,657 +1,595 @@
-# Advanced USFM Formatter Features
+# Advanced Features
 
-This guide covers the advanced features implemented in `@usfm-tools/formatter` for sophisticated USFM text formatting.
+This guide covers advanced usage patterns and features of the @usfm-tools/formatter package.
 
-## Overview of New Features
+## Configuration Options
 
-The formatter now includes several advanced capabilities:
-
-1. **Context-Aware Rules** - Rules that apply based on document structure and marker relationships
-2. **Pattern-Based Matching** - Use regular expressions to match multiple related markers
-3. **FormattingFunction Interface** - Dynamic formatting functions for complex scenarios
-4. **Enhanced Priority System** - Sophisticated rule precedence handling
-5. **Content Pattern Matching** - Rules based on marker content patterns
-
-## Context-Aware Rules
-
-### Basic Context Conditions
-
-Context conditions allow rules to apply only when specific document structure conditions are met:
+### Complete Options Reference
 
 ```typescript
-import { USFMFormattingRule } from '@usfm-tools/formatter';
-
-// Rule applies only when verse follows chapter
-const verseAfterChapterRule: USFMFormattingRule = {
-  id: 'verse-after-chapter',
-  name: 'Verse After Chapter',
-  priority: 150,
-  applies: {
-    marker: 'v',
-    context: {
-      previousMarker: 'c'
-    }
-  },
-  whitespace: {
-    before: ' ',   // Space instead of newline after chapter
-    after: ' '
-  }
-};
-```
-
-### Multiple Previous Markers
-
-Use arrays to match multiple possible previous markers:
-
-```typescript
-const verseAfterHeadersRule: USFMFormattingRule = {
-  id: 'verse-after-headers',
-  name: 'Verse After Headers',
-  priority: 140,
-  applies: {
-    marker: 'v',
-    context: {
-      previousMarker: ['c', 's1', 's2', 'mt1', 'mt2']  // Any of these
-    }
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
-```
-
-### Hierarchical Context (Ancestor Markers)
-
-Rules can apply based on the marker hierarchy (what section the marker is inside):
-
-```typescript
-const verseInPoetryRule: USFMFormattingRule = {
-  id: 'verse-in-poetry',
-  name: 'Verse in Poetry Context',
-  priority: 130,
-  applies: {
-    marker: 'v',
-    context: {
-      ancestorMarkers: ['q', 'q1', 'q2']  // Inside any poetry section
-    }
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
-
-const listItemInSectionRule: USFMFormattingRule = {
-  id: 'list-in-section',
-  name: 'List Item in Section',
-  priority: 120,
-  applies: {
-    marker: 'li1',
-    context: {
-      ancestorMarkers: ['s1']  // Inside a section header
-    }
-  },
-  whitespace: {
-    before: '\n\n',  // Extra spacing in sections
-    after: ' '
-  }
-};
-```
-
-### Document Position Context
-
-Handle special cases for document start and other positions:
-
-```typescript
-const documentStartRule: USFMFormattingRule = {
-  id: 'document-start-id',
-  name: 'Document Start ID',
-  priority: 200,
-  applies: {
-    marker: 'id',
-    context: {
-      isDocumentStart: true
-    }
-  },
-  whitespace: {
-    before: '',  // No spacing at document start
-    after: ' '
-  }
-};
-
-const notDocumentStartRule: USFMFormattingRule = {
-  id: 'regular-id',
-  name: 'Regular ID Marker',
-  priority: 100,
-  applies: {
-    marker: 'id',
-    context: {
-      isDocumentStart: false  // Not at document start
-    }
-  },
-  whitespace: {
-    before: '\n\n',  // More spacing for mid-document ID
-    after: ' '
-  }
-};
-```
-
-### Content-Based Context
-
-Rules can apply based on the content of markers:
-
-```typescript
-const shortContentRule: USFMFormattingRule = {
-  id: 'short-verse-content',
-  name: 'Short Verse Content',
-  priority: 120,
-  applies: {
-    marker: 'v',
-    context: {
-      hasContent: true,
-      contentPattern: /^.{1,20}$/  // Very short content (1-20 chars)
-    }
-  },
-  whitespace: {
-    before: ' ',
-    after: ' '
-  }
-};
-
-const numericContentRule: USFMFormattingRule = {
-  id: 'numeric-verse',
-  name: 'Numeric Verse Pattern',
-  priority: 110,
-  applies: {
-    marker: 'v',
-    context: {
-      contentPattern: /^\d+\s/  // Starts with number and space
-    }
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
-
-const emptyContentRule: USFMFormattingRule = {
-  id: 'empty-marker',
-  name: 'Empty Marker',
-  priority: 90,
-  applies: {
-    marker: 'p',
-    context: {
-      hasContent: false  // No content
-    }
-  },
-  whitespace: {
-    before: '\n',
-    after: ''  // No space after empty paragraphs
-  }
-};
-```
-
-## Pattern-Based Rules
-
-Use regular expressions to match multiple related markers efficiently:
-
-### Poetry Patterns
-
-```typescript
-const allPoetryRule: USFMFormattingRule = {
-  id: 'all-poetry-markers',
-  name: 'All Poetry Formatting',
-  priority: 90,
-  applies: {
-    pattern: /^q\d*$/  // Matches q, q1, q2, q3, etc.
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
-
-const poetryWithIndentRule: USFMFormattingRule = {
-  id: 'poetry-with-indent',
-  name: 'Poetry with Indentation',
-  priority: 85,
-  applies: {
-    pattern: /^q[2-9]$/  // Only q2, q3, etc. (not q or q1)
-  },
-  whitespace: {
-    before: '\n',
-    after: '  '  // Extra space for indentation levels
-  }
-};
-```
-
-### List Patterns
-
-```typescript
-const allListsRule: USFMFormattingRule = {
-  id: 'all-list-items',
-  name: 'All List Items',
-  priority: 85,
-  applies: {
-    pattern: /^li\d*$/  // Matches li, li1, li2, li3, etc.
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
-
-const nestedListsRule: USFMFormattingRule = {
-  id: 'nested-lists',
-  name: 'Nested List Items',
-  priority: 80,
-  applies: {
-    pattern: /^li[2-9]$/  // li2, li3, etc. (nested)
-  },
-  whitespace: {
-    before: '\n',
-    after: '  '  // Extra indentation
-  }
-};
-```
-
-### Section Header Patterns
-
-```typescript
-const allSectionsRule: USFMFormattingRule = {
-  id: 'all-sections',
-  name: 'All Section Headers',
-  priority: 80,
-  applies: {
-    pattern: /^s\d*$/  // s, s1, s2, s3, s4
-  },
-  whitespace: {
-    before: '\n\n',  // Double line break for sections
-    after: '\n'
-  }
-};
-
-const majorSectionsRule: USFMFormattingRule = {
-  id: 'major-sections',
-  name: 'Major Section Headers',
-  priority: 75,
-  applies: {
-    pattern: /^(s|s1)$/  // Only s and s1 (major sections)
-  },
-  whitespace: {
-    before: '\n\n\n',  // Triple line break for major sections
-    after: '\n'
-  }
-};
-```
-
-### Complex Patterns
-
-```typescript
-const titlePatternsRule: USFMFormattingRule = {
-  id: 'title-patterns',
-  name: 'Title Patterns',
-  priority: 75,
-  applies: {
-    pattern: /^(mt|mte|ms|mr)\d*$/  // All title types with optional numbers
-  },
-  whitespace: {
-    before: '\n\n',
-    after: '\n'
-  }
-};
-
-const footnotePatternRule: USFMFormattingRule = {
-  id: 'footnote-patterns',
-  name: 'Footnote Patterns',
-  priority: 70,
-  applies: {
-    pattern: /^f[entx]?$/  // f, fe, fn, ft, fx
-  },
-  whitespace: {
-    before: '',
-    after: ' '
-  }
-};
-```
-
-## Complex Context Combinations
-
-Combine multiple context conditions for sophisticated rule matching:
-
-```typescript
-const complexContextRule: USFMFormattingRule = {
-  id: 'complex-verse-rule',
-  name: 'Complex Verse Context',
-  priority: 160,
-  applies: {
-    marker: 'v',
-    context: {
-      previousMarker: ['p', 'm'],        // Previous is paragraph or margin
-      ancestorMarkers: ['q1'],           // Inside q1 poetry
-      hasContent: true,                  // Has content
-      contentPattern: /^\d+\s\w+/,      // Number, space, then word
-      isDocumentStart: false             // Not at document start
-    }
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
-
-const contextWithPatternRule: USFMFormattingRule = {
-  id: 'poetry-after-section',
-  name: 'Poetry After Section',
-  priority: 140,
-  applies: {
-    pattern: /^q\d*$/,                   // Any poetry marker
-    context: {
-      previousMarker: ['s1', 's2'],     // After section headers
-      isDocumentStart: false
-    }
-  },
-  whitespace: {
-    before: '\n\n',  // Extra space after sections
-    after: ' '
-  }
-};
-```
-
-## FormattingFunction Interface
-
-For dynamic formatting that can't be expressed with static rules:
-
-```typescript
-import { FormattingFunction, FormattingContext } from '@usfm-tools/formatter';
-
-// Custom formatting function
-const dynamicVerseFormatter: FormattingFunction = (
-  marker: string, 
-  position: 'before' | 'after', 
-  context: FormattingContext
-): string => {
-  if (marker !== 'v') return '';
+interface USFMFormatterOptions {
+  // Structural formatting choices
+  paragraphContentOnNewLine?: boolean;   // Default: false
+  versesOnNewLine?: boolean;             // Default: true
+  characterMarkersOnNewLine?: boolean;   // Default: false
+  noteMarkersOnNewLine?: boolean;        // Default: false
   
-  // Dynamic logic based on context
-  if (context.ancestorMarkers?.includes('q1')) {
-    // In poetry, verses get newlines
-    return position === 'before' ? '\n' : ' ';
-  }
+  // Line length management
+  maxLineLength?: number;                // Default: 0 (unlimited)
+  splitLongLines?: boolean;              // Default: false
   
-  if (context.previousMarker === 'c') {
-    // After chapter, verses get spaces
-    return position === 'before' ? ' ' : ' ';
-  }
-  
-  // Default verse formatting
-  return position === 'before' ? '\n' : ' ';
-};
+  // Custom marker definitions
+  customMarkers?: Record<string, USFMMarkerInfo>;
+}
 
-// Rule using formatting function
-const dynamicVerseRule: USFMFormattingRule = {
-  id: 'dynamic-verse',
-  name: 'Dynamic Verse Formatting',
-  priority: 200,
-  applies: { marker: 'v' },
-  formattingFunction: dynamicVerseFormatter
-};
+interface USFMMarkerInfo {
+  type: 'paragraph' | 'character' | 'note' | 'milestone';
+  hasSpecialContent?: boolean;
+}
 ```
 
-### Advanced FormattingFunction Examples
+### Dynamic Option Updates
 
 ```typescript
-// Content-aware formatting
-const contentAwareFormatter: FormattingFunction = (marker, position, context) => {
-  if (marker === 'v' && context.contentPattern) {
-    const content = context.contentPattern;
+const formatter = new USFMFormatter();
+
+// Check current configuration
+console.log(formatter.getOptions());
+
+// Update specific options
+formatter.updateOptions({ 
+  versesOnNewLine: false,
+  characterMarkersOnNewLine: true 
+});
+
+// Options affect all subsequent formatting
+let result = formatter.addMarker('\p Text ', 'v').normalizedOutput;
+// Now verses will be inline due to versesOnNewLine: false
+```
+
+### Configuration Presets
+
+```typescript
+// Bible study preset
+const studyBibleOptions: USFMFormatterOptions = {
+  versesOnNewLine: true,
+  paragraphContentOnNewLine: false,
+  characterMarkersOnNewLine: false,
+  noteMarkersOnNewLine: false,
+  customMarkers: {
+    'study-note': { type: 'note' },
+    'cross-ref': { type: 'note' },
+    'commentary': { type: 'note' }
+  }
+};
+
+// Poetry-focused preset
+const poetryOptions: USFMFormatterOptions = {
+  versesOnNewLine: false,  // Keep verses inline in poetry
+  paragraphContentOnNewLine: true,
+  characterMarkersOnNewLine: false,
+  customMarkers: {
+    'stanza-break': { type: 'paragraph' },
+    'refrain': { type: 'paragraph' }
+  }
+};
+
+// Use presets
+const studyFormatter = new USFMFormatter(studyBibleOptions);
+const poetryFormatter = new USFMFormatter(poetryOptions);
+```
+
+## Custom Marker System
+
+### Marker Type Effects
+
+Different marker types have different formatting behaviors:
+
+```typescript
+const formatter = new USFMFormatter({
+  customMarkers: {
+    'my-para': { type: 'paragraph' },      // Gets newlines before
+    'my-char': { type: 'character' },      // Inline by default
+    'my-note': { type: 'note' },           // Inline, can contain other markers
+    'my-mile': { type: 'milestone' }       // Self-contained, no content
+  }
+});
+
+// Paragraph markers automatically get structural whitespace
+let text = formatter.addMarker('content', 'my-para').normalizedOutput;
+// Result: "content\nmy-para "
+
+// Character markers stay inline
+text = formatter.addMarker('content', 'my-char').normalizedOutput;
+// Result: "content \my-char "
+
+// Note markers are inline but can be configured
+text = formatter.addMarker('content', 'my-note').normalizedOutput;
+// Result: "content \my-note "
+```
+
+### Special Content Markers
+
+Some markers have special content handling:
+
+```typescript
+const formatter = new USFMFormatter({
+  customMarkers: {
+    'verse-ref': { 
+      type: 'character',
+      hasSpecialContent: true  // Like verse numbers
+    }
+  }
+});
+
+// Special content markers get extra structural spacing
+let result = formatter.addMarker('', 'verse-ref').normalizedOutput;
+result = formatter.addTextContent(result, '1').normalizedOutput;
+// Result: "\verse-ref 1 " (note the extra space after content)
+```
+
+### Runtime Marker Management
+
+```typescript
+const formatter = new USFMFormatter();
+
+// Add markers during execution
+formatter.addCustomMarker('dynamic-marker', { type: 'character' });
+
+// Check if marker was inferred
+if (formatter.hasInferredMarkers()) {
+  const inferred = formatter.getInferredMarkers();
+  console.log('Inferred markers:', inferred);
+  
+  // Save inferred markers for production use
+  const prodFormatter = new USFMFormatter({
+    customMarkers: inferred
+  });
+}
+
+// Clear inferred markers if needed
+formatter.clearInferredMarkers();
+```
+
+## Advanced Text Processing
+
+### Handling Complex Content
+
+```typescript
+const formatter = new USFMFormatter();
+
+// Build complex nested structures
+let text = '';
+text = formatter.addMarker(text, 'p').normalizedOutput;
+text = formatter.addMarker(text, 'v').normalizedOutput;
+text = formatter.addTextContent(text, '1 Jesus said to them, ').normalizedOutput;
+
+// Nested quote with emphasis
+text = formatter.addMarker(text, 'qt').normalizedOutput;
+text = formatter.addTextContent(text, 'Truly I say to you, ').normalizedOutput;
+
+// Emphasis within quote
+text = formatter.addMarker(text, 'em').normalizedOutput;
+text = formatter.addTextContent(text, 'whoever').normalizedOutput;
+text = formatter.addMarker(text, 'em', true).normalizedOutput;
+
+text = formatter.addTextContent(text, ' believes will have eternal life').normalizedOutput;
+text = formatter.addMarker(text, 'qt', true).normalizedOutput;
+
+text = formatter.addTextContent(text, '.').normalizedOutput;
+
+console.log(text);
+// \p
+// \v 1 Jesus said to them, \qt Truly I say to you, \em whoever\em* believes will have eternal life\qt*.
+```
+
+### Attribute Management
+
+```typescript
+const formatter = new USFMFormatter();
+
+// Multiple attributes
+const complexAttributes = {
+  lemma: 'believe',
+  strong: 'G4100',
+  morph: 'V-PAI-3S',
+  src: 'UBS5'
+};
+
+let text = formatter.addMarker('text ', 'w').normalizedOutput;
+text = formatter.addAttributes(text, complexAttributes).normalizedOutput;
+text = formatter.addTextContent(text, 'believes').normalizedOutput;
+text = formatter.addMarker(text, 'w', true).normalizedOutput;
+
+console.log(text);
+// text \w |lemma="believe" strong="G4100" morph="V-PAI-3S" src="UBS5"believes\w*
+
+// Attributes with special characters
+const specialAttributes = {
+  'x-pronunciation': '/bɪˈliːv/',
+  'data-custom': 'value with spaces'
+};
+
+text = formatter.addMarker('', 'w').normalizedOutput;
+text = formatter.addAttributes(text, specialAttributes).normalizedOutput;
+text = formatter.addTextContent(text, 'word').normalizedOutput;
+text = formatter.addMarker(text, 'w', true).normalizedOutput;
+
+console.log(text);
+// \w |x-pronunciation="/bɪˈliːv/" data-custom="value with spaces"word\w*
+```
+
+## Performance Optimization
+
+### Efficient Building Patterns
+
+```typescript
+// ✅ Good: Build incrementally
+const formatter = new USFMFormatter();
+let result = '';
+result = formatter.addMarker(result, 'p').normalizedOutput;
+result = formatter.addMarker(result, 'v').normalizedOutput;
+result = formatter.addTextContent(result, '1 Text').normalizedOutput;
+
+// ✅ Good: Reuse formatter instance
+const formatter = new USFMFormatter();
+const verses = ['1 First verse', '2 Second verse', '3 Third verse'];
+let chapter = formatter.addMarker('', 'p').normalizedOutput;
+
+for (const verse of verses) {
+  chapter = formatter.addMarker(chapter, 'v').normalizedOutput;
+  chapter = formatter.addTextContent(chapter, verse).normalizedOutput;
+}
+
+// ❌ Avoid: Creating new formatter instances
+verses.forEach(verse => {
+  const newFormatter = new USFMFormatter(); // Wasteful
+  // ...
+});
+```
+
+### Batch Processing
+
+```typescript
+interface USFMDocument {
+  id: string;
+  title: string;
+  chapters: Array<{
+    number: string;
+    verses: Array<{ number: string; text: string; }>;
+  }>;
+}
+
+function buildDocument(doc: USFMDocument, formatter: USFMFormatter): string {
+  let usfm = '';
+  
+  // Document header
+  usfm = formatter.addMarker(usfm, 'id').normalizedOutput;
+  usfm = formatter.addTextContent(usfm, doc.id).normalizedOutput;
+  
+  usfm = formatter.addMarker(usfm, 'mt1').normalizedOutput;
+  usfm = formatter.addTextContent(usfm, doc.title).normalizedOutput;
+  
+  // Process chapters
+  for (const chapter of doc.chapters) {
+    usfm = formatter.addMarker(usfm, 'c').normalizedOutput;
+    usfm = formatter.addTextContent(usfm, chapter.number).normalizedOutput;
     
-    // Very short verses get inline formatting
-    if (content.length <= 10) {
-      return position === 'before' ? ' ' : ' ';
-    }
+    usfm = formatter.addMarker(usfm, 'p').normalizedOutput;
     
-    // Long verses get block formatting
-    if (content.length > 100) {
-      return position === 'before' ? '\n\n' : '\n';
+    // Process verses
+    for (const verse of chapter.verses) {
+      usfm = formatter.addMarker(usfm, 'v').normalizedOutput;
+      usfm = formatter.addTextContent(usfm, `${verse.number} ${verse.text}`).normalizedOutput;
     }
   }
   
-  return position === 'before' ? '\n' : ' ';
-};
+  return usfm;
+}
 
-// Hierarchical formatting
-const hierarchyFormatter: FormattingFunction = (marker, position, context) => {
-  const depth = context.ancestorMarkers?.length || 0;
-  
-  if (position === 'before') {
-    // More indentation for deeper nesting
-    return '\n' + '  '.repeat(depth);
-  }
-  
-  return ' ';
-};
-
-// Conditional formatting based on next marker
-const nextMarkerFormatter: FormattingFunction = (marker, position, context) => {
-  if (marker === 'p' && position === 'after') {
-    // No space if next marker is verse
-    if (context.nextMarker === 'v') {
-      return '';
-    }
-    
-    // Extra space if next marker is section
-    if (context.nextMarker?.match(/^s\d*$/)) {
-      return '\n';
-    }
-  }
-  
-  return ' ';
-};
+// Usage
+const formatter = new USFMFormatter();
+const documents = [doc1, doc2, doc3]; // Array of documents
+const formattedDocs = documents.map(doc => buildDocument(doc, formatter));
 ```
 
-## Priority System and Rule Ordering
+## Integration Patterns
 
-The priority system determines which rule applies when multiple rules match:
-
-```typescript
-const ruleSet: USFMFormattingRule[] = [
-  // Highest priority: specific context overrides
-  {
-    id: 'verse-after-chapter-override',
-    priority: 200,
-    applies: { 
-      marker: 'v', 
-      context: { previousMarker: 'c' } 
-    },
-    whitespace: { before: ' ', after: ' ' }
-  },
-  
-  // High priority: pattern with context
-  {
-    id: 'poetry-verse-pattern',
-    priority: 150,
-    applies: { 
-      marker: 'v',
-      context: { ancestorMarkers: ['q'] }
-    },
-    whitespace: { before: '\n', after: ' ' }
-  },
-  
-  // Medium priority: general pattern
-  {
-    id: 'all-verses',
-    priority: 100,
-    applies: { marker: 'v' },
-    whitespace: { before: '\n', after: ' ' }
-  },
-  
-  // Low priority: fallback
-  {
-    id: 'default-character',
-    priority: 50,
-    applies: { pattern: /.*/ },  // Matches everything
-    whitespace: { before: ' ', after: ' ' }
-  }
-];
-```
-
-## Real-World Examples
-
-### Bible Translation Rules
-
-```typescript
-const bibleTranslationRules: USFMFormattingRule[] = [
-  // Document structure
-  {
-    id: 'book-id',
-    priority: 200,
-    applies: { marker: 'id', context: { isDocumentStart: true } },
-    whitespace: { before: '', after: ' ' }
-  },
-  
-  // Chapter formatting
-  {
-    id: 'chapter-major-break',
-    priority: 180,
-    applies: { marker: 'c' },
-    whitespace: { before: '\n\n', after: ' ' }
-  },
-  
-  // Verse formatting with context
-  {
-    id: 'verse-after-chapter',
-    priority: 170,
-    applies: { marker: 'v', context: { previousMarker: 'c' } },
-    whitespace: { before: ' ', after: ' ' }
-  },
-  {
-    id: 'verse-in-poetry',
-    priority: 160,
-    applies: { marker: 'v', context: { ancestorMarkers: ['q'] } },
-    whitespace: { before: '\n', after: ' ' }
-  },
-  {
-    id: 'verse-default',
-    priority: 100,
-    applies: { marker: 'v' },
-    whitespace: { before: '\n', after: ' ' }
-  },
-  
-  // Poetry formatting
-  {
-    id: 'poetry-lines',
-    priority: 90,
-    applies: { pattern: /^q\d*$/ },
-    whitespace: { before: '\n', after: ' ' }
-  },
-  
-  // Paragraph formatting
-  {
-    id: 'paragraphs',
-    priority: 80,
-    applies: { marker: 'p' },
-    whitespace: { before: '\n', after: '' }
-  }
-];
-```
-
-### Study Bible Rules
-
-```typescript
-const studyBibleRules: USFMFormattingRule[] = [
-  // Section headers with extra spacing
-  {
-    id: 'major-sections',
-    priority: 150,
-    applies: { pattern: /^s1?$/ },
-    whitespace: { before: '\n\n\n', after: '\n' }
-  },
-  
-  // Footnotes with special handling
-  {
-    id: 'footnotes',
-    priority: 140,
-    applies: { pattern: /^f[entx]?$/ },
-    whitespace: { before: '', after: ' ' }
-  },
-  
-  // Cross-references
-  {
-    id: 'cross-refs',
-    priority: 130,
-    applies: { marker: 'x' },
-    whitespace: { before: '', after: ' ' }
-  },
-  
-  // Lists with proper indentation
-  {
-    id: 'list-items-level1',
-    priority: 120,
-    applies: { marker: 'li1' },
-    whitespace: { before: '\n', after: ' ' }
-  },
-  {
-    id: 'list-items-nested',
-    priority: 110,
-    applies: { pattern: /^li[2-9]$/ },
-    whitespace: { before: '\n', after: '  ' }
-  }
-];
-```
-
-## Testing Your Rules
-
-Always test your rules with sample USFM:
+### With AST/Parser Integration
 
 ```typescript
 import { USFMFormatter } from '@usfm-tools/formatter';
-import { USFMParser } from '@usfm-tools/parser';
 
-function testRules(rules: USFMFormattingRule[], testUSFM: string) {
-  const parser = new USFMParser();
-  const formatter = new USFMFormatter(rules);
+// Integrate with AST visitors or parsers
+class USFMBuilder {
+  private result = '';
   
-  console.log('Input:', testUSFM);
+  constructor(private formatter: USFMFormatter) {}
   
-  // Test rule matching
-  const testContext = {
-    previousMarker: 'c',
-    isDocumentStart: false,
-    hasContent: true
-  };
+  visitMarkerNode(node: MarkerNode) {
+    this.result = this.formatter.addMarker(this.result, node.marker, node.isClosing).normalizedOutput;
+    
+    if (node.attributes) {
+      this.result = this.formatter.addAttributes(this.result, node.attributes).normalizedOutput;
+    }
+    
+    return this;
+  }
   
-  const beforeWhitespace = formatter.getMarkerWhitespace('v', 'before', testContext);
-  const afterWhitespace = formatter.getMarkerWhitespace('v', 'after', testContext);
+  visitTextNode(node: TextNode) {
+    this.result = this.formatter.addTextContent(this.result, node.content).normalizedOutput;
+    return this;
+  }
   
-  console.log('Verse after chapter:');
-  console.log('  Before:', JSON.stringify(beforeWhitespace));
-  console.log('  After:', JSON.stringify(afterWhitespace));
+  build() {
+    return this.result;
+  }
 }
-
-// Test with sample USFM
-const sampleUSFM = '\\id TIT\n\\c 1\n\\p\n\\v 1 Paul, a servant...';
-testRules(bibleTranslationRules, sampleUSFM);
 ```
 
-## Best Practices
+### Stream Processing
 
-1. **Start Simple**: Begin with basic rules, add complexity as needed
-2. **Use Priorities Wisely**: Leave gaps (100, 150, 200) for future rules
-3. **Test Context Conditions**: Verify your context logic with real USFM
-4. **Document Your Rules**: Include clear names and descriptions
-5. **Use Patterns Efficiently**: Prefer patterns over multiple similar rules
-6. **Consider Performance**: More complex context conditions = slower matching
-7. **Plan Your Hierarchy**: Design your ancestor marker tracking strategy
+```typescript
+import { Transform } from 'stream';
 
-## Troubleshooting
+class USFMFormatterStream extends Transform {
+  private formatter: USFMFormatter;
+  private buffer = '';
+  
+  constructor(options?: USFMFormatterOptions) {
+    super({ objectMode: true });
+    this.formatter = new USFMFormatter(options);
+  }
+  
+  _transform(chunk: { type: 'marker' | 'text' | 'attributes', data: any }, _encoding: string, callback: Function) {
+    try {
+      switch (chunk.type) {
+        case 'marker':
+          const result = this.formatter.addMarker(this.buffer, chunk.data.marker, chunk.data.isClosing);
+          this.buffer = result.normalizedOutput;
+          break;
+          
+        case 'text':
+          const textResult = this.formatter.addTextContent(this.buffer, chunk.data);
+          this.buffer = textResult.normalizedOutput;
+          break;
+          
+        case 'attributes':
+          const attrResult = this.formatter.addAttributes(this.buffer, chunk.data);
+          this.buffer = attrResult.normalizedOutput;
+          break;
+      }
+      
+      callback();
+    } catch (error) {
+      callback(error);
+    }
+  }
+  
+  _flush(callback: Function) {
+    this.push(this.buffer);
+    callback();
+  }
+}
 
-Common issues and solutions:
+// Usage
+const stream = new USFMFormatterStream({ versesOnNewLine: false });
+// Pipe data through the stream
+```
 
-- **Rules not applying**: Check priority order and context conditions
-- **Wrong whitespace**: Verify context matching logic
-- **Performance issues**: Simplify complex context conditions
-- **Conflicts**: Use priority system to resolve rule conflicts
+## Error Handling and Validation
 
-For more examples and integration patterns, see the [examples directory](../../../examples/). 
+### Robust Error Handling
+
+```typescript
+function safeFormatting(formatter: USFMFormatter, operations: Array<{ type: string, data: any }>) {
+  let result = '';
+  const errors: string[] = [];
+  
+  for (const op of operations) {
+    try {
+      switch (op.type) {
+        case 'marker':
+          const markerResult = formatter.addMarker(result, op.data.marker, op.data.isClosing);
+          result = markerResult.normalizedOutput;
+          break;
+          
+        case 'text':
+          const textResult = formatter.addTextContent(result, op.data);
+          result = textResult.normalizedOutput;
+          break;
+          
+        case 'attributes':
+          const attrResult = formatter.addAttributes(result, op.data);
+          result = attrResult.normalizedOutput;
+          break;
+          
+        default:
+          errors.push(`Unknown operation type: ${op.type}`);
+      }
+    } catch (error) {
+      errors.push(`Error in ${op.type} operation: ${error.message}`);
+      // Continue with next operation
+    }
+  }
+  
+  return { result, errors };
+}
+```
+
+### Input Validation
+
+```typescript
+function validateAndFormat(formatter: USFMFormatter, marker: string, content?: string) {
+  // Validate marker name
+  if (!marker || typeof marker !== 'string') {
+    throw new Error('Marker must be a non-empty string');
+  }
+  
+  if (!/^[a-zA-Z][a-zA-Z0-9]*\*?$/.test(marker)) {
+    throw new Error(`Invalid marker name: ${marker}`);
+  }
+  
+  // Validate content
+  if (content !== undefined && typeof content !== 'string') {
+    throw new Error('Content must be a string');
+  }
+  
+  // Format safely
+  let result = formatter.addMarker('', marker).normalizedOutput;
+  if (content) {
+    result = formatter.addTextContent(result, content).normalizedOutput;
+  }
+  
+  return result;
+}
+```
+
+## Testing and Debugging
+
+### Testing Patterns
+
+```typescript
+describe('USFMFormatter Advanced Usage', () => {
+  let formatter: USFMFormatter;
+  
+  beforeEach(() => {
+    formatter = new USFMFormatter({
+      customMarkers: {
+        'test-marker': { type: 'character' }
+      }
+    });
+  });
+  
+  test('should handle complex nested structures', () => {
+    let result = '';
+    result = formatter.addMarker(result, 'p').normalizedOutput;
+    result = formatter.addMarker(result, 'v').normalizedOutput;
+    result = formatter.addTextContent(result, '1 Text with ').normalizedOutput;
+    result = formatter.addMarker(result, 'test-marker').normalizedOutput;
+    result = formatter.addTextContent(result, 'nested').normalizedOutput;
+    result = formatter.addMarker(result, 'test-marker', true).normalizedOutput;
+    result = formatter.addTextContent(result, ' content.').normalizedOutput;
+    
+    expect(result).toBe('\\p\n\\v 1 Text with \\test-marker nested\\test-marker* content.');
+  });
+  
+  test('should handle attribute edge cases', () => {
+    let result = formatter.addMarker('', 'w').normalizedOutput;
+    result = formatter.addAttributes(result, {
+      'empty-value': '',
+      'with-quotes': 'value "with" quotes',
+      'with-pipes': 'value|with|pipes'
+    }).normalizedOutput;
+    result = formatter.addTextContent(result, 'word').normalizedOutput;
+    result = formatter.addMarker(result, 'w', true).normalizedOutput;
+    
+    expect(result).toContain('empty-value=""');
+    expect(result).toContain('with-quotes="value "with" quotes"');
+    expect(result).toContain('with-pipes="value|with|pipes"');
+  });
+});
+```
+
+### Debugging Utilities
+
+```typescript
+class USFMFormatterDebugger {
+  private formatter: USFMFormatter;
+  private operations: Array<{ operation: string, input: string, output: string }> = [];
+  
+  constructor(formatter: USFMFormatter) {
+    this.formatter = formatter;
+  }
+  
+  addMarker(currentOutput: string, marker: string, isClosing = false) {
+    const result = this.formatter.addMarker(currentOutput, marker, isClosing);
+    this.operations.push({
+      operation: `addMarker('${marker}', ${isClosing})`,
+      input: currentOutput,
+      output: result.normalizedOutput
+    });
+    return result;
+  }
+  
+  addTextContent(currentOutput: string, content: string) {
+    const result = this.formatter.addTextContent(currentOutput, content);
+    this.operations.push({
+      operation: `addTextContent('${content}')`,
+      input: currentOutput,
+      output: result.normalizedOutput
+    });
+    return result;
+  }
+  
+  addAttributes(currentOutput: string, attributes: Record<string, string>) {
+    const result = this.formatter.addAttributes(currentOutput, attributes);
+    this.operations.push({
+      operation: `addAttributes(${JSON.stringify(attributes)})`,
+      input: currentOutput,
+      output: result.normalizedOutput
+    });
+    return result;
+  }
+  
+  getOperationHistory() {
+    return this.operations;
+  }
+  
+  printDebugInfo() {
+    console.log('USFM Formatter Operations:');
+    this.operations.forEach((op, index) => {
+      console.log(`${index + 1}. ${op.operation}`);
+      console.log(`   Input:  "${op.input}"`);
+      console.log(`   Output: "${op.output}"`);
+      console.log();
+    });
+  }
+}
+
+// Usage
+const formatter = new USFMFormatter();
+const debugger = new USFMFormatterDebugger(formatter);
+
+let result = debugger.addMarker('', 'p').normalizedOutput;
+result = debugger.addTextContent(result, 'content').normalizedOutput;
+
+debugger.printDebugInfo();
+```
+
+## Migration and Compatibility
+
+### Legacy API Compatibility
+
+If you need to maintain compatibility with older APIs:
+
+```typescript
+// Wrapper for legacy normalizeUSFM-style usage
+function legacyNormalizeUSFM(input: string, options?: USFMFormatterOptions): string {
+  const formatter = new USFMFormatter(options);
+  
+  // Parse the input and rebuild using the new API
+  // This is a simplified example - real implementation would need proper parsing
+  const lines = input.split('\n');
+  let result = '';
+  
+  for (const line of lines) {
+    if (line.startsWith('\\')) {
+      const match = line.match(/^\\(\w+)\s*(.*)/);
+      if (match) {
+        const [, marker, content] = match;
+        result = formatter.addMarker(result, marker).normalizedOutput;
+        if (content) {
+          result = formatter.addTextContent(result, content).normalizedOutput;
+        }
+      }
+    } else if (line.trim()) {
+      result = formatter.addTextContent(result, line).normalizedOutput;
+    }
+  }
+  
+  return result;
+}
+```
+
+This guide covers the advanced features and patterns available in the @usfm-tools/formatter package. For basic usage, see the simple-usage.md guide. 

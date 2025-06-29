@@ -7,6 +7,7 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
     type: 'paragraph',
     context: ['ScriptureContent'],
     label: 'book',
+    hasSpecialContent: true,
   },
   usfm: {
     displayName: 'File markup version information',
@@ -252,16 +253,19 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   c: {
     displayName: 'Chapter number (necessary for normal Paratext operation)',
     type: 'paragraph',
+    hasSpecialContent: true,
   },
   ca: {
     displayName:
       'Second (alternate) chapter number (for coding dual versification; useful for places where different traditions of chapter breaks need to be supported in the same translation)',
     type: 'character',
+    hasSpecialContent: true,
   },
   cp: {
     displayName:
       'Published chapter number (chapter string that should appear in the published text)',
     type: 'paragraph',
+    hasSpecialContent: true,
   },
   cl: {
     displayName:
@@ -275,15 +279,18 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   v: {
     displayName: 'A verse number (Necessary for normal paratext operation) (basic)',
     type: 'character',
+    hasSpecialContent: true,
   },
   va: {
     displayName:
       'Second (alternate) verse number (for coding dual numeration in Psalms; see also NRSV Exo 22.1-4)',
     type: 'character',
+    hasSpecialContent: true,
   },
   vp: {
     displayName: 'Published verse marker (verse string that should appear in the published text)',
     type: 'character',
+    hasSpecialContent: true,
   },
   p: {
     displayName: 'paragraph text, with first line indent (basic)',
@@ -837,11 +844,13 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   f: {
     displayName: 'A Footnote text item (basic)',
     type: 'note',
+    hasSpecialContent: true,
   },
   fe: {
     displayName: 'An Endnote text item',
     type: 'note',
     context: ['NoteContent'],
+    hasSpecialContent: true,
   },
   fr: {
     displayName: 'The origin reference for the footnote (basic)',
@@ -909,6 +918,7 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   x: {
     displayName: 'A list of cross references (basic)',
     type: 'note',
+    hasSpecialContent: true,
   },
   xo: {
     displayName: 'The cross reference origin reference (basic)',
@@ -963,10 +973,12 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   ef: {
     displayName: 'Study Bible extended footnote (basic)',
     type: 'note',
+    hasSpecialContent: true,
   },
   ex: {
     displayName: 'List of study Bible extended cross references',
     type: 'note',
+    hasSpecialContent: true,
   },
   esb: {
     displayName: 'Study Bible sidebar (mini article)',
@@ -1166,7 +1178,7 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
         type: 'string',
       },
       strong: {
-        description: 'Strong’s ID in the form H#### (Hebrew) or G#### (Greek)',
+        description: "Strong's ID in the form H#### (Hebrew) or G#### (Greek)",
         type: 'string',
       },
       srcloc: {

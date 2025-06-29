@@ -46,6 +46,7 @@ export class USFMParser {
   private currentMethod: string = '';
   private readonly trackPositions: boolean;
   private readonly markerRegistry: USFMMarkerRegistry;
+  private inferredMarkers: Record<string, USFMMarkerInfo> = {};
 
   /**
    * Creates a new instance of the USFMParser.
@@ -59,10 +60,35 @@ export class USFMParser {
   }
 
   /**
+   * Get all markers that were inferred during parsing
+   * @returns Record of marker names to their inferred USFMMarkerInfo - same format as customMarkers option
+   */
+  getInferredMarkers(): Record<string, USFMMarkerInfo> {
+    return { ...this.inferredMarkers };
+  }
+
+  /**
+   * Clear the list of inferred markers
+   */
+  clearInferredMarkers(): void {
+    this.inferredMarkers = {};
+  }
+
+  /**
+   * Check if any markers were inferred during parsing
+   */
+  hasInferredMarkers(): boolean {
+    return Object.keys(this.inferredMarkers).length > 0;
+  }
+
+  /**
    * Parses the loaded USFM text into an AST.
    * @returns {USFMParser} The parser instance for method chaining
    */
-  parse(): USFMParser {
+  parse(input?: string): USFMParser {
+    if (typeof input === 'string') {
+      this.load(input);
+    }
     this.setPosition(0);
     if (this.trackPositions) {
       this.positionVisits.clear();
@@ -1057,18 +1083,20 @@ export class USFMParser {
 
     switch (markerType) {
       case MarkerTypeEnum.CHARACTER:
-        markerInfo = { type: MarkerTypeEnum.CHARACTER };
+        markerInfo = { type: 'character' };
         break;
       case MarkerTypeEnum.MILESTONE:
-        markerInfo = { type: MarkerTypeEnum.MILESTONE };
+        markerInfo = { type: 'milestone' };
         break;
       case MarkerTypeEnum.PARAGRAPH:
-        markerInfo = { type: MarkerTypeEnum.PARAGRAPH };
+        markerInfo = { type: 'paragraph' };
         break;
     }
 
     if (markerInfo) {
       this.markerRegistry.addMarker(marker, markerInfo);
+      // Track this as an inferred marker for user reference
+      this.inferredMarkers[marker] = markerInfo;
       this.logWarning(
         `Unsupported marker in USFM: '\\${marker}', inferred as ${markerType}, please add it to the customMarkers option parameter in the USFMParser constructor to stop seeing this warning`
       );

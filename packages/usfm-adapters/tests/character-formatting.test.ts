@@ -99,13 +99,13 @@ describe('Character and Note Marker Formatting', () => {
       expect(output).toBe('\\p \\w Paul\\w* went to town');
     });
 
-    it('should not add spaces after markers when followed by closing markers', () => {
+    it('should add space between empty character markers', () => {
       const input = '\\p Paul \\w\\w* went';
       const result = parser.load(input).parse().visit(visitor);
       const output = visitor.getResult().trim();
 
-      // Empty character marker should not have extra spaces
-      expect(output).toBe('\\p Paul \\w\\w* went');
+      // Empty character marker should have space between opening and closing
+      expect(output).toBe('\\p Paul \\w \\w* went');
     });
   });
 
@@ -115,7 +115,8 @@ describe('Character and Note Marker Formatting', () => {
       const result = parser.load(input).parse().visit(visitor);
       const output = visitor.getResult().trim();
 
-      expect(output).toBe('\\p Paul \\w\\w* went');
+      // Empty character markers should have space between opening and closing
+      expect(output).toBe('\\p Paul \\w \\w* went');
     });
 
     it('should handle character markers at end of paragraph', () => {

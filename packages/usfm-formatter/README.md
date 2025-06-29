@@ -1,498 +1,741 @@
 # @usfm-tools/formatter
 
-USFM formatting rules for consistent text normalization. This package provides configurable rules for USFM text formatting, designed to work with `@usfm-tools/adapters` for actual text transformation.
-
-## Architecture
-
-- **@usfm-tools/formatter**: Defines formatting rules
-- **@usfm-tools/adapters**: Applies rules using USFMVisitor
-- **@usfm-tools/parser**: Parses USFM into AST
-
-This separation ensures clean architecture and prevents circular dependencies.
+A clean, efficient USFM formatter for building properly formatted USFM text. This package provides a simple API for adding markers, content, and attributes while automatically handling whitespace and structural formatting according to USFM 3.1.1 specifications.
 
 ## Installation
 
 ```bash
-npm install @usfm-tools/formatter @usfm-tools/adapters @usfm-tools/parser
+npm install @usfm-tools/formatter
 ```
 
 ## Quick Start
 
-### Basic Normalization
-
 ```typescript
-import { USFMFormatter, coreUSFMFormattingRules } from '@usfm-tools/formatter';
-import { USFMVisitor } from '@usfm-tools/adapters';
-import { USFMParser } from '@usfm-tools/parser';
+import { USFMFormatter } from '@usfm-tools/formatter';
 
-// Parse USFM into AST
-const parser = new USFMParser();
-const ast = parser.load(usfm).parse();
+const formatter = new USFMFormatter();
 
-// Create formatter with rules
-const formatter = new USFMFormatter(coreUSFMFormattingRules);
+// Build USFM step by step
+let result = formatter.addMarker('', 'id');                    // "\id "
+result = formatter.addTextContent(result.normalizedOutput, 'GEN Genesis');  // "\id GEN Genesis"
+result = formatter.addMarker(result.normalizedOutput, 'c');                 // "\id GEN Genesis\n\c "
+result = formatter.addTextContent(result.normalizedOutput, '1');            // "\id GEN Genesis\n\c 1"
+result = formatter.addMarker(result.normalizedOutput, 'p');                 // "\id GEN Genesis\n\c 1\n\p "
+result = formatter.addMarker(result.normalizedOutput, 'v');                 // "\id GEN Genesis\n\c 1\n\p\n\v "
+result = formatter.addTextContent(result.normalizedOutput, '1 In the beginning'); // Final USFM
 
-// Apply formatting using visitor
-const visitor = new USFMVisitor({ formatter });
-const normalized = visitor.visit(ast);
+console.log(result.normalizedOutput);
+// Output: \id GEN Genesis\n\c 1\n\p\n\v 1 In the beginning
 ```
 
-### Simple Normalization (Limited)
+## Core API
 
-For basic use cases without custom rules:
+The formatter provides three core methods for building USFM:
+
+### `addMarker(currentOutput, marker, isClosing?)`
+
+Adds a USFM marker with proper structural whitespace.
 
 ```typescript
-import { normalizeUSFMSimple } from '@usfm-tools/formatter';
+const formatter = new USFMFormatter();
 
-const normalized = normalizeUSFMSimple('\\id TIT\r\n\\c  1');
-// Basic whitespace cleanup only
+// Add opening markers
+formatter.addMarker('', 'p');              // "\p "
+formatter.addMarker('content', 'w');       // "content \w "
+
+// Add closing markers
+formatter.addMarker('content', 'w', true); // "content\w*"
 ```
 
-## Formatting Rules
+**Parameters:**
+- `currentOutput`: The current USFM string being built
+- `marker`: The marker name (without backslash)
+- `isClosing`: Optional boolean for closing markers (default: false)
 
-### Core Rules
+**Returns:** `FormatResult` with `normalizedOutput` property
 
-The package includes `coreUSFMFormattingRules` that handle standard USFM spacing:
+### `addTextContent(currentOutput, textContent)`
+
+Adds text content with intelligent spacing based on the preceding marker.
 
 ```typescript
-import { coreUSFMFormattingRules } from '@usfm-tools/formatter';
+const formatter = new USFMFormatter();
 
-// View available rules
-console.log(coreUSFMFormattingRules);
+let result = formatter.addMarker('', 'v');
+result = formatter.addTextContent(result.normalizedOutput, '1 Verse text');
+// Result: "\v 1 Verse text"
+
+// Handles special content like verse numbers
+result = formatter.addTextContent('\v ', '1');
+// Result: "\v 1 " (adds structural space after verse number)
 ```
 
-### Creating Custom Rules
+**Parameters:**
+- `currentOutput`: The current USFM string being built
+- `textContent`: The text content to add
 
-Rules control spacing before and after USFM markers:
+**Returns:** `FormatResult` with `normalizedOutput` property
+
+### `addAttributes(currentOutput, attributes)`
+
+Adds USFM 3.1.1 attributes with proper `|` separator syntax.
 
 ```typescript
-import { USFMFormattingRule } from '@usfm-tools/formatter';
+const formatter = new USFMFormatter();
 
-// Custom rule for verse spacing
-const customVerseRule: USFMFormattingRule = {
-  id: 'custom-verse-spacing',
-  name: 'Custom Verse Spacing',
-  description: 'Verses on new lines with no space after',
-  priority: 100,
-  applies: {
-    marker: 'v'
-  },
-  whitespace: {
-    before: '\n',
-    after: ''
-  }
-};
+formatter.addAttributes('\w gracious', { lemma: 'grace' });
+// Result: "\w gracious|lemma=\"grace\""
 
-// Custom rule for paragraph breaks
-const paragraphBreakRule: USFMFormattingRule = {
-  id: 'paragraph-breaks',
-  name: 'Paragraph Line Breaks',
-  description: 'Force paragraph markers on new lines',
-  priority: 90,
-  applies: {
-    marker: 'p'
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
+formatter.addAttributes('\w gracious', { 
+  lemma: 'grace', 
+  strong: 'H1234,G5485' 
+});
+// Result: "\w gracious|lemma=\"grace\" strong=\"H1234,G5485\""
 ```
 
-### Context-Aware Rules
+**Parameters:**
+- `currentOutput`: The current USFM string being built  
+- `attributes`: Object with attribute key-value pairs
 
-Rules can apply based on context conditions:
+**Returns:** `FormatResult` with `normalizedOutput` property
+
+### `addMilestone(currentOutput, marker, attributes?)`
+
+Adds a self-closing milestone marker with proper formatting. Milestone markers are commonly used for alignment, quotations, and other structural annotations.
 
 ```typescript
-// Rule that applies only when verse follows chapter
-const verseAfterChapterRule: USFMFormattingRule = {
-  id: 'verse-after-chapter',
-  name: 'Verse After Chapter',
-  description: 'Special spacing for verses immediately after chapters',
-  priority: 150,
-  applies: {
-    marker: 'v',
-    context: {
-      previousMarker: 'c'
-    }
-  },
-  whitespace: {
-    before: ' ',  // Space, not newline after chapter
-    after: ' '
-  }
-};
+const formatter = new USFMFormatter();
 
-// Rule with multiple previous marker conditions
-const verseAfterMultipleRule: USFMFormattingRule = {
-  id: 'verse-after-headers',
-  name: 'Verse After Headers',
-  priority: 140,
-  applies: {
-    marker: 'v',
-    context: {
-      previousMarker: ['c', 's1', 's2', 'mt1']  // Array of possible previous markers
-    }
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
+// Milestone without attributes
+formatter.addMilestone('text', 'zaln-s');
+// Result: "text \zaln-s\*"
 
-// Rule with ancestor context (hierarchy checking)
-const verseInPoetryRule: USFMFormattingRule = {
-  id: 'verse-in-poetry',
-  name: 'Verse in Poetry Context',
-  description: 'Special verse formatting when inside poetry sections',
-  priority: 130,
-  applies: {
-    marker: 'v',
-    context: {
-      ancestorMarkers: ['q', 'q1', 'q2']  // Verse inside poetry
-    }
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
+// Milestone with attributes
+formatter.addMilestone('text', 'zaln-s', { 
+  who: 'Jesus', 
+  occurrence: '1' 
+});
+// Result: "text \zaln-s |who=\"Jesus\" occurrence=\"1\"\*"
 
-// Rule with document start condition
-const firstMarkerRule: USFMFormattingRule = {
-  id: 'first-marker',
-  name: 'Document Start',
-  description: 'No spacing before first marker',
-  priority: 200,
-  applies: {
-    marker: 'id',
-    context: {
-      isDocumentStart: true
-    }
-  },
-  whitespace: {
-    before: '',  // No space at document start
-    after: ' '
-  }
-};
+// Common alignment markers
+formatter.addMilestone('', 'zaln-s', { 
+  'x-morph': 'He,Np',
+  'x-occurrence': '1',
+  'x-occurrences': '1'
+});
+// Result: "\zaln-s |x-morph=\"He,Np\" x-occurrence=\"1\" x-occurrences=\"1\"\*"
 
-// Rule with content pattern matching
-const shortContentRule: USFMFormattingRule = {
-  id: 'short-content',
-  name: 'Short Content Special Handling',
-  priority: 90,
-  applies: {
-    marker: 'v',
-    context: {
-      hasContent: true,
-      contentPattern: /^.{1,10}$/  // Very short content (1-10 chars)
-    }
-  },
-  whitespace: {
-    before: ' ',
-    after: ''
-  }
-};
+formatter.addMilestone('content', 'zaln-e');
+// Result: "content \zaln-e\*"
 ```
 
-### Pattern-Based Rules
+**Parameters:**
+- `currentOutput`: The current USFM string being built
+- `marker`: The milestone marker name (without backslash or asterisk)  
+- `attributes`: Optional object with attribute key-value pairs
 
-Use regular expressions to match multiple related markers:
+**Returns:** `FormatResult` with `normalizedOutput` property
+
+## Complete Examples
+
+### Basic Bible Text
 
 ```typescript
-// Rule for all poetry markers (q, q1, q2, q3, etc.)
-const poetryRule: USFMFormattingRule = {
-  id: 'poetry-lines',
-  name: 'Poetry Line Formatting',
-  description: 'Consistent spacing for all poetry markers',
-  priority: 90,
-  applies: {
-    pattern: /^q\d*$/  // Matches q, q1, q2, q3, etc.
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
+const formatter = new USFMFormatter();
 
-// Rule for all list items (li, li1, li2, li3, etc.)
-const listItemRule: USFMFormattingRule = {
-  id: 'list-items',
-  name: 'List Item Spacing',
-  description: 'Consistent spacing for all list item markers',
-  priority: 80,
-  applies: {
-    pattern: /^li\d*$/  // Matches li, li1, li2, li3, etc.
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
+let usfm = '';
+usfm = formatter.addMarker(usfm, 'id').normalizedOutput;
+usfm = formatter.addTextContent(usfm, 'MAT Matthew').normalizedOutput;
+usfm = formatter.addMarker(usfm, 'c').normalizedOutput;
+usfm = formatter.addTextContent(usfm, '1').normalizedOutput;
+usfm = formatter.addMarker(usfm, 'p').normalizedOutput;
+usfm = formatter.addMarker(usfm, 'v').normalizedOutput;
+usfm = formatter.addTextContent(usfm, '1 The book of the genealogy of Jesus Christ').normalizedOutput;
 
-// Rule for all section headers (s, s1, s2, s3, s4)
-const sectionHeaderRule: USFMFormattingRule = {
-  id: 'section-headers',
-  name: 'Section Header Spacing',
-  priority: 85,
-  applies: {
-    pattern: /^s\d*$/  // Matches s, s1, s2, s3, s4
-  },
-  whitespace: {
-    before: '\n\n',  // Double line break for sections
-    after: '\n'
-  }
-};
+console.log(usfm);
+// \id MAT Matthew
+// \c 1
+// \p
+// \v 1 The book of the genealogy of Jesus Christ
 ```
 
-## Advanced Usage
-
-### Custom Formatter Configuration
+### Character Markers with Attributes
 
 ```typescript
-import { USFMFormatter, coreUSFMFormattingRules } from '@usfm-tools/formatter';
+const formatter = new USFMFormatter();
 
-// Combine core rules with custom rules
-const customRules = [
-  ...coreUSFMFormattingRules,
-  customVerseRule,
-  paragraphBreakRule,
-  verseAfterChapterRule
-];
+let text = '';
+text = formatter.addMarker(text, 'p').normalizedOutput;
+text = formatter.addMarker(text, 'v').normalizedOutput;
+text = formatter.addTextContent(text, '1 In the beginning was the ').normalizedOutput;
 
-const formatter = new USFMFormatter(customRules);
+// Add word marker with attributes
+text = formatter.addMarker(text, 'w').normalizedOutput;
+text = formatter.addAttributes(text, { 
+  lemma: 'logos', 
+  strong: 'G3056' 
+}).normalizedOutput;
+text = formatter.addTextContent(text, 'Word').normalizedOutput;
+text = formatter.addMarker(text, 'w', true).normalizedOutput; // Close marker
 
-// Use with specific options
-const formatterWithOptions = new USFMFormatter(customRules, {
-  strictMode: true,
-  preserveWhitespace: false
+text = formatter.addTextContent(text, '.').normalizedOutput;
+
+console.log(text);
+// \p
+// \v 1 In the beginning was the \w |lemma="logos" strong="G3056"Word\w*.
+```
+
+### Footnotes and Cross-References
+
+```typescript
+const formatter = new USFMFormatter();
+
+let text = '';
+text = formatter.addMarker(text, 'p').normalizedOutput;
+text = formatter.addMarker(text, 'v').normalizedOutput;
+text = formatter.addTextContent(text, '1 Jesus').normalizedOutput;
+
+// Add footnote
+text = formatter.addMarker(text, 'f').normalizedOutput;
+text = formatter.addTextContent(text, '+ ').normalizedOutput;
+text = formatter.addMarker(text, 'fr').normalizedOutput;
+text = formatter.addTextContent(text, '1.1 ').normalizedOutput;
+text = formatter.addMarker(text, 'ft').normalizedOutput;
+text = formatter.addTextContent(text, 'Greek: Iesous').normalizedOutput;
+text = formatter.addMarker(text, 'f', true).normalizedOutput; // Close footnote
+
+text = formatter.addTextContent(text, ' said').normalizedOutput;
+
+console.log(text);
+// \p
+// \v 1 Jesus\f + \fr 1.1 \ft Greek: Iesous\f* said
+```
+
+### Milestone Markers for Alignment
+
+```typescript
+const formatter = new USFMFormatter();
+
+let text = '';
+text = formatter.addMarker(text, 'p').normalizedOutput;
+text = formatter.addMarker(text, 'v').normalizedOutput;
+text = formatter.addTextContent(text, '1 In the beginning was the ').normalizedOutput;
+
+// Add alignment milestone for "Word"
+text = formatter.addMilestone(text, 'zaln-s', {
+  'x-morph': 'Gr,N,,,,,NMS,',
+  'x-occurrence': '1',
+  'x-occurrences': '1',
+  'x-content': 'λόγος'
+}).normalizedOutput;
+
+text = formatter.addTextContent(text, 'Word').normalizedOutput;
+
+// Close alignment
+text = formatter.addMilestone(text, 'zaln-e').normalizedOutput;
+
+text = formatter.addTextContent(text, ', and the Word was with God.').normalizedOutput;
+
+console.log(text);
+// \p
+// \v 1 In the beginning was the \zaln-s |x-morph="Gr,N,,,,,NMS," x-occurrence="1" x-occurrences="1" x-content="λόγος"\*Word\zaln-e\*, and the Word was with God.
+```
+
+## Configuration Options
+
+```typescript
+const formatter = new USFMFormatter({
+  // Structural formatting choices
+  paragraphContentOnNewLine: false,   // Content after \p on same line (default)
+  versesOnNewLine: true,              // \v markers on new lines (default)
+  characterMarkersOnNewLine: false,   // \w markers inline (default)
+  noteMarkersOnNewLine: false,        // \f markers inline (default)
+  
+  // Granular marker control (takes precedence over broad categories above)
+  markersOnNewLine: ['w', 'wj', 'qt'], // Specific markers that should start on new lines
+  markersInline: ['bd', 'it', 'em'],   // Specific markers that should be inline
+  
+  // Category-wide overrides (takes precedence over broad categories, but not specific arrays)
+  allCharacterMarkersOnNewLine: false, // All character markers on new lines
+  allNoteMarkersOnNewLine: false,      // All note markers on new lines
+  allNonParagraphMarkersOnNewLine: false, // All non-paragraph markers on new lines
+  
+  // Line length management
+  maxLineLength: 0,                   // No line length limit (default)
+  splitLongLines: false,              // Don't split long lines (default)
+  
+  // Custom marker definitions
+  customMarkers: {
+    'custom-para': { type: 'paragraph' },
+    'custom-char': { type: 'character' }
+  }
 });
 ```
 
-### Rule Priority System
+## Granular Marker Control
 
-Rules with higher priority override lower priority rules:
+The formatter provides three levels of control for marker line formatting, with a clear priority order:
 
-```typescript
-const highPriorityRule: USFMFormattingRule = {
-  id: 'high-priority-verse',
-  name: 'High Priority Verse Rule',
-  priority: 1000,  // Very high priority
-  applies: {
-    marker: 'v'
-  },
-  whitespace: {
-    before: '\n\n',  // Double newline
-    after: ' '
-  }
-};
-```
-
-### Complex Context Conditions
-
-Combine multiple context conditions:
+### Priority 1: Specific Marker Arrays (Highest Priority)
 
 ```typescript
-const complexContextRule: USFMFormattingRule = {
-  id: 'complex-verse-rule',
-  name: 'Complex Verse Context',
-  priority: 120,
-  applies: {
-    marker: 'v',
-    context: {
-      previousMarker: ['p', 'm'],      // Previous marker is p or m
-      ancestorMarkers: ['q1'],         // Inside q1 poetry
-      hasContent: true,                // Has content
-      contentPattern: /^\d+\s/,       // Content starts with number and space
-      isDocumentStart: false           // Not at document start
-    }
-  },
-  whitespace: {
-    before: '\n',
-    after: ' '
-  }
-};
-```
-
-## Integration Examples
-
-### With Custom Presets
-
-```typescript
-// Create preset for Bible translation
-const bibleTranslationRules: USFMFormattingRule[] = [
-  {
-    id: 'chapter-breaks',
-    name: 'Chapter Breaks',
-    priority: 100,
-    applies: { marker: 'c' },
-    whitespace: { before: '\n\n', after: ' ' }
-  },
-  {
-    id: 'verse-inline',
-    name: 'Inline Verses',
-    priority: 90,
-    applies: { marker: 'v' },
-    whitespace: { before: ' ', after: ' ' }
-  },
-  {
-    id: 'paragraph-standard',
-    name: 'Standard Paragraphs',
-    priority: 80,
-    applies: { marker: 'p' },
-    whitespace: { before: '\n', after: '' }
-  }
-];
-
-// Use preset
-const formatter = new USFMFormatter(bibleTranslationRules);
-```
-
-### Batch Processing
-
-```typescript
-import { USFMFormatter } from '@usfm-tools/formatter';
-import { USFMVisitor } from '@usfm-tools/adapters';
-import { USFMParser } from '@usfm-tools/parser';
-
-async function normalizeUSFMFiles(files: string[], rules: USFMFormattingRule[]) {
-  const parser = new USFMParser();
-  const formatter = new USFMFormatter(rules);
-  const visitor = new USFMVisitor({ formatter });
+const formatter = new USFMFormatter({
+  // Only these specific markers will start on new lines
+  markersOnNewLine: ['w', 'wj', 'qt'],
   
-  const results = [];
+  // These specific markers will always be inline
+  markersInline: ['bd', 'it', 'em', 'sup']
+});
+
+let text = '';
+text = formatter.addMarker(text, 'p').normalizedOutput;
+text = formatter.addMarker(text, 'v').normalizedOutput;
+text = formatter.addTextContent(text, '1 Jesus said, ').normalizedOutput;
+
+// \qt is in markersOnNewLine, so it goes on new line
+text = formatter.addMarker(text, 'qt').normalizedOutput;
+text = formatter.addTextContent(text, 'Follow me').normalizedOutput;
+text = formatter.addMarker(text, 'qt', true).normalizedOutput;
+
+text = formatter.addTextContent(text, '. The ').normalizedOutput;
+
+// \w is in markersOnNewLine, so it goes on new line
+text = formatter.addMarker(text, 'w').normalizedOutput;
+text = formatter.addAttributes(text, { lemma: 'logos' }).normalizedOutput;
+text = formatter.addTextContent(text, 'word').normalizedOutput;
+text = formatter.addMarker(text, 'w', true).normalizedOutput;
+
+text = formatter.addTextContent(text, ' was ').normalizedOutput;
+
+// \bd is in markersInline, so it stays inline regardless of other settings
+text = formatter.addMarker(text, 'bd').normalizedOutput;
+text = formatter.addTextContent(text, 'bold').normalizedOutput;
+text = formatter.addMarker(text, 'bd', true).normalizedOutput;
+
+console.log(text);
+// Output:
+// \p
+// \v 1 Jesus said, 
+// \qt Follow me\qt*. The 
+// \w |lemma="logos"word\w* was \bd bold\bd*
+```
+
+### Priority 2: Category-Wide Overrides
+
+```typescript
+// All character markers on new lines (but specific arrays override this)
+const formatter = new USFMFormatter({
+  allCharacterMarkersOnNewLine: true,  // All character markers on new lines
+  markersInline: ['bd', 'it'],         // Except these - they stay inline
+});
+
+// All note markers on new lines
+const noteFormatter = new USFMFormatter({
+  allNoteMarkersOnNewLine: true,       // All \f, \x, etc. on new lines
+  markersInline: ['fe']                // Except \fe - it stays inline
+});
+
+// All non-paragraph markers on new lines (very structured)
+const structuredFormatter = new USFMFormatter({
+  allNonParagraphMarkersOnNewLine: true, // Everything except \p, \q, \m, etc.
+  markersInline: ['sup', 'i']            // Except these specific ones
+});
+```
+
+### Priority 3: Broad Categories (Lowest Priority)
+
+```typescript
+// Traditional broad category control
+const formatter = new USFMFormatter({
+  characterMarkersOnNewLine: true,     // All character markers on new lines
+  noteMarkersOnNewLine: false,         // All note markers inline
+  // These are overridden by more specific settings above
+});
+```
+
+### Complete Example: Fine-Grained Control
+
+```typescript
+// Complex formatting rules for a study Bible
+const studyBibleFormatter = new USFMFormatter({
+  // Specific word study markers on new lines for clarity
+  markersOnNewLine: ['w', 'wj', 'wg', 'wh'],
   
-  for (const file of files) {
-    try {
-      const usfm = await readFile(file);
-      const ast = parser.load(usfm).parse();
-      const normalized = visitor.visit(ast);
-      results.push({ file, normalized, success: true });
-    } catch (error) {
-      results.push({ file, error, success: false });
-    }
+  // Common formatting markers stay inline for readability
+  markersInline: ['bd', 'it', 'em', 'sup', 'ord'],
+  
+  // All footnotes and cross-references on new lines for study
+  allNoteMarkersOnNewLine: true,
+  
+  // But endnotes stay inline
+  markersInline: ['fe', 'ef'], // This overrides allNoteMarkersOnNewLine for these specific markers
+  
+  // Custom study markers
+  customMarkers: {
+    'study-note': { type: 'note' },
+    'cross-ref': { type: 'note' },
+    'word-study': { type: 'character' }
+  }
+});
+
+// Example usage
+let bible = '';
+bible = studyBibleFormatter.addMarker(bible, 'p').normalizedOutput;
+bible = studyBibleFormatter.addMarker(bible, 'v').normalizedOutput;
+bible = studyBibleFormatter.addTextContent(bible, '1 In the beginning was the ').normalizedOutput;
+
+// \w is in markersOnNewLine
+bible = studyBibleFormatter.addMarker(bible, 'w').normalizedOutput;
+bible = studyBibleFormatter.addAttributes(bible, { lemma: 'logos', strong: 'G3056' }).normalizedOutput;
+bible = studyBibleFormatter.addTextContent(bible, 'Word').normalizedOutput;
+bible = studyBibleFormatter.addMarker(bible, 'w', true).normalizedOutput;
+
+bible = studyBibleFormatter.addTextContent(bible, ', and the Word was ').normalizedOutput;
+
+// \bd is in markersInline
+bible = studyBibleFormatter.addMarker(bible, 'bd').normalizedOutput;
+bible = studyBibleFormatter.addTextContent(bible, 'God').normalizedOutput;
+bible = studyBibleFormatter.addMarker(bible, 'bd', true).normalizedOutput;
+
+// \f is a note marker, allNoteMarkersOnNewLine is true, so it goes on new line
+bible = studyBibleFormatter.addMarker(bible, 'f').normalizedOutput;
+bible = studyBibleFormatter.addTextContent(bible, '+ ').normalizedOutput;
+bible = studyBibleFormatter.addMarker(bible, 'fr').normalizedOutput;
+bible = studyBibleFormatter.addTextContent(bible, '1.1 ').normalizedOutput;
+bible = studyBibleFormatter.addMarker(bible, 'ft').normalizedOutput;
+bible = studyBibleFormatter.addTextContent(bible, 'Greek: Theos').normalizedOutput;
+bible = studyBibleFormatter.addMarker(bible, 'f', true).normalizedOutput;
+
+bible = studyBibleFormatter.addTextContent(bible, '.').normalizedOutput;
+
+console.log(bible);
+// Output:
+// \p
+// \v 1 In the beginning was the 
+// \w |lemma="logos" strong="G3056"Word\w*, and the Word was \bd God\bd*
+// \f + \fr 1.1 \ft Greek: Theos\f*.
+```
+
+### Dynamic Rule Updates
+
+You can change the rules at runtime for different document sections:
+
+```typescript
+const formatter = new USFMFormatter();
+
+// Start with minimal formatting
+let document = buildIntroduction(formatter);
+
+// Switch to word-study formatting for main text
+formatter.updateOptions({
+  markersOnNewLine: ['w', 'wj', 'wg'],
+  allNoteMarkersOnNewLine: true
+});
+document += buildMainText(formatter);
+
+// Switch to poetry formatting
+formatter.updateOptions({
+  markersOnNewLine: [],           // Clear specific markers
+  markersInline: ['w', 'wj'],     // Words inline in poetry
+  allNoteMarkersOnNewLine: false, // Notes inline in poetry
+  versesOnNewLine: false          // Verses inline in poetry
+});
+document += buildPsalms(formatter);
+
+// Switch back to study formatting
+formatter.updateOptions({
+  markersOnNewLine: ['w', 'wj'],
+  markersInline: ['bd', 'it'],
+  allNoteMarkersOnNewLine: true,
+  versesOnNewLine: true
+});
+document += buildCommentary(formatter);
+```
+
+### Option Effects
+
+**`versesOnNewLine: false`**
+```typescript
+// Default (true): verses on new lines
+\p Text
+\v 1 Verse text
+
+// false: verses inline
+\p Text \v 1 Verse text
+```
+
+**`paragraphContentOnNewLine: true`**
+```typescript
+// Default (false): content on same line
+\p Content here
+
+// true: content on new line
+\p
+Content here
+```
+
+## Custom Markers
+
+### Define Custom Markers
+
+```typescript
+const formatter = new USFMFormatter({
+  customMarkers: {
+    'study-note': { type: 'note' },
+    'highlight': { type: 'character' },
+    'section-break': { type: 'paragraph' }
+  }
+});
+
+// Use custom markers
+let text = formatter.addMarker('', 'section-break').normalizedOutput;
+text = formatter.addTextContent(text, 'Study Section').normalizedOutput;
+```
+
+### Add Markers at Runtime
+
+```typescript
+const formatter = new USFMFormatter();
+formatter.addCustomMarker('my-marker', { type: 'character' });
+
+// Now use the marker
+const result = formatter.addMarker('text', 'my-marker');
+```
+
+### Automatic Marker Inference
+
+The formatter can automatically infer marker types for unknown markers:
+
+```typescript
+const formatter = new USFMFormatter();
+
+// Use unknown markers - they'll be inferred
+formatter.addMarker('\p Text\n', 'unknown-para'); // Inferred as paragraph
+formatter.addMarker('text', 'unknown-char');      // Inferred as character
+
+// Check what was inferred
+if (formatter.hasInferredMarkers()) {
+  const inferred = formatter.getInferredMarkers();
+  console.log(inferred);
+  // {
+  //   'unknown-para': { type: 'paragraph' },
+  //   'unknown-char': { type: 'character' }
+  // }
+}
+
+// Use inferred markers in production
+const prodFormatter = new USFMFormatter({
+  customMarkers: formatter.getInferredMarkers()
+});
+```
+
+## Advanced Features
+
+### Chaining Operations
+
+For cleaner code, you can chain operations:
+
+```typescript
+const formatter = new USFMFormatter();
+
+const buildVerse = (start: string, verseNum: string, text: string) => {
+  let result = formatter.addMarker(start, 'v').normalizedOutput;
+  result = formatter.addTextContent(result, `${verseNum} ${text}`).normalizedOutput;
+  return result;
+};
+
+let usfm = formatter.addMarker('', 'p').normalizedOutput;
+usfm = buildVerse(usfm, '1', 'First verse text');
+usfm = buildVerse(usfm, '2', 'Second verse text');
+```
+
+### Builder Pattern Helper
+
+```typescript
+class USFMBuilder {
+  private output = '';
+  
+  constructor(private formatter: USFMFormatter) {}
+  
+  marker(name: string, isClosing = false) {
+    this.output = this.formatter.addMarker(this.output, name, isClosing).normalizedOutput;
+    return this;
   }
   
-  return results;
-}
-```
-
-## Rule Reference
-
-### Rule Structure
-
-```typescript
-interface USFMFormattingRule {
-  id: string;                    // Unique identifier
-  name: string;                  // Human-readable name
-  description?: string;          // Rule description
-  priority: number;              // Higher = more important (0-1000)
-  applies: MarkerMatcher;        // When to apply this rule
-  whitespace: {                  // What spacing to apply
-    before?: string;             // Whitespace before marker
-    after?: string;              // Whitespace after marker
-  };
+  text(content: string) {
+    this.output = this.formatter.addTextContent(this.output, content).normalizedOutput;
+    return this;
+  }
+  
+  attributes(attrs: Record<string, string>) {
+    this.output = this.formatter.addAttributes(this.output, attrs).normalizedOutput;
+    return this;
+  }
+  
+  build() {
+    return this.output;
+  }
 }
 
-interface MarkerMatcher {
-  marker?: string;               // Specific marker name (e.g., 'v', 'p')
-  pattern?: RegExp;              // Pattern for multiple markers (e.g., /^q\d*$/)
-  context?: ContextCondition;    // Additional context requirements
-}
+// Usage
+const formatter = new USFMFormatter();
+const builder = new USFMBuilder(formatter);
 
-interface ContextCondition {
-  previousMarker?: string | string[];     // Previous marker(s)
-  nextMarker?: string | string[];         // Next marker(s)
-  ancestorMarkers?: string[];             // Ancestor markers in hierarchy
-  isDocumentStart?: boolean;              // Is this the first marker?
-  hasContent?: boolean;                   // Does marker have content?
-  contentPattern?: RegExp;                // Pattern for content matching
-}
+const usfm = builder
+  .marker('p')
+  .marker('v')
+  .text('1 In the beginning was the ')
+  .marker('w')
+  .attributes({ lemma: 'logos' })
+  .text('Word')
+  .marker('w', true)
+  .text('.')
+  .build();
 ```
 
-### Common Patterns
-
-#### Verse Numbering Styles
+### Updating Options
 
 ```typescript
-// Inline verses: \v 1 Text continues...
-const inlineVerses: USFMFormattingRule = {
-  id: 'inline-verses',
-  name: 'Inline Verse Numbers',
-  priority: 100,
-  applies: { marker: 'v' },
-  whitespace: { before: ' ', after: ' ' }
-};
+const formatter = new USFMFormatter();
 
-// Block verses: \n\v 1 Text on new line
-const blockVerses: USFMFormattingRule = {
-  id: 'block-verses',
-  name: 'Block Verse Numbers',  
-  priority: 100,
-  applies: { marker: 'v' },
-  whitespace: { before: '\n', after: ' ' }
-};
+// Check current options
+console.log(formatter.getOptions());
+
+// Update options
+formatter.updateOptions({ versesOnNewLine: false });
+
+// Options affect subsequent formatting
+const result = formatter.addMarker('\p Text ', 'v');
+// Now verses will be inline
 ```
 
-#### Chapter Formatting
+## USFM Compliance
+
+The formatter follows USFM 3.1.1 specifications:
+
+- **Structural Whitespace**: Automatically adds required whitespace between markers and content
+- **Attribute Syntax**: Uses proper `|key="value"` syntax for attributes  
+- **Marker Hierarchy**: Respects paragraph vs character vs note marker types
+- **Special Content**: Handles verse numbers, chapter numbers, and footnote callers correctly
+- **Closing Markers**: Properly formats closing markers without trailing whitespace
+
+## Migration from Legacy APIs
+
+If you're migrating from older formatting APIs:
 
 ```typescript
-// Chapters with double line break
-const chapterBreaks: USFMFormattingRule = {
-  id: 'chapter-breaks',
-  name: 'Chapter with Breaks',
-  priority: 100,
-  applies: { marker: 'c' },
-  whitespace: { before: '\n\n', after: '\n' }
-};
+// Old complex rule-based approach ❌
+const formatter = new USFMFormatter(complexRules);
+const result = formatter.formatWithRules(input, context);
+
+// New simple API ✅  
+const formatter = new USFMFormatter();
+let result = formatter.addMarker('', 'p').normalizedOutput;
+result = formatter.addTextContent(result, 'content').normalizedOutput;
 ```
 
-#### Poetry Formatting
+## Performance Notes
+
+- The formatter is optimized for incremental building
+- Custom markers should be defined upfront when possible  
+- Marker inference has minimal overhead but can be avoided in production
+- Registry-based marker lookup is efficient and caches results
+
+## Common Patterns
+
+### Document Structure
 
 ```typescript
-// Poetry lines with consistent indentation
-const poetryRule: USFMFormattingRule = {
-  id: 'poetry-lines',
-  name: 'Poetry Line Formatting',
-  priority: 90,
-  applies: { pattern: /^q\d*$/ },
-  whitespace: { before: '\n', after: ' ' }
-};
+const formatter = new USFMFormatter();
+
+// Start with identification
+let usfm = formatter.addMarker('', 'id').normalizedOutput;
+usfm = formatter.addTextContent(usfm, 'GEN Genesis').normalizedOutput;
+
+// Add headers
+usfm = formatter.addMarker(usfm, 'h').normalizedOutput;
+usfm = formatter.addTextContent(usfm, 'Genesis').normalizedOutput;
+
+// Add title  
+usfm = formatter.addMarker(usfm, 'mt1').normalizedOutput;
+usfm = formatter.addTextContent(usfm, 'The First Book of Moses, called Genesis').normalizedOutput;
+
+// Start content
+usfm = formatter.addMarker(usfm, 'c').normalizedOutput;
+usfm = formatter.addTextContent(usfm, '1').normalizedOutput;
 ```
 
-## Best Practices
-
-1. **Use adapters package**: Always use `@usfm-tools/adapters` for actual normalization
-2. **Rule priority**: Higher numbers = higher priority (0-1000 range)
-3. **Test rules**: Validate your custom rules with sample USFM
-4. **Document rules**: Include clear names and descriptions
-5. **Context awareness**: Use context conditions for complex scenarios
-6. **Pattern efficiency**: Use patterns for multiple related markers
-7. **Priority planning**: Plan your priority hierarchy before implementing
-
-## Migration from Legacy
-
-If upgrading from old `normalizeUSFM` usage:
+### Poetry Text
 
 ```typescript
-// Old approach (deprecated)
-import { normalizeUSFM } from '@usfm-tools/formatter';
-const result = normalizeUSFM(usfm, undefined, customRules);
+const formatter = new USFMFormatter();
 
-// New approach (recommended)
-import { USFMFormatter } from '@usfm-tools/formatter';
-import { USFMVisitor } from '@usfm-tools/adapters';
-import { USFMParser } from '@usfm-tools/parser';
+let usfm = formatter.addMarker('', 'q1').normalizedOutput;
+usfm = formatter.addTextContent(usfm, 'The Lord is my shepherd;').normalizedOutput;
 
-const parser = new USFMParser();
-const ast = parser.load(usfm).parse();
-const formatter = new USFMFormatter(customRules);
-const visitor = new USFMVisitor({ formatter });
-const result = visitor.visit(ast);
+usfm = formatter.addMarker(usfm, 'q2').normalizedOutput;
+usfm = formatter.addTextContent(usfm, 'I shall not want.').normalizedOutput;
+```
+
+### Character Formatting
+
+```typescript
+const formatter = new USFMFormatter();
+
+let text = formatter.addTextContent('', 'Jesus said to them, ').normalizedOutput;
+
+// Add quoted text
+text = formatter.addMarker(text, 'qt').normalizedOutput;
+text = formatter.addTextContent(text, 'Follow me').normalizedOutput;
+text = formatter.addMarker(text, 'qt', true).normalizedOutput;
+
+text = formatter.addTextContent(text, '.').normalizedOutput;
 ```
 
 ## API Reference
 
-See the [API documentation](./docs/api.md) for complete method signatures and options.
+### Main Methods
+
+| Method | Description | Parameters | Returns |
+|--------|-------------|------------|---------|
+| `addMarker` | Add USFM marker | `(output, marker, isClosing?)` | `FormatResult` |
+| `addTextContent` | Add text content | `(output, content)` | `FormatResult` |
+| `addAttributes` | Add USFM attributes | `(output, attributes)` | `FormatResult` |
+| `addMilestone` | Add self-closing milestone marker | `(output, marker, attributes?)` | `FormatResult` |
+
+### Setup Methods
+
+| Method | Description | Parameters | Returns |
+|--------|-------------|------------|---------|
+| `addCustomMarker` | Register custom marker | `(marker, info)` | `void` |
+| `getOptions` | Get current options | `()` | `Options` |
+| `updateOptions` | Update options | `(newOptions)` | `void` |
+| `getInferredMarkers` | Get inferred markers | `()` | `Record<string, MarkerInfo>` |
+| `clearInferredMarkers` | Clear inferred markers | `()` | `void` |
+| `hasInferredMarkers` | Check if has inferred | `()` | `boolean` |
+
+### Types
+
+```typescript
+interface FormatResult {
+  normalizedOutput: string;
+}
+
+interface USFMFormatterOptions {
+  paragraphContentOnNewLine?: boolean;
+  versesOnNewLine?: boolean;  
+  characterMarkersOnNewLine?: boolean;
+  noteMarkersOnNewLine?: boolean;
+  maxLineLength?: number;
+  splitLongLines?: boolean;
+  customMarkers?: Record<string, USFMMarkerInfo>;
+}
+
+interface USFMMarkerInfo {
+  type: 'paragraph' | 'character' | 'note' | 'milestone';
+  hasSpecialContent?: boolean;
+}
+```
 
 ## License
 

@@ -20,6 +20,7 @@
     "build": "pnpm run clean && tsc --build",
     "build:watch": "tsc --build --watch",
     "test": "pnpm run build && jest --testPathIgnorePatterns=performance",
+    "test:only": "jest",
     "test:performance": "pnpm run build && jest --testPathPattern=performance",
     "test:watch": "jest --watch",
     "test:clean": "pnpm run clean && pnpm run test",

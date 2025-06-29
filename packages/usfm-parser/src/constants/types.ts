@@ -52,6 +52,18 @@ export interface USFMMarkerBaseInfo {
   contentType?: 'text' | 'mixed' | 'none';
   label?: string;
   tags?: string[];
+  /**
+   * Indicates if this marker has special content that should be followed by structural whitespace.
+   * Special content is typically a string without spaces (like verse numbers, chapter numbers,
+   * book IDs, footnote callers) where a space after the content is structural, not significant.
+   *
+   * Examples:
+   * - \v 1 Text (verse number "1" + structural space + verse text)
+   * - \c 1 (chapter number "1" + structural space/newline)
+   * - \id GEN Genesis (book ID "GEN" + structural space + title)
+   * - \f + Note text (caller "+" + structural space + note text)
+   */
+  hasSpecialContent?: boolean;
 }
 
 export interface USFMMarkerWithoutAttributes extends USFMMarkerBaseInfo {

@@ -27,7 +27,6 @@ export interface ContextCondition {
   previousMarker?: string | string[];
   nextMarker?: string | string[];
   ancestorMarkers?: string | string[];
-  isDocumentStart?: boolean;
   hasContent?: boolean;
   contentPattern?: RegExp;
 }

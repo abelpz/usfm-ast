@@ -1,457 +1,426 @@
-# Simple USFM Normalization Without Adapters
+# Simple Usage Guide
 
-For users who want to normalize USFM without adding the `@usfm-tools/adapters` dependency, this guide shows how to create a simple implementation using just the formatter rules and parser.
+This guide covers the basic usage of the @usfm-tools/formatter package with its new simplified API.
 
-## Quick Setup
+## Installation
 
 ```bash
-npm install @usfm-tools/formatter @usfm-tools/parser
+npm install @usfm-tools/formatter
 ```
 
-## Basic Implementation
+## Basic Concepts
+
+The formatter provides three core methods for building USFM text:
+
+1. **`addMarker()`** - Adds USFM markers with proper whitespace
+2. **`addTextContent()`** - Adds text content with intelligent spacing
+3. **`addAttributes()`** - Adds USFM 3.1.1 attributes
+
+## Quick Examples
+
+### Simple Verse
 
 ```typescript
-import { USFMFormatter, coreUSFMFormattingRules } from '@usfm-tools/formatter';
-import { USFMParser } from '@usfm-tools/parser';
-
-function simpleNormalizeUSFM(usfm: string): string {
-  try {
-    // Parse into AST
-    const parser = new USFMParser();
-    const nodes = parser.load(usfm).parse().getNodes();
-    
-    // Create formatter
-    const formatter = new USFMFormatter(coreUSFMFormattingRules);
-    
-    // Reconstruct with rules
-    return reconstructWithRules(nodes, formatter);
-  } catch (error) {
-    console.warn('Normalization failed:', error);
-    return usfm;
-  }
-}
-
-function reconstructWithRules(nodes: any[], formatter: USFMFormatter): string {
-  const result: string[] = [];
-  let context = {
-    isDocumentStart: true,
-    previousMarker: null,
-    ancestorMarkers: [] as string[]
-  };
-  
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    const nextNode = nodes[i + 1];
-    
-    // Build context for rule matching
-    const formattingContext = {
-      previousMarker: context.previousMarker,
-      nextMarker: nextNode?.marker,
-      ancestorMarkers: context.ancestorMarkers,
-      isDocumentStart: context.isDocumentStart,
-      hasContent: node.content && node.content.length > 0,
-      contentPattern: getContentPattern(node)
-    };
-    
-    // Get whitespace using new API
-    const beforeWhitespace = formatter.getMarkerWhitespace(node.marker, 'before', formattingContext);
-    const afterWhitespace = formatter.getMarkerWhitespace(node.marker, 'after', formattingContext);
-    
-    // Add spacing before marker
-    if (beforeWhitespace && !context.isDocumentStart) {
-      result.push(beforeWhitespace);
-    }
-    
-    // Add marker
-    result.push(`\\${node.marker}`);
-    
-    // Add spacing after marker
-    if (afterWhitespace) {
-      result.push(afterWhitespace);
-    }
-    
-    // Add content
-    if (node.content) {
-      result.push(processContent(node.content));
-    }
-    
-    // Update context
-    updateContext(context, node);
-  }
-  
-  return result.join('');
-}
-
-function getContentPattern(node: any): string | undefined {
-  if (!node.content || node.content.length === 0) return undefined;
-  
-  // Get text content for pattern matching
-  const textContent = node.content
-    .filter((item: any) => item.type === 'text')
-    .map((item: any) => item.content)
-    .join('');
-    
-  return textContent;
-}
-
-function updateContext(context: any, node: any) {
-  context.isDocumentStart = false;
-  context.previousMarker = node.marker;
-  
-  // Update ancestor markers for hierarchy tracking
-  if (node.type === 'paragraph') {
-    // Reset or update ancestor chain based on marker type
-    if (node.marker === 'p' || node.marker === 'm') {
-      context.ancestorMarkers = ['p'];
-    } else if (node.marker?.match(/^q\d*$/)) {
-      context.ancestorMarkers = ['q'];
-    } else if (node.marker?.match(/^li\d*$/)) {
-      context.ancestorMarkers = ['li'];
-    }
-  }
-}
-
-function processContent(content: any[]): string {
-  return content.map(item => {
-    if (typeof item === 'string') return item;
-    if (item.type === 'text') return item.content;
-    if (item.marker) {
-      // Handle nested markers
-      let result = `\\${item.marker}`;
-      if (item.content) {
-        result += ` ${processContent(item.content)}`;
-      }
-      if (item.type === 'character') {
-        result += `\\${item.marker}*`;
-      }
-      return result;
-    }
-    return '';
-  }).join('');
-}
-```
-
-## Usage Example
-
-```typescript
-// Simple usage
-const input = '\\id TIT\r\n\\c  1\n\n\\p\n\\v 1   Text  here';
-const normalized = simpleNormalizeUSFM(input);
-console.log(normalized);
-// Output: \id TIT\n\c 1\n\p\n\v 1 Text here
-```
-
-## Custom Rules Implementation
-
-```typescript
-import { USFMFormattingRule } from '@usfm-tools/formatter';
-
-// Create custom rules with new simplified format
-const customRules: USFMFormattingRule[] = [
-  {
-    id: 'verse-newlines',
-    name: 'Verses on New Lines',
-    priority: 100,
-    applies: { marker: 'v' },
-    whitespace: { before: '\n', after: ' ' }
-  },
-  {
-    id: 'chapter-breaks',
-    name: 'Chapter Breaks',
-    priority: 90,
-    applies: { marker: 'c' },
-    whitespace: { before: '\n\n', after: '\n' }
-  },
-  {
-    id: 'verse-after-chapter',
-    name: 'Verse After Chapter Context',
-    priority: 150,
-    applies: { 
-      marker: 'v',
-      context: {
-        previousMarker: 'c'
-      }
-    },
-    whitespace: { before: ' ', after: ' ' }
-  },
-  {
-    id: 'poetry-pattern',
-    name: 'Poetry Lines',
-    priority: 80,
-    applies: { pattern: /^q\d*$/ },
-    whitespace: { before: '\n', after: ' ' }
-  }
-];
-
-// Use custom rules
-function normalizeWithCustomRules(usfm: string): string {
-  const parser = new USFMParser();
-  const nodes = parser.load(usfm).parse().getNodes();
-  const formatter = new USFMFormatter(customRules);
-  
-  return reconstructWithRules(nodes, formatter);
-}
-```
-
-## Advanced Example with Context
-
-```typescript
-function advancedReconstruct(nodes: any[], formatter: USFMFormatter): string {
-  const result: string[] = [];
-  let context = {
-    isDocumentStart: true,
-    previousMarker: null,
-    nextMarker: null,
-    ancestorMarkers: [] as string[],
-    inPoetry: false,
-    inList: false
-  };
-  
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    const nextNode = nodes[i + 1];
-    
-    // Update context
-    updateAdvancedContext(context, node, nextNode);
-    
-    // Create formatting context
-    const formattingContext = {
-      previousMarker: context.previousMarker,
-      nextMarker: context.nextMarker,
-      ancestorMarkers: [...context.ancestorMarkers],
-      isDocumentStart: context.isDocumentStart,
-      hasContent: node.content && node.content.length > 0,
-      contentPattern: getContentForPatternMatching(node)
-    };
-    
-    // Get whitespace from formatter
-    const beforeWhitespace = formatter.getMarkerWhitespace(node.marker, 'before', formattingContext);
-    const afterWhitespace = formatter.getMarkerWhitespace(node.marker, 'after', formattingContext);
-    
-    // Apply formatting
-    if (beforeWhitespace && !context.isDocumentStart) {
-      result.push(beforeWhitespace);
-    }
-    
-    result.push(`\\${node.marker}`);
-    
-    if (afterWhitespace) {
-      result.push(afterWhitespace);
-    }
-    
-    // Process content with context awareness
-    if (node.content) {
-      result.push(processContentWithContext(node.content, context));
-    }
-    
-    context.isDocumentStart = false;
-    context.previousMarker = node.marker;
-  }
-  
-  return result.join('');
-}
-
-function updateAdvancedContext(context: any, node: any, nextNode: any) {
-  // Track poetry sections
-  if (node.marker?.match(/^q\d*$/)) {
-    context.inPoetry = true;
-    context.ancestorMarkers = ['q'];
-  } else if (node.marker === 'p' || node.marker === 'm') {
-    context.inPoetry = false;
-    context.ancestorMarkers = ['p'];
-  }
-  
-  // Track list sections
-  if (node.marker?.match(/^li\d*$/)) {
-    context.inList = true;
-    context.ancestorMarkers = ['li'];
-  } else if (node.marker === 'p' || node.marker === 'm') {
-    context.inList = false;
-  }
-  
-  // Set next marker
-  context.nextMarker = nextNode?.marker || null;
-}
-
-function getContentForPatternMatching(node: any): string | undefined {
-  if (!node.content || node.content.length === 0) return undefined;
-  
-  // Extract text content for pattern matching
-  const textContent = node.content
-    .filter((item: any) => item.type === 'text')
-    .map((item: any) => item.content)
-    .join('')
-    .trim();
-    
-  return textContent || undefined;
-}
-
-function processContentWithContext(content: any[], context: any): string {
-  return content.map(item => {
-    if (typeof item === 'string') return item;
-    if (item.type === 'text') return item.content;
-    if (item.marker) {
-      // Handle nested markers with context
-      let result = `\\${item.marker}`;
-      
-      if (item.content) {
-        result += ` ${processContentWithContext(item.content, context)}`;
-      }
-      
-      if (item.type === 'character') {
-        result += `\\${item.marker}*`;
-      }
-      
-      return result;
-    }
-    return '';
-  }).join('');
-}
-```
-
-## Context-Aware Custom Rules
-
-```typescript
-// Advanced rules using the new context system
-const advancedContextRules: USFMFormattingRule[] = [
-  {
-    id: 'verse-after-multiple',
-    name: 'Verse After Headers',
-    priority: 140,
-    applies: {
-      marker: 'v',
-      context: {
-        previousMarker: ['c', 's1', 's2', 'mt1', 'mt2']
-      }
-    },
-    whitespace: { before: '\n', after: ' ' }
-  },
-  {
-    id: 'verse-in-poetry',
-    name: 'Verse in Poetry',
-    priority: 130,
-    applies: {
-      marker: 'v',
-      context: {
-        ancestorMarkers: ['q']
-      }
-    },
-    whitespace: { before: '\n', after: ' ' }
-  },
-  {
-    id: 'short-verses',
-    name: 'Short Verse Content',
-    priority: 120,
-    applies: {
-      marker: 'v',
-      context: {
-        hasContent: true,
-        contentPattern: /^.{1,20}$/  // Very short verses
-      }
-    },
-    whitespace: { before: ' ', after: ' ' }
-  },
-  {
-    id: 'document-start-id',
-    name: 'Document Start ID',
-    priority: 200,
-    applies: {
-      marker: 'id',
-      context: {
-        isDocumentStart: true
-      }
-    },
-    whitespace: { before: '', after: ' ' }
-  }
-];
-
-// Use with the advanced reconstruction
-function normalizeWithAdvancedRules(usfm: string): string {
-  const parser = new USFMParser();
-  const nodes = parser.load(usfm).parse().getNodes();
-  const formatter = new USFMFormatter(advancedContextRules);
-  
-  return advancedReconstruct(nodes, formatter);
-}
-```
-
-## Pattern-Based Rules
-
-```typescript
-// Rules using regular expressions for multiple markers
-const patternBasedRules: USFMFormattingRule[] = [
-  {
-    id: 'all-poetry',
-    name: 'All Poetry Markers',
-    priority: 90,
-    applies: { pattern: /^q\d*$/ },  // q, q1, q2, q3, etc.
-    whitespace: { before: '\n', after: ' ' }
-  },
-  {
-    id: 'all-lists',
-    name: 'All List Markers',
-    priority: 85,
-    applies: { pattern: /^li\d*$/ },  // li, li1, li2, li3, etc.
-    whitespace: { before: '\n', after: ' ' }
-  },
-  {
-    id: 'all-sections',
-    name: 'All Section Headers',
-    priority: 80,
-    applies: { pattern: /^s\d*$/ },  // s, s1, s2, s3, s4
-    whitespace: { before: '\n\n', after: '\n' }
-  },
-  {
-    id: 'all-titles',
-    name: 'All Title Markers',
-    priority: 75,
-    applies: { pattern: /^mt\d*$/ },  // mt, mt1, mt2, mt3, etc.
-    whitespace: { before: '\n\n', after: '\n' }
-  }
-];
-```
-
-## Limitations
-
-This simple approach has limitations compared to the full `@usfm-tools/adapters` implementation:
-
-1. **No comprehensive AST traversal** - May miss edge cases
-2. **Limited context awareness** - Basic context tracking only  
-3. **No validation** - Doesn't validate USFM structure
-4. **Basic content handling** - May not handle all nested structures
-5. **Manual context management** - You must implement context tracking
-
-## When to Use Full Adapters
-
-Consider using `@usfm-tools/adapters` if you need:
-
-- Comprehensive USFM validation
-- Complex nested marker handling
-- Full AST traversal with visitor pattern
-- Production-grade normalization
-- Support for all USFM 3.1 features
-- Automatic context management
-- Advanced FormattingFunction support
-
-## Migration Path
-
-Start with this simple approach, then migrate to adapters when needed:
-
-```typescript
-// Simple approach
-import { simpleNormalizeUSFM } from './simple-normalize';
-const result = simpleNormalizeUSFM(usfm);
-
-// Upgrade to adapters later
-import { USFMVisitor } from '@usfm-tools/adapters';
 import { USFMFormatter } from '@usfm-tools/formatter';
-import { USFMParser } from '@usfm-tools/parser';
 
-const parser = new USFMParser();
-const ast = parser.load(usfm).parse();
-const formatter = new USFMFormatter(rules);
-const visitor = new USFMVisitor({ formatter });
-const result = visitor.visit(ast);
+const formatter = new USFMFormatter();
+
+let usfm = formatter.addMarker('', 'p').normalizedOutput;         // "\p "
+usfm = formatter.addMarker(usfm, 'v').normalizedOutput;           // "\p\n\v "
+usfm = formatter.addTextContent(usfm, '1 Hello world').normalizedOutput; // "\p\n\v 1 Hello world"
 ```
 
-This gives you flexibility to start simple and upgrade when your needs grow. 
+### With Character Markup
+
+```typescript
+const formatter = new USFMFormatter();
+
+let text = '';
+text = formatter.addMarker(text, 'p').normalizedOutput;
+text = formatter.addMarker(text, 'v').normalizedOutput;
+text = formatter.addTextContent(text, '1 The ').normalizedOutput;
+
+// Add emphasis
+text = formatter.addMarker(text, 'em').normalizedOutput;
+text = formatter.addTextContent(text, 'word').normalizedOutput;
+text = formatter.addMarker(text, 'em', true).normalizedOutput; // Closing marker
+
+text = formatter.addTextContent(text, ' was emphasized.').normalizedOutput;
+
+console.log(text);
+// \p
+// \v 1 The \em word\em* was emphasized.
+```
+
+### With Attributes
+
+```typescript
+const formatter = new USFMFormatter();
+
+let text = '';
+text = formatter.addMarker(text, 'p').normalizedOutput;
+text = formatter.addMarker(text, 'v').normalizedOutput;
+text = formatter.addTextContent(text, '1 In the beginning was the ').normalizedOutput;
+
+// Word with attributes
+text = formatter.addMarker(text, 'w').normalizedOutput;
+text = formatter.addAttributes(text, { lemma: 'logos', strong: 'G3056' }).normalizedOutput;
+text = formatter.addTextContent(text, 'Word').normalizedOutput;
+text = formatter.addMarker(text, 'w', true).normalizedOutput;
+
+console.log(text);
+// \p
+// \v 1 In the beginning was the \w |lemma="logos" strong="G3056"Word\w*
+```
+
+## Building Complete Documents
+
+### Basic Structure
+
+```typescript
+const formatter = new USFMFormatter();
+
+// Build document step by step
+let usfm = '';
+
+// Book identification
+usfm = formatter.addMarker(usfm, 'id').normalizedOutput;
+usfm = formatter.addTextContent(usfm, 'GEN Genesis').normalizedOutput;
+
+// Headers
+usfm = formatter.addMarker(usfm, 'h').normalizedOutput;
+usfm = formatter.addTextContent(usfm, 'Genesis').normalizedOutput;
+
+usfm = formatter.addMarker(usfm, 'mt1').normalizedOutput;
+usfm = formatter.addTextContent(usfm, 'The First Book of Moses, called Genesis').normalizedOutput;
+
+// Chapter 1
+usfm = formatter.addMarker(usfm, 'c').normalizedOutput;
+usfm = formatter.addTextContent(usfm, '1').normalizedOutput;
+
+// First paragraph
+usfm = formatter.addMarker(usfm, 'p').normalizedOutput;
+
+// First verse
+usfm = formatter.addMarker(usfm, 'v').normalizedOutput;
+usfm = formatter.addTextContent(usfm, '1 In the beginning God created the heavens and the earth.').normalizedOutput;
+
+console.log(usfm);
+```
+
+Output:
+```
+\id GEN Genesis
+\h Genesis
+\mt1 The First Book of Moses, called Genesis
+\c 1
+\p
+\v 1 In the beginning God created the heavens and the earth.
+```
+
+## Common Patterns
+
+### Footnotes
+
+```typescript
+const formatter = new USFMFormatter();
+
+let text = '';
+text = formatter.addMarker(text, 'p').normalizedOutput;
+text = formatter.addMarker(text, 'v').normalizedOutput;
+text = formatter.addTextContent(text, '1 Jesus').normalizedOutput;
+
+// Start footnote
+text = formatter.addMarker(text, 'f').normalizedOutput;
+text = formatter.addTextContent(text, '+ ').normalizedOutput;
+
+// Footnote reference
+text = formatter.addMarker(text, 'fr').normalizedOutput;
+text = formatter.addTextContent(text, '1.1 ').normalizedOutput;
+
+// Footnote text
+text = formatter.addMarker(text, 'ft').normalizedOutput;
+text = formatter.addTextContent(text, 'Greek: Iesous').normalizedOutput;
+
+// Close footnote
+text = formatter.addMarker(text, 'f', true).normalizedOutput;
+
+text = formatter.addTextContent(text, ' spoke').normalizedOutput;
+
+console.log(text);
+// \p
+// \v 1 Jesus\f + \fr 1.1 \ft Greek: Iesous\f* spoke
+```
+
+### Poetry
+
+```typescript
+const formatter = new USFMFormatter();
+
+let poem = '';
+poem = formatter.addMarker(poem, 'q1').normalizedOutput;
+poem = formatter.addTextContent(poem, 'The Lord is my shepherd;').normalizedOutput;
+
+poem = formatter.addMarker(poem, 'q2').normalizedOutput;
+poem = formatter.addTextContent(poem, 'I shall not want.').normalizedOutput;
+
+poem = formatter.addMarker(poem, 'q1').normalizedOutput;
+poem = formatter.addTextContent(poem, 'He makes me lie down in green pastures.').normalizedOutput;
+
+console.log(poem);
+// \q1 The Lord is my shepherd;
+// \q2 I shall not want.
+// \q1 He makes me lie down in green pastures.
+```
+
+### Cross-References
+
+```typescript
+const formatter = new USFMFormatter();
+
+let text = '';
+text = formatter.addMarker(text, 'p').normalizedOutput;
+text = formatter.addMarker(text, 'v').normalizedOutput;
+text = formatter.addTextContent(text, '1 In the beginning').normalizedOutput;
+
+// Cross-reference
+text = formatter.addMarker(text, 'x').normalizedOutput;
+text = formatter.addTextContent(text, '+ ').normalizedOutput;
+
+text = formatter.addMarker(text, 'xo').normalizedOutput;
+text = formatter.addTextContent(text, '1.1: ').normalizedOutput;
+
+text = formatter.addMarker(text, 'xt').normalizedOutput;
+text = formatter.addTextContent(text, 'Jhn 1.1').normalizedOutput;
+
+text = formatter.addMarker(text, 'x', true).normalizedOutput;
+
+text = formatter.addTextContent(text, ' God created').normalizedOutput;
+
+console.log(text);
+// \p
+// \v 1 In the beginning\x + \xo 1.1: \xt Jhn 1.1\x* God created
+```
+
+## Configuration Options
+
+### Verse Formatting
+
+```typescript
+// Default: verses on new lines
+const formatter1 = new USFMFormatter();
+let result1 = formatter1.addMarker('\\p Text', 'v').normalizedOutput;
+console.log(result1); // "\p Text\n\v "
+
+// Inline verses
+const formatter2 = new USFMFormatter({ versesOnNewLine: false });
+let result2 = formatter2.addMarker('\\p Text ', 'v').normalizedOutput;
+console.log(result2); // "\p Text \v "
+```
+
+### Paragraph Content
+
+```typescript
+// Default: content on same line
+const formatter1 = new USFMFormatter();
+let result1 = formatter1.addMarker('', 'p').normalizedOutput;
+console.log(result1); // "\p "
+
+// Content on new line
+const formatter2 = new USFMFormatter({ paragraphContentOnNewLine: true });
+let result2 = formatter2.addMarker('', 'p').normalizedOutput;
+console.log(result2); // "\p\n"
+```
+
+### Character Markers
+
+```typescript
+// Default: character markers inline
+const formatter1 = new USFMFormatter();
+let result1 = formatter1.addMarker('text', 'em').normalizedOutput;
+console.log(result1); // "text \em "
+
+// Character markers on new lines
+const formatter2 = new USFMFormatter({ characterMarkersOnNewLine: true });
+let result2 = formatter2.addMarker('text', 'em').normalizedOutput;
+console.log(result2); // "text\n\em "
+```
+
+## Custom Markers
+
+### Define Custom Markers
+
+```typescript
+const formatter = new USFMFormatter({
+  customMarkers: {
+    'study-note': { type: 'note' },
+    'highlight': { type: 'character' },
+    'section-header': { type: 'paragraph' }
+  }
+});
+
+// Use custom markers
+let text = formatter.addMarker('', 'section-header').normalizedOutput;
+text = formatter.addTextContent(text, 'Study Notes').normalizedOutput;
+
+text = formatter.addMarker(text, 'p').normalizedOutput;
+text = formatter.addTextContent(text, 'This is ').normalizedOutput;
+
+text = formatter.addMarker(text, 'highlight').normalizedOutput;
+text = formatter.addTextContent(text, 'highlighted').normalizedOutput;
+text = formatter.addMarker(text, 'highlight', true).normalizedOutput;
+
+text = formatter.addTextContent(text, ' text.').normalizedOutput;
+```
+
+### Add Markers at Runtime
+
+```typescript
+const formatter = new USFMFormatter();
+formatter.addCustomMarker('my-special', { type: 'character' });
+
+let text = formatter.addMarker('content', 'my-special').normalizedOutput;
+text = formatter.addTextContent(text, 'special text').normalizedOutput;
+text = formatter.addMarker(text, 'my-special', true).normalizedOutput;
+```
+
+## Helper Functions
+
+### Build Verse Function
+
+```typescript
+function buildVerse(formatter: USFMFormatter, start: string, num: string, text: string): string {
+  let result = formatter.addMarker(start, 'v').normalizedOutput;
+  result = formatter.addTextContent(result, `${num} ${text}`).normalizedOutput;
+  return result;
+}
+
+// Usage
+const formatter = new USFMFormatter();
+let chapter = formatter.addMarker('', 'p').normalizedOutput;
+chapter = buildVerse(formatter, chapter, '1', 'First verse text');
+chapter = buildVerse(formatter, chapter, '2', 'Second verse text');
+```
+
+### Build Word with Attributes
+
+```typescript
+function buildWord(formatter: USFMFormatter, start: string, word: string, attrs: Record<string, string>): string {
+  let result = formatter.addMarker(start, 'w').normalizedOutput;
+  result = formatter.addAttributes(result, attrs).normalizedOutput;
+  result = formatter.addTextContent(result, word).normalizedOutput;
+  result = formatter.addMarker(result, 'w', true).normalizedOutput;
+  return result;
+}
+
+// Usage
+const formatter = new USFMFormatter();
+let text = formatter.addTextContent('', 'The ').normalizedOutput;
+text = buildWord(formatter, text, 'word', { lemma: 'logos', strong: 'G3056' });
+text = formatter.addTextContent(text, ' was spoken.').normalizedOutput;
+```
+
+## Builder Pattern
+
+For more complex documents, consider using a builder pattern:
+
+```typescript
+class USFMBuilder {
+  private output = '';
+  
+  constructor(private formatter: USFMFormatter) {}
+  
+  marker(name: string, isClosing = false) {
+    this.output = this.formatter.addMarker(this.output, name, isClosing).normalizedOutput;
+    return this;
+  }
+  
+  text(content: string) {
+    this.output = this.formatter.addTextContent(this.output, content).normalizedOutput;
+    return this;
+  }
+  
+  attributes(attrs: Record<string, string>) {
+    this.output = this.formatter.addAttributes(this.output, attrs).normalizedOutput;
+    return this;
+  }
+  
+  build() {
+    return this.output;
+  }
+}
+
+// Usage
+const formatter = new USFMFormatter();
+const builder = new USFMBuilder(formatter);
+
+const usfm = builder
+  .marker('p')
+  .marker('v')
+  .text('1 In the beginning was the ')
+  .marker('w')
+  .attributes({ lemma: 'logos' })
+  .text('Word')
+  .marker('w', true)
+  .text('.')
+  .build();
+
+console.log(usfm);
+// \p
+// \v 1 In the beginning was the \w |lemma="logos"Word\w*.
+```
+
+## Best Practices
+
+1. **Always use the result**: Each method returns a `FormatResult` object with `normalizedOutput`
+2. **Chain operations**: Build USFM incrementally using the output of previous operations
+3. **Define custom markers upfront**: Add custom markers during formatter construction when possible
+4. **Use closing markers**: Remember to close character markers with `isClosing: true`
+5. **Handle attributes properly**: Add attributes before adding content to markers
+6. **Consider builder patterns**: For complex documents, use helper functions or builder patterns
+
+## Common Mistakes
+
+### Forgetting to Use normalizedOutput
+
+```typescript
+// ❌ Wrong - not using the result
+const formatter = new USFMFormatter();
+formatter.addMarker('', 'p');
+formatter.addTextContent('', 'content'); // This won't work
+
+// ✅ Correct - using normalizedOutput
+const formatter = new USFMFormatter();
+let result = formatter.addMarker('', 'p').normalizedOutput;
+result = formatter.addTextContent(result, 'content').normalizedOutput;
+```
+
+### Forgetting to Close Character Markers
+
+```typescript
+// ❌ Wrong - no closing marker
+let text = formatter.addMarker('content', 'em').normalizedOutput;
+text = formatter.addTextContent(text, 'emphasized').normalizedOutput;
+// Missing closing \em*
+
+// ✅ Correct - with closing marker
+let text = formatter.addMarker('content', 'em').normalizedOutput;
+text = formatter.addTextContent(text, 'emphasized').normalizedOutput;
+text = formatter.addMarker(text, 'em', true).normalizedOutput; // \em*
+```
+
+### Adding Attributes After Content
+
+```typescript
+// ❌ Wrong - attributes after content
+let text = formatter.addMarker('', 'w').normalizedOutput;
+text = formatter.addTextContent(text, 'word').normalizedOutput;
+text = formatter.addAttributes(text, { lemma: 'test' }).normalizedOutput; // Too late
+
+// ✅ Correct - attributes before content
+let text = formatter.addMarker('', 'w').normalizedOutput;
+text = formatter.addAttributes(text, { lemma: 'test' }).normalizedOutput;
+text = formatter.addTextContent(text, 'word').normalizedOutput;
+```
+
+This guide covers the essential usage patterns for the @usfm-tools/formatter package. For more advanced features and complete API reference, see the main README.md file. 

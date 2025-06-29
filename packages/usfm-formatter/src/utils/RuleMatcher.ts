@@ -27,7 +27,6 @@ export class USFMFormattingRuleMatcher {
       previousMarker?: string;
       nextMarker?: string;
       ancestorMarkers?: string[];
-      isDocumentStart?: boolean;
       hasContent?: boolean;
       content?: string;
     }
@@ -57,7 +56,6 @@ export class USFMFormattingRuleMatcher {
       previousMarker?: string;
       nextMarker?: string;
       ancestorMarkers?: string[];
-      isDocumentStart?: boolean;
       hasContent?: boolean;
       content?: string;
     }
@@ -93,7 +91,6 @@ export class USFMFormattingRuleMatcher {
       previousMarker?: string;
       nextMarker?: string;
       ancestorMarkers?: string[];
-      isDocumentStart?: boolean;
       hasContent?: boolean;
       content?: string;
     }
@@ -138,7 +135,6 @@ export class USFMFormattingRuleMatcher {
       previousMarker?: string;
       nextMarker?: string;
       ancestorMarkers?: string[];
-      isDocumentStart?: boolean;
       hasContent?: boolean;
       content?: string;
     }
@@ -186,13 +182,6 @@ export class USFMFormattingRuleMatcher {
       );
 
       if (!hasAnyAncestor) return false;
-    }
-
-    // Check document start
-    if (ruleContext.isDocumentStart !== undefined) {
-      if (ruleContext.isDocumentStart !== actualContext.isDocumentStart) {
-        return false;
-      }
     }
 
     // Check has content

@@ -24,7 +24,6 @@ export type MarkerType =
 export type WhitespaceType = 'none' | 'space' | 'newline' | 'preserve';
 
 export type ExceptionContext =
-  | 'document-start'
   | 'after-newline'
   | 'after-break'
   | 'within-note'
@@ -79,39 +78,40 @@ export interface USFMFormattingRule {
 // Re-export for convenience
 export type FormattingRule = USFMFormattingRule;
 
-// Formatting function interface to break circular dependencies
+// Formatting function interface for USFM conversion
 export interface FormatResult {
-  before: string;
-  after: string;
-  afterContent?: string;
-  beforeContent?: string;
+  normalizedOutput: string; // The complete output string with the new marker properly formatted
 }
 
 export interface FormattingFunction {
+  /**
+   * Format a marker with current output context, returning the complete normalized output
+   */
   formatMarker(
+    currentOutput: string,
     marker: string,
-    markerType: MarkerType,
-    nextMarker?: string,
-    context?: ExceptionContext,
-    isDocumentStart?: boolean
-  ): FormatResult;
-  formatParagraphWithContext(
-    marker: string,
-    nextMarker?: string,
-    nextMarkerType?: MarkerType,
-    isDocumentStart?: boolean
-  ): FormatResult;
-  formatVerseWithContext(context?: string): FormatResult;
-  formatMarkerWithContext?(
-    marker: string,
-    markerType: MarkerType,
-    context?: {
-      previousMarker?: string;
-      nextMarker?: string;
-      ancestorMarkers?: string[];
-      isDocumentStart?: boolean;
-      hasContent?: boolean;
-      content?: string;
+    options?: {
+      isClosing?: boolean;
     }
   ): FormatResult;
+
+  /**
+   * Format a marker with its content, allowing the formatter to handle proper spacing
+   * between marker and content (e.g., verse numbers, chapter numbers)
+   */
+  formatMarkerWithContent?(
+    currentOutput: string,
+    marker: string,
+    content?: string,
+    options?: {
+      isClosing?: boolean;
+      attributes?: Record<string, string>;
+    }
+  ): FormatResult;
+
+  /**
+   * Add text content to the current USFM string, intelligently handling spacing
+   * based on the marker that precedes the content
+   */
+  addTextContent?(currentOutput: string, textContent: string): FormatResult;
 }
