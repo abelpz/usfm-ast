@@ -1,0 +1,35 @@
+<usx version="3.1">
+  <book code="NUM" style="id"/>
+  <chapter number="2" style="c" sid="NUM 2"/>
+  <para style="p">
+    <verse number="10-16" style="v" sid="NUM 2:10-16"/>On the south, those under the
+    banner of the division of Reuben shall camp in their groups, under their
+    leaders, as follows:</para>
+  <table>
+    <row style="tr">
+      <cell style="th1" align="start">Tribe </cell>
+      <cell style="th2" align="start">Leader </cell>
+      <cell style="thr3" align="end">Number</cell>
+    </row>
+    <row style="tr">
+      <cell style="tc1" align="start">Reuben </cell>
+      <cell style="tc2" align="start">Elizur son of Shedeur </cell>
+      <cell style="tcr3" align="end">46,500</cell>
+    </row>
+    <row style="tr">
+      <cell style="tc1" align="start">Simeon </cell>
+      <cell style="tc2" align="start">Shelumiel son of Zurishaddai </cell>
+      <cell style="tcr3" align="end">59,300</cell>
+    </row>
+    <row style="tr">
+      <cell style="tc1" align="start">Gad </cell>
+      <cell style="tc2" align="start">Eliasaph son of Deuel </cell>
+      <cell style="tcr3" align="end">45,650</cell>
+    </row>
+    <row style="tr">
+      <cell style="tcr1" align="end" colspan="2">Total: </cell>
+      <cell style="tcr3" align="end">151,450</cell>
+    </row>
+    ...
+  </table>
+</usx>

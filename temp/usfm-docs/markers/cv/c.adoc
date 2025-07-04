@@ -1,0 +1,93 @@
+= c
+:description: Chapter number
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/cv/c.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Chapter number.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\c ++``#__number__#`` ++\ca ++``#__altnumber__#``++\ca*++`` _(see: xref:cv:ca.adoc[])_
+** ``++\cp ++``#__pubnumber__# _(see: xref:cv:cp.adoc[])_
+* *USX:* ``++<chapter style="c" ++``#__@number @altnumber @pubnumber @sid @eid__#``++/>++``
+#number# *::: Chapter number
+#altnumber#::: Chapter number for an alternate versification scheme.
+#pubnumber#::: Published chapter character. The character(s) (number, letter, or both) which should be displayed in a published text, where it is different than the sequential chapter number used within the translation editing environment.
+#sid# *::: Chapter start identifier. A standard book + chapter scripture reference. Book names must be a standard 3-character xref:doc:books.adoc[book identifier]. _Required at chapter start milestone._
+** Pattern: `+[A-Z1-4]{3} ?[0-9]++`
+#eid# *::: Chapter end identifier. A standard book + chapter scripture reference. Book names must be a standard 3-character xref:doc:books.adoc[book identifier]. _Required at chapter end milestone._
+** Pattern: `+[A-Z1-4]{3} ?[0-9]++`
+Valid In:: `[xref:doc:index.adoc#scripture[Scripture]]` > `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Diagrams
+
+[tabs]
+======
+USFM::
++
+image::schema/chapter_rail.svg[]
+USX::
++
+image::schema/chapter_usx.svg[]
+image::schema/chapterend_usx.svg[]
+======
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Matthew 1 (GNT)
+[source#src-usfm-cv-c_1,usfm,highlight=3]
+----
+\io1 The last week in and near Jerusalem (21.1–27.66)
+\io1 The resurrection and appearances of the Lord (28.1-20)
+\c 1
+\s1 The Ancestors of Jesus Christ
+\r (Luke 3.23-38)
+\p
+\v 1 This is the list of the ancestors of Jesus Christ, a descendant of David, 
+who was a descendant of Abraham.
+----
+USX::
++
+.Matthew 1 (GNT)
+[source#src-usx-cv-c_1,xml,highlight=3;11]
+----
+<para style="io1">The last week in and near Jerusalem (21.1–27.66)</para>
+<para style="io1">The resurrection and appearances of the Lord (28.1-20)</para>
+<chapter number="1" style="c" sid="MAT 1"/>
+<para style="s1">The Ancestors of Jesus Christ</para>
+<para style="r">(Luke 3.23-38)</para>
+<para style="p">
+  <verse number="1" style="v" sid="MAT 1:1"/>This is the list of the ancestors of
+  Jesus Christ, a descendant of David, who was a descendant of Abraham.
+  <verse eid="MAT 1:1"/></para>
+  ...
+<chapter eid="MAT 1"/>
+----
+======
+
+image::cv/c_1.jpg[Matthew 1 (GNT),300]
+
+== Properties
+
+TextType:: ChapterNumber
+TextProperties:: chapter
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

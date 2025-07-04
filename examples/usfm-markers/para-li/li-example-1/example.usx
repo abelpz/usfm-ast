@@ -1,0 +1,19 @@
+<usx version="3.1">
+  <book code="NUM" style="id"/>
+  <chapter number="7" style="c" sid="NUM 7"/>
+  <para style="p">
+    <verse number="84-88" style="v" sid="NUM 7:84-88"/>The totals of the offerings
+    brought by the twelve leaders for the dedication of the altar were as follows:
+    </para>
+  <para style="li1" vid="NUM 7:84-88">–twelve silver bowls and twelve silver basins
+    weighing a total of 60 pounds</para>
+  <para style="li1" vid="NUM 7:84-88">–twelve gold dishes weighing a total of 48
+    ounces, filled with incense</para>
+  <para style="li1" vid="NUM 7:84-88">–twelve bulls, twelve rams, and twelve
+    one-year-old lambs, plus the grain offerings that go with them, for the burnt
+    offerings</para>
+  <para style="li1" vid="NUM 7:84-88">–twelve goats for the sin offerings</para>
+  <para style="li1" vid="NUM 7:84-88">–twenty-four bulls, sixty rams, sixty goats,
+    sixty one-year-old lambs, for the fellowship offerings<verse eid="NUM 7:84-88"/>
+    </para>
+</usx>

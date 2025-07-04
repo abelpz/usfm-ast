@@ -1,0 +1,11 @@
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <para style="p">
+    <verse number="2-6a" style="v" sid="MAT 1:2-6a" />From Abraham to King David,
+    the following ancestors are listed: Abraham, Isaac, Jacob, Judah and his 
+    brothers; then Perez and Zerah (their mother was Tamar), Hezron, Ram, Amminadab, 
+    Nahshon, Salmon, Boaz (his mother was Rahab), Obed (his mother was 
+    <char style="jmp" href="#article-Ruth">Ruth</char>), Jesse, and King 
+    David.<verse eid="MAT 1:2-6a"/>
+  </para>
+</usx>

@@ -1,0 +1,128 @@
+= ip
+:description: Introduction paragraph
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/ip.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Introduction paragraph.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\ip ++``#__content__#
+* *USX:* ``++<para style="ip">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`, `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]` (Study Bible)
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Introduction to Mark (GNT)
+[source#src-usfm-para-ip_1,usfm,highlight=6]
+----
+\id MRK
+\h Mark
+\mt2 The Gospel according to
+\mt1 MARK
+\is Introduction
+\ip \bk The Gospel according to Mark\bk* begins with the statement that it is 
+“the Good News about Jesus Christ, the Son of God.” Jesus is pictured as a 
+man of action and authority. His authority is seen in his teaching, in his 
+power over demons, and in forgiving people's sins. Jesus speaks of himself as 
+the Son of Man, who came to give his life to set people free from sin.
+----
+USX::
++
+.Introduction to Mark (GNT)
+[source#src-usx-para-ip_1,xml,highlight=7]
+----
+<usx version="3.1">
+  <book code="MRK" style="id"/>
+  <para style="h">Mark</para>
+  <para style="mt2">The Gospel according to</para>
+  <para style="mt1">MARK</para>
+  <para style="is">Introduction</para>
+  <para style="ip">
+    <char style="bk">The Gospel according to Mark</char> begins with the statement
+    that it is “the Good News about Jesus Christ, the Son of God.” Jesus is
+    pictured as a man of action and authority. His authority is seen in his
+    teaching, in his power over demons, and in forgiving people's sins. Jesus
+    speaks of himself as the Son of Man, who came to give his life to set people
+    free from sin.</para>
+</usx>
+----
+USJ::
++
+.Introduction to Mark (GNT)
+[source#src-usj-para-ip_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "h",
+      "content": ["Mark"]
+    },
+    {
+      "type": "para",
+      "marker": "mt2",
+      "content": ["The Gospel according to"]
+    },
+    {
+      "type": "para",
+      "marker": "mt1",
+      "content": ["MARK"]
+    },
+    {
+      "type": "para",
+      "marker": "is",
+      "content": ["Introduction"]
+    },
+    {
+      "type": "para",
+      "marker": "ip",
+      "content": [
+        {
+          "type": "char",
+          "marker": "bk",
+          "content": ["The Gospel according to Mark"]
+        },
+        " begins with the statement that it is “the Good News about Jesus Christ, the Son of God.” Jesus is pictured as a man of action and authority. His authority is seen in his teaching, in his power over demons, and in forgiving people's sins. Jesus speaks of himself as the Son of Man, who came to give his life to set people free from sin."
+      ]
+    }
+  ]
+}
+----
+======
+
+image::para/ip_1.jpg[Introduction to Mark (GNT),400]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

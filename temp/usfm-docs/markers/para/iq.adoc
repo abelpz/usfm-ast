@@ -1,0 +1,147 @@
+= iq#
+:description: Introduction poetic line
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/iq.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Introduction poetic line.
+* The variable `#` (1-3) represents the level of indent. See xref:ROOT:syntax.adoc[syntax notes] on numbered markers.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\iq# ++``#__content__#
+* *USX:* ``++<para style="iq#">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Introduction to Titus (CEV)
+[source#src-usfm-para-iq_1,usfm,highlight=4..10]
+----
+\id TIT
+\ip Paul also tells how we are saved:
+\ib
+\iq1 God our Savior showed us
+\iq2 how good and kind he is.
+\iq1 He saved us because
+\iq2 of his mercy,
+\iq1 and not because
+\iq2 of any good things
+\iq2 that we have done.
+\ipr (3.4,5a)
+----
+USX::
++
+.Introduction to Titus (CEV)
+[source#src-usx-para-iq_1,xml,highlight=5..11]
+----
+<usx version="3.1">
+  <book code="TIT" style="id"/>
+  <para style="ip">Paul also tells how we are saved:</para>
+  <para style="ib"/>
+  <para style="iq1">God our Savior showed us</para>
+  <para style="iq2">how good and kind he is.</para>
+  <para style="iq1">He saved us because</para>
+  <para style="iq2">of his mercy,</para>
+  <para style="iq1">and not because</para>
+  <para style="iq2">of any good things</para>
+  <para style="iq2">that we have done.</para>
+  <para style="ipr">(3.4,5a)</para>
+</usx>
+----
+USJ::
++
+.Introduction to Titus (CEV)
+[source#src-usj-para-iq_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "TIT",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "ip",
+      "content": ["Paul also tells how we are saved:"]
+    },
+    {
+      "type": "para",
+      "marker": "ib",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "iq1",
+      "content": ["God our Savior showed us"]
+    },
+    {
+      "type": "para",
+      "marker": "iq2",
+      "content": ["how good and kind he is."]
+    },
+    {
+      "type": "para",
+      "marker": "iq1",
+      "content": ["He saved us because"]
+    },
+    {
+      "type": "para",
+      "marker": "iq2",
+      "content": ["of his mercy,"]
+    },
+    {
+      "type": "para",
+      "marker": "iq1",
+      "content": ["and not because"]
+    },
+    {
+      "type": "para",
+      "marker": "iq2",
+      "content": ["of any good things"]
+    },
+    {
+      "type": "para",
+      "marker": "iq2",
+      "content": ["that we have done."]
+    },
+    {
+      "type": "para",
+      "marker": "ipr",
+      "content": ["(3.4,5a)"]
+    }
+  ]
+}
+----
+======
+
+image::para/iq_1.jpg[Introduction to Titus (CEV),300]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

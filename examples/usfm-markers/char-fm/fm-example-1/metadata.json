@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Genesis 2.9 and 2.17 (GNT)",
+    "usx": "Genesis 2.9 and 2.17 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

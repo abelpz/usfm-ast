@@ -1,0 +1,108 @@
+= toc#
+:description: Book name texts
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/toc.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Book name texts. One common use of these texts is for composing a table of contents. They are also a record of names used in scripture references texts, such as xref:para:titles-sections/r.adoc[r] or xref:char:notes/crossref/xt.adoc[xt].
+* The variable `#` (1-3) represents the book name form.
+** `toc1` - Long book name.
+** `toc2` - Short book name.
+** `toc3` - Book abbreviation.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\toc# ++``#__content__#
+* *USX:* ``++<para style="toc#">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-headers[BookHeaders]]`
+// tag::spec[]
+Added:: 2.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Matthew (GNT)
+[source#src-usfm-para-toc_1,usfm,highlight=3..5]
+----
+\id MAT
+\h Matthew
+\toc1 The Gospel According to Matthew
+\toc2 Matthew
+\toc3 Mat
+----
+USX::
++
+.Matthew (GNT)
+[source#src-usx-para-toc_1,xml,highlight=4..6]
+----
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <para style="h">Matthew</para>
+  <para style="toc1">The Gospel According to Matthew</para>
+  <para style="toc2">Matthew</para>
+  <para style="toc3">Mat</para>
+</usx>
+----
+USJ::
++
+.Matthew (GNT)
+[source#src-usj-para-toc_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "h",
+      "content": ["Matthew"]
+    },
+    {
+      "type": "para",
+      "marker": "toc1",
+      "content": ["The Gospel According to Matthew"]
+    },
+    {
+      "type": "para",
+      "marker": "toc2",
+      "content": ["Matthew"]
+    },
+    {
+      "type": "para",
+      "marker": "toc3",
+      "content": ["Mat"]
+    }
+  ]
+}
+----
+======
+
+image::para/toc_1.jpg[Matthew (GNT),550]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Phrase gloss with portions of ruby characters separated by a colon",
+    "usx": "Phrase gloss with portions of ruby characters separated by a colon",
+    "usj": "Phrase gloss with portions of ruby characters separated by a colon"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

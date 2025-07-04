@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Exodus 3.15 (GNT)",
+    "usx": "Exodus 3.15 (GNT)",
+    "usj": "Exodus 3.15 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

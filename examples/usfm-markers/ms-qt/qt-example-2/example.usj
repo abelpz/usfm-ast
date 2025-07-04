@@ -1,0 +1,141 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "22",
+          "type": "verse"
+        },
+        "Paul stood up in front of the city council and said, ",
+        {
+          "marker": "qt1-s",
+          "type": "ms",
+          "sid": "qt1.ACT.17:22.1",
+          "who": "Paul"
+        },
+        "“I see that in every way you Athenians are very religious. ",
+        {
+          "marker": "v",
+          "number": "23",
+          "type": "verse"
+        },
+        "For as I walked through your city and looked at the places where you worship, I found an altar on which is written, ‘To an Unknown God.’ That which you worship, then, even though you do not know it, is what I now proclaim to you. ",
+        {
+          "marker": "v",
+          "number": "24",
+          "type": "verse"
+        },
+        "God, who made the world and everything in it, is Lord of heaven and earth and does not live in temples made by human hands. ",
+        {
+          "marker": "v",
+          "number": "25",
+          "type": "verse"
+        },
+        "Nor does he need anything that we can supply by working for him, since it is he himself who gives life and breath and everything else to everyone ",
+        {
+          "marker": "v",
+          "number": "26",
+          "type": "verse"
+        },
+        "From one human being he created all races of people and made them live throughout the whole earth. He himself fixed beforehand the exact times and the limits of the places where they would live. ",
+        {
+          "marker": "v",
+          "number": "27",
+          "type": "verse"
+        },
+        "He did this so that they would look for him, and perhaps find him as they felt around for him. Yet God is actually not far from any one of us; ",
+        {
+          "marker": "v",
+          "number": "28",
+          "type": "verse"
+        },
+        "as someone has said,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "marker": "qt2-s",
+          "type": "ms",
+          "sid": "qt2.ACT.17:28.1",
+          "who": "someone"
+        },
+        "‘In him we live and move and exist.’",
+        {
+          "marker": "qt2-e",
+          "type": "ms",
+          "eid": "qt2.ACT.17:28.1"
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "m",
+      "content": [
+        "It is as some of your poets have said,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "marker": "qt2-s",
+          "type": "ms",
+          "sid": "qt2.ACT.17:28.2",
+          "who": "poets"
+        },
+        "‘We too are his children.’ ",
+        {
+          "marker": "qt2-e",
+          "type": "ms",
+          "eid": "qt2.ACT.17:28.2"
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "m",
+      "content": [
+        {
+          "marker": "v",
+          "number": "29",
+          "type": "verse"
+        },
+        "Since we are God's children, we should not suppose that his nature is anything like an image of gold or silver or stone, shaped by human art and skill. ",
+        {
+          "marker": "v",
+          "number": "30",
+          "type": "verse"
+        },
+        "God has overlooked the times when people did not know him, but now he commands all of them everywhere to turn away from their evil ways. ",
+        {
+          "marker": "v",
+          "number": "31",
+          "type": "verse"
+        },
+        "For he has fixed a day in which he will judge the whole world with justice by means of a man he has chosen. He has given proof of this to everyone by raising that man from death!”",
+        {
+          "marker": "qt1-e",
+          "type": "ms",
+          "eid": "qt1_ACT_17:22.1"
+        }
+      ]
+    }
+  ]
+}

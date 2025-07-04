@@ -1,0 +1,8 @@
+<usx version="3.1">
+  <book code="GEN" style="id"/>
+  <para style="p">...</para>
+  <para style="p">
+    <verse number="29" style="v" sid="GEN 5:29"/>И нарек ему имя: Ной, сказав: он
+    утешит нас в работе нашей и в трудах рук наших при <char style="add">
+    возделывании</char> земли, которую проклял Господь.<verse eid="GEN 5:29"/></para>
+</usx>

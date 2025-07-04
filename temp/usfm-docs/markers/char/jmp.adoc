@@ -1,0 +1,462 @@
+= jmp
+:description: Link text
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/jmp.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Link text. For associating linking attributes to a span of text.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\jmp ++``#__content__#``++|++``#__@href @title @id__#``++\jmp*++``
+* *USX:* ``++<char style="jmp" ++``#__@href @title @id__#``++>++``#__content__#``++</char>++``
+#href#::: Identifies the resource being linked to as a URI. _(default attribute)_
+** A user-defined URI prefix can be used to help identify the target resource. For example: `x-prj:` might identify another scripture translation project available within the current editing environment, like `x-prj:RSV52 MAT 3:1-4`.
+** User defined URI prefixes must begin with the prefix `x-`.
+** When an #href# specifies a scripture reference, follow the pattern: `+[A-Z1-4]{3}(-[A-Z1-4]{3})? ?[a-z0-9\-:]*+`. Example: `MAT 3:1-4`, where:
+*** Book names is a standard 3-character scripture xref:doc:books.adoc[book identifier].
+*** The chapter + verse separator is a colon `:`.
+*** Verse ranges are indicated using a hyphen.
+#title#::: Plain text describing the resource being linked to (for example - to display in a tooltip when hovering over the link).
+#id#::: A unique identifier for a specific content location (i.e. an anchor).
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:doc:index.adoc#doc-book-titles[BookTitles]]`, `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`, `[xref:doc:index.adoc#doc-book-intro-end-titles[BookIntroductionEndTitles]]`, `[xref:para:titles-sections/index.adoc[Section]]`, `[Para]` (xref:para:paragraphs/index.adoc[Body Paragraphs], xref:para:poetry/index.adoc[Poetry]), `[xref:para:lists/index.adoc[List]]`, `[xref:para:tables/index.adoc[Table]]`
+// tag::spec[]
+Added:: 3.0
+Updated:: 3.1
+* _Deprecated_ the `link-` prefix in the attribute names.
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Link to other project text
+[source#src-usfm-char-jmp_1,usfm,highlight=5..6]
+----
+\id GEN
+\c 1
+\p
+\v 1 \ef - \fr 1:2 \ft The traditional translation of verse 1, as given in
+\jmp RSV|href="x-prj:RSV52 GEN 1:1" title="Revised Standard 
+Version"\jmp*, may be appropriate.\ef*
+----
+USX::
++
+.Link to other project text
+[source#src-usx-char-jmp_1,xml,highlight=7..8]
+----
+<usx version="3.1">
+  <book code="GEN" style="id"/>
+  <para style="p">
+    <verse number="1" style="v" sid="GEN 1:1"/>
+    <note caller="-" style="ef">
+      <char style="fr">1.1: </char><char style="ft">The traditional translation 
+      of verse 1, as given in <char style="jmp" href="x-prj:RSV52 GEN 1:1"
+      title="Revised Standard Version">RSV</char>, may be appropriate.</char>
+    </note>
+  </para>
+</usx>
+----
+USJ::
++
+.Link to other project text
+[source#src-usj-char-jmp_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "GEN",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "GEN 1:1"
+        },
+        {
+          "type": "note",
+          "marker": "ef",
+          "caller": "-",
+          "content": [
+            {
+              "type": "char",
+              "marker": "fr",
+              "content": ["1.1:"]
+            },
+            {
+              "type": "char",
+              "marker": "ft",
+              "content": [
+                "The traditional translation of verse 1, as given in",
+                {
+                  "type": "char",
+                  "marker": "jmp",
+                  "href": "x-prj:RSV52 GEN 1:1",
+                  "title": "Revised Standard Version",
+                  "content": ["RSV"]
+                },
+                ", may be appropriate."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+----
+======
+
+[tabs]
+======
+USFM::
++
+.Link to illustration / media
+[source#src-usfm-char-jmp_2,usfm,highlight=3..4]
+----
+\p Storehouses, as used here, refers to large buildings with walls and roof, 
+where grain was kept until needed. (See illustration: 
+\jmp Storehouse|href="figures/storehouse.png" 
+title="Ancient storehouse"\jmp*)
+----
+USX::
++
+.Link to other project text
+[source#src-usx-char-jmp_2,xml,highlight=3..4]
+----
+<para style="p">Storehouses, as used here, refers to large buildings with 
+walls and roof, where grain was kept until needed. (See illustration: 
+<char style="jmp" href="figures/storehouse.png" 
+title="Ancient storehouse">Storehouse</char>)
+...</para>
+----
+USJ::
++
+.Link to other project text
+[source#src-usj-char-jmp_2,json,highlight=]
+----
+{
+  "type": "para",
+  "marker": "p",
+  "content": [
+    "Storehouses, as used here, refers to large buildings with walls and roof, where grain was kept until needed. (See illustration:",
+    {
+      "type": "char",
+      "marker": "jmp",
+      "href": "figures/storehouse.png",
+      "title": "Ancient storehouse",
+      "content": ["Storehouse"]
+    },
+    ") ..."
+  ]
+}
+----
+======
+
+[tabs]
+======
+USFM::
++
+.Assigning an identifier (anchor)
+[source#src-usfm-char-jmp_3,usfm,highlight=6]
+----
+\id MRK
+\c 1
+\q1 “Someone is shouting in the desert,
+\q2 ‘Prepare a road for the Lord;
+\q2 make a straight path for him to travel!’ ”
+\esb \cat People\cat*\jmp |id="article-john_the_baptist"\jmp*
+\ms John the Baptist
+\p John is sometimes called the last “Old Testament prophet” because of the 
+warnings he brought about God's judgment and because he announced the coming 
+of God's “Chosen One” (Messiah).
+...
+\esbe
+----
+USX::
++
+.Assigning an identifier (anchor)
+[source#src-usx-char-jmp_3,xml,highlight=7]
+----
+<usx version="3.1">
+  <book code="MRK" style="id"/>
+  <para style="q1">“Someone is shouting in the desert,</para>
+  <para style="q2">‘Prepare a road for the Lord;</para>
+  <para style="q2">make a straight path for him to travel!’ ”</para>
+  <sidebar style="esb" category="people">
+    <para style="ms"><char style="jmp" id="article-john_the_baptist" />John the 
+      Baptist</para>
+    <para style="p">John is sometimes called the last “Old Testament prophet” 
+      because of the warnings he  brought about God's judgment and because he 
+      announced the coming of God's “Chosen One” (Messiah).</para>
+    ...
+  </sidebar>
+</usx>
+----
+USJ::
++
+.Assigning an identifier (anchor)
+[source#src-usj-char-jmp_3,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": ["“Someone is shouting in the desert,"]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["‘Prepare a road for the Lord;"]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["make a straight path for him to travel!’ ”"]
+    },
+    {
+      "type": "sidebar",
+      "marker": "esb",
+      "category": "people",
+      "content": [
+        {
+          "type": "para",
+          "marker": "ms",
+          "content": [
+            {
+              "type": "char",
+              "marker": "jmp",
+              "id": "article-john_the_baptist",
+              "content": []
+            },
+            "John the Baptist"
+          ]
+        },
+        {
+          "type": "para",
+          "marker": "p",
+          "content": [
+            "John is sometimes called the last “Old Testament prophet” because of the warnings he brought about God's judgment and because he announced the coming of God's “Chosen One” (Messiah)."
+          ]
+        },
+        " ... "
+      ]
+    }
+  ]
+}
+----
+======
+
+[tabs]
+======
+USFM::
++
+.Reference to named target within the same project
+[source#src-usfm-char-jmp_5,usfm,highlight=7]
+----
+\id MAT
+\c 1
+\p
+\v 2-6a From Abraham to King David, the following ancestors are listed: Abraham,
+Isaac, Jacob, Judah and his brothers; then Perez and Zerah (their mother was 
+Tamar*), Hezron, Ram, Amminadab, Nahshon, Salmon, Boaz (his mother was Rahab*), 
+Obed (his mother was \jmp Ruth|href="#article-Ruth"\jmp*), Jesse, and King 
+David.
+----
+USX::
++
+.Reference to named target within the same project
+[source#src-usx-char-jmp_5,xml,highlight=8]
+----
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <para style="p">
+    <verse number="2-6a" style="v" sid="MAT 1:2-6a" />From Abraham to King David,
+    the following ancestors are listed: Abraham, Isaac, Jacob, Judah and his 
+    brothers; then Perez and Zerah (their mother was Tamar), Hezron, Ram, Amminadab, 
+    Nahshon, Salmon, Boaz (his mother was Rahab), Obed (his mother was 
+    <char style="jmp" href="#article-Ruth">Ruth</char>), Jesse, and King 
+    David.<verse eid="MAT 1:2-6a"/>
+  </para>
+</usx>
+----
+USJ::
++
+.Reference to named target within the same project
+[source#src-usj-char-jmp_5,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2-6a",
+          "sid": "MAT 1:2-6a"
+        },
+        "From Abraham to King David, the following ancestors are listed: Abraham, Isaac, Jacob, Judah and his brothers; then Perez and Zerah (their mother was Tamar), Hezron, Ram, Amminadab, Nahshon, Salmon, Boaz (his mother was Rahab), Obed (his mother was ",
+        {
+          "type": "char",
+          "marker": "jmp",
+          "href": "#article-Ruth",
+          "content": ["Ruth"]
+        },
+        "), Jesse, and King David."
+      ]
+    }
+  ]
+}
+----
+======
+
+[tabs]
+======
+USFM::
++
+.Nested within extended footnote text.
+[source#src-usfm-char-jmp_6,usfm,highlight=9]
+----
+\id MAT
+\c 1
+\p
+\v 2-6a From Abraham to King David, the following ancestors are listed: Abraham,
+Isaac, Jacob, Judah and his brothers; then Perez and Zerah (their mother was 
+Tamar*), Hezron, Ram, Amminadab, Nahshon, Salmon, Boaz (his mother was Rahab*), 
+Obed (his mother was Ruth\ef - \fr 1.2-6a: \fq Ruth: \ft A Moabite (Ruth 1.4). 
+Only outstanding women were normally included in Jewish genealogical lists. See 
+article on \jmp Ruth|href="#article-Ruth"\jmp*\ef*), Jesse, and King David.
+----
+USX::
++
+.Reference to named target within the same project
+[source#src-usx-char-jmp_6,xml,highlight=12]
+----
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <para style="p">
+    <verse number="2-6a" style="v" sid="MAT 1:2-6a" />From Abraham to King David,
+    the following ancestors are listed: Abraham, Isaac, Jacob, Judah and his 
+    brothers; then Perez and Zerah (their mother was Tamar), Hezron, Ram, Amminadab, 
+    Nahshon, Salmon, Boaz (his mother was Rahab), Obed (his mother was 
+    Ruth<note caller="-" style="ef">
+      <char style="fr">1.2-6a: </char><char style="fq">Ruth: </char>
+        <char style="ft">A Moabite. Only outstanding women were normally included in 
+        Jewish genealogical lists. See article on 
+        <char style="jmp" href="#article-Ruth">Ruth</char></char></note>), 
+    Jesse, and King David. ...<verse eid="MAT 1:2-6a"/></para>
+</usx>
+----
+USJ::
++
+.Reference to named target within the same project
+[source#src-usj-char-jmp_6,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2-6a",
+          "sid": "MAT 1:2-6a"
+        },
+        "From Abraham to King David, the following ancestors are listed: Abraham, Isaac, Jacob, Judah and his brothers; then Perez and Zerah (their mother was Tamar), Hezron, Ram, Amminadab, Nahshon, Salmon, Boaz (his mother was Rahab), Obed (his mother was Ruth",
+        {
+          "type": "note",
+          "marker": "ef",
+          "caller": "-",
+          "content": [
+            {
+              "type": "char",
+              "marker": "fr",
+              "content": ["1.2-6a:"]
+            },
+            {
+              "type": "char",
+              "marker": "fq",
+              "content": ["Ruth:"]
+            },
+            {
+              "type": "char",
+              "marker": "ft",
+              "content": [
+                "A Moabite. Only outstanding women were normally included in Jewish genealogical lists. See article on",
+                {
+                  "type": "char",
+                  "marker": "jmp",
+                  "href": "#article-Ruth",
+                  "content": ["Ruth"]
+                }
+              ]
+            }
+          ]
+        },
+        "), Jesse, and King David. ..."
+      ]
+    }
+  ]
+}
+----
+======
+
+//image::char/missing.jpg[,300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

@@ -1,0 +1,101 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "18",
+          "type": "verse"
+        },
+        "“Why do you call me good?” Jesus asked him. “No one is good except God alone. ",
+        {
+          "marker": "v",
+          "number": "19",
+          "type": "verse"
+        },
+        {
+          "marker": "x",
+          "content": [
+            {
+              "marker": "xo",
+              "content": [
+                "10.19: a "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xt",
+              "content": [
+                "Exo 20.13; Deu 5.17; "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xo",
+              "content": [
+                "b "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xt",
+              "content": [
+                "Exo 20.14; Deu 5.18; "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xo",
+              "content": [
+                "c "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xt",
+              "content": [
+                "Exo 20.15; Deu 5.19; "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xo",
+              "content": [
+                "d "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xt",
+              "content": [
+                "Exo 20.16; Deu 5.20; "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xo",
+              "content": [
+                "e "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xt",
+              "content": [
+                "Exo 20.12; Deu 5.16."
+              ],
+              "type": "char"
+            }
+          ],
+          "caller": "-",
+          "type": "note"
+        },
+        " You know the commandments: ‘Do not commit murder; do not commit adultery; do not steal; do not accuse anyone falsely; do not cheat; respect your father and your mother.’”"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+= //
+:description: Discretionary line break
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/optbreak.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Discretionary (optional) line break.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++//++``
+* *USX:* ``++<optbreak/>++``
+Valid In:: `[xref:doc:index.adoc#doc-book-titles[BookTitles]]`, `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`, `[xref:doc:index.adoc#doc-book-intro-end-titles[BookIntroductionEndTitles]]`, `[xref:para:titles-sections/index.adoc[Section]]`, `[Para]` (xref:para:paragraphs/index.adoc[Body Paragraphs], xref:para:poetry/index.adoc[Poetry]), `[xref:para:lists/index.adoc[List]]`, `[xref:para:tables/index.adoc[Table]]`, `[xref:note:footnote/index.adoc[Footnote]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Matthew 9.1 (GNT)
+[source#src-usfm-char-optbreak_1,usfm,highlight=3]
+----
+\id MAT
+\c 9
+\s1 Jesus Heals a Man // Who Could Not Walk
+\r (Mark 2.1-12; Luke 5.17-26)
+----
+USX::
++
+.Matthew 9.1 (GNT)
+[source#src-usx-char-optbreak_1,xml,highlight=5]
+----
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <chapter number="9" style="c" sid="MAT 9"/>
+  <para style="s1">Jesus Heals a Man <optbreak/> Who Could Not Walk</para>
+  <para style="r">(<ref loc="MRK 2:1-12">Mark 2.1-12</ref>; <ref
+      loc="LUK 5:17-26">Luke 5.17-26</ref>)</para>
+</usx>
+----
+USJ::
++
+.Matthew 9.1 (GNT)
+[source#src-usj-char-optbreak_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "9",
+      "sid": "MAT 9"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "Jesus Heals a Man ",
+        {
+          "type": "optbreak"
+        },
+        " Who Could Not Walk"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "r",
+      "content": [
+        "(",
+        {
+          "type": "ref",
+          "loc": "MRK 2:1-12",
+          "content": ["Mark 2.1-12"]
+        },
+        "; ",
+        {
+          "type": "ref",
+          "loc": "LUK 5:17-26",
+          "content": ["Luke 5.17-26"]
+        },
+        ")"
+      ]
+    }
+  ]
+}
+----
+======
+
+image::char/optbreak_1.jpg[Matthew 9.1 (GNT),300]
+
+== Properties
+
+TextProperties:: publishable
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

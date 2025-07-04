@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Character sequence which includes a non-Han character which is NOT glossed",
+    "usx": "Character sequence which includes a non-Han character which is NOT glossed",
+    "usj": "Character sequence which includes a non-Han character which is NOT glossed"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

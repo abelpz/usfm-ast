@@ -1,0 +1,32 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "h",
+      "content": ["Matthew"]
+    },
+    {
+      "type": "para",
+      "marker": "toc1",
+      "content": ["The Gospel According to Matthew"]
+    },
+    {
+      "type": "para",
+      "marker": "toc2",
+      "content": ["Matthew"]
+    },
+    {
+      "type": "para",
+      "marker": "toc3",
+      "content": ["Mat"]
+    }
+  ]
+}

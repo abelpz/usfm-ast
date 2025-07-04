@@ -1,0 +1,94 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PRO",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "22",
+      "sid": "PRO 22"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "... ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "21",
+          "sid": "PRO 22:21"
+        },
+        "and will teach you what the truth really is. Then when you are sent to find it out, you will bring back the right answer."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "s2",
+      "content": [
+        "-1-"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "22",
+          "sid": "PRO 22:22"
+        },
+        "Don't take advantage of the poor just because you can; don't take advantage of those who stand helpless in court. ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "23",
+          "sid": "PRO 22:23"
+        },
+        "The ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": [
+            "Lord"
+          ]
+        },
+        " will argue their case for them and threaten the life of anyone who threatens theirs."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "s2",
+      "content": [
+        "-2-"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "24",
+          "sid": "PRO 22:24"
+        },
+        "Don't make friends with people who have hot, violent tempers. ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "25",
+          "sid": "PRO 22:25"
+        },
+        "You might learn their habits and not be able to change."
+      ]
+    }
+  ]
+}

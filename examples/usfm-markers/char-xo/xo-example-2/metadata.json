@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Multiple Origin Parts - Mark 10.19 (GNT)",
+    "usx": "Multiple Origin Parts - Mark 10.19 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

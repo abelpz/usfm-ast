@@ -1,0 +1,181 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "GEN",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "GEN 1"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "GEN 1:1"
+        },
+        "まだ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "なに",
+          "content": [
+            "何"
+          ]
+        },
+        "もなかった",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "とき",
+          "content": [
+            "時"
+          ]
+        },
+        "、",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "かみ",
+          "content": [
+            "神"
+          ]
+        },
+        "は",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "てん",
+          "content": [
+            "天"
+          ]
+        },
+        "と ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "ち",
+          "content": [
+            "地"
+          ]
+        },
+        "を",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "つく",
+          "content": [
+            "造"
+          ]
+        },
+        "りました。 ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "GEN 1:2"
+        },
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "ち",
+          "content": [
+            "地"
+          ]
+        },
+        "は",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "かたち",
+          "content": [
+            "形"
+          ]
+        },
+        "も",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "さだ",
+          "content": [
+            "定"
+          ]
+        },
+        "まらず、",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "やみ",
+          "content": [
+            "闇"
+          ]
+        },
+        "に ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "つつ",
+          "content": [
+            "包"
+          ]
+        },
+        "まれた",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "みず",
+          "content": [
+            "水"
+          ]
+        },
+        "の",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "うえ",
+          "content": [
+            "上"
+          ]
+        },
+        "を、さらに",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "かみ",
+          "content": [
+            "神"
+          ]
+        },
+        "の ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "れい",
+          "content": [
+            "霊"
+          ]
+        },
+        "が",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "おお",
+          "content": [
+            "覆"
+          ]
+        },
+        "っていました。"
+      ]
+    }
+  ]
+}

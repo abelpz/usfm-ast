@@ -1,0 +1,17 @@
+<usx version="3.1">
+  <book code="PSA" style="id"/>
+  <para style="q1">
+    <verse number="3" style="v" sid="PSA 115:3"/>Our God is in heaven;</para>
+  <para style="q2" vid="PSA 115:3">he does whatever he wishes.
+    <verse eid="PSA 115:3"/></para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PSA 115:4"/>
+    <note caller="-" style="x">
+      <char style="xo" closed="false">115.4-8: </char>
+      <char style="xt" closed="false">Ps 135.15-18; 
+        <char style="dc">Ltj Jr 4-73; </char></char>
+      <char style="xt" closed="false">Rev 9.20.</char>
+    </note> Their gods are made of silver and gold,</para>
+  <para style="q2" vid="PSA 115:4">formed by human hands.<verse eid="PSA 115:4"/>
+    </para>
+</usx>

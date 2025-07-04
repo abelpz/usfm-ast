@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Psalm 119 (NIV)",
+    "usx": "Psalm 119 (NIV)",
+    "usj": "Psalm 119 (NIV)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

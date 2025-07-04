@@ -14,6 +14,10 @@ import {
   isTextNode,
   isNoteNode,
   isMilestoneNode,
+  USFMNodeType,
+  BaseUSFMVisitor,
+  USFMVisitorWithContext,
+  EnhancedUSJNode,
 } from '@usfm-tools/types';
 import {
   CharacterUSFMNode,
@@ -25,12 +29,38 @@ import {
   USFMNodeUnion,
 } from '../nodes';
 import { USFMMarkerRegistry, USFMMarkerInfo, USFMParserOptions } from '../constants';
+import { MarkerType, MarkerTypeEnum } from '@usfm-tools/types';
+
 import {
-  BaseUSFMVisitor,
-  USFMVisitorWithContext,
-  MarkerType,
-  MarkerTypeEnum,
-} from '@usfm-tools/types';
+  ParsedRootNode,
+  ParsedBookNode,
+  ParsedChapterNode,
+  ParsedParagraphNode,
+  ParsedCharacterNode,
+  ParsedVerseNode,
+  ParsedNoteNode,
+  ParsedMilestoneNode,
+  ParsedTextNode,
+  ParsedUSJNode,
+  createParsedBook,
+  createParsedChapter,
+  createParsedParagraph,
+  createParsedCharacter,
+  createParsedVerse,
+  createParsedNote,
+  createParsedMilestone,
+  createParsedText,
+  createParsedSidebar,
+  ParsedSidebarNode,
+  ParsedRefNode,
+  createParsedRef,
+  ParsedTableNode,
+  ParsedTableRowNode,
+  ParsedTableCellNode,
+  createParsedTable,
+  createParsedTableRow,
+  createParsedTableCell,
+} from '../nodes/enhanced-usj-nodes';
 
 /**
  * A parser for USFM (Unified Standard Format Markers) text.
@@ -39,7 +69,7 @@ import {
 export class USFMParser {
   private pos: number = 0;
   private input: string = '';
-  private nodes: HydratedUSFMNode[] = [];
+  private rootNode: ParsedRootNode | null = null;
   private logs: Array<{ type: 'warn' | 'error'; message: string }> = [];
   private positionVisits: Map<number, number> = new Map();
   private readonly MAX_VISITS = 1000;
@@ -47,6 +77,14 @@ export class USFMParser {
   private readonly trackPositions: boolean;
   private readonly markerRegistry: USFMMarkerRegistry;
   private inferredMarkers: Record<string, USFMMarkerInfo> = {};
+
+  // USJ version we support for version comparison
+  private static readonly SUPPORTED_USJ_VERSION = '3.1';
+
+  // Context tracking for sid generation
+  private currentBookCode: string = '';
+  private currentChapter: string = '';
+  private currentVerse: string = '';
 
   /**
    * Creates a new instance of the USFMParser.
@@ -93,8 +131,14 @@ export class USFMParser {
     if (this.trackPositions) {
       this.positionVisits.clear();
     }
+
+    // Reset context tracking for sid generation
+    this.currentBookCode = '';
+    this.currentChapter = '';
+    this.currentVerse = '';
+
     this.currentMethod = 'parse';
-    this.nodes = this.parseNodes();
+    this.rootNode = this.parseNodes();
     return this;
   }
 
@@ -110,10 +154,26 @@ export class USFMParser {
 
   /**
    * Returns the parsed AST nodes.
-   * @returns {HydratedUSFMNode[]} Array of parsed USFM nodes
+   * @returns {EnhancedUSJNode[]} Array of parsed USFM nodes
    */
-  getNodes(): HydratedUSFMNode[] {
-    return this.nodes;
+  getNodes(): EnhancedUSJNode[] {
+    return this.rootNode?.content || [];
+  }
+
+  /**
+   * Returns the root node containing all parsed content.
+   * @returns {ParsedRootNode | null} The root node or null if not parsed
+   */
+  getRootNode(): ParsedRootNode | null {
+    return this.rootNode;
+  }
+
+  /**
+   * Exports the parsed content as plain USJ format.
+   * @returns {any} Plain USJ object suitable for JSON serialization
+   */
+  toJSON(): any {
+    return this.rootNode?.toJSON() || { type: 'USJ', version: '3.1', content: [] };
   }
 
   /**
@@ -150,11 +210,11 @@ export class USFMParser {
 
   /**
    * Parses USFM nodes from the loaded usfm text.
-   * @returns {HydratedUSFMNode[]} Array of parsed USFM nodes
+   * @returns {ParsedRootNode} The root node containing all parsed content
    * @private
    */
-  private parseNodes(): HydratedUSFMNode[] {
-    const rootNode = this.createNode<RootNode>({ type: 'root', content: [] }, 0);
+  private parseNodes(): ParsedRootNode {
+    const rootNode = new ParsedRootNode([]);
 
     while (this.pos < this.input.length) {
       this.movePosition(0, true, 'parseNodes'); // Check for infinite loop without moving
@@ -163,20 +223,62 @@ export class USFMParser {
       if (char === '\\') {
         const { marker, isNested, markerInfo } = this.parseMarker();
 
+        // Skip empty markers (like milestone closing markers)
+        if (!marker) {
+          continue;
+        }
+
+        // Handle \usfm marker specially - extract version and compare with USJ version
+        if (marker === 'usfm') {
+          const versionContent = this.parseSpecialContent().trim();
+          if (versionContent !== USFMParser.SUPPORTED_USJ_VERSION) {
+            this.logWarning(
+              `USFM version mismatch: found version ${versionContent}, but USJ output supports version ${USFMParser.SUPPORTED_USJ_VERSION}. ` +
+                `This may cause compatibility issues.`
+            );
+          }
+          // Skip creating a node for \usfm marker
+          continue;
+        }
+
         switch (markerInfo?.type) {
           case MarkerTypeEnum.PARAGRAPH:
-            rootNode.content.push(this.parseParagraph(marker, rootNode.content.length, rootNode));
+            // Handle special markers that should be book/chapter nodes
+            if (marker === 'id') {
+              rootNode.content.push(this.parseBook(marker, rootNode.content.length));
+            } else if (marker === 'c') {
+              const chapterNode = this.parseChapter(marker, rootNode.content.length);
+              rootNode.content.push(chapterNode);
+            } else if (marker === 'tr') {
+              // Handle table parsing - parse consecutive \tr markers as a table
+              rootNode.content.push(this.parseTable(rootNode.content.length));
+            } else if (markerInfo.sectionContainer) {
+              // Handle section containers like \esb
+              rootNode.content.push(this.parseSection(marker, rootNode.content.length));
+            } else if (markerInfo.closes) {
+              // This is a closing marker like \esbe - skip it as it's handled by parseSection
+              continue;
+            } else if (markerInfo.role === 'break') {
+              // Handle break markers that don't have content
+              rootNode.content.push(this.parseBreakParagraph(marker, rootNode.content.length));
+            } else {
+              rootNode.content.push(this.parseEnhancedParagraph(marker, rootNode.content.length));
+            }
             break;
           case MarkerTypeEnum.CHARACTER:
-            rootNode.content.push(
-              this.parseCharacter(marker, isNested, rootNode.content.length, rootNode)
-            );
+            if (marker === 'v') {
+              rootNode.content.push(this.parseVerse(marker, rootNode.content.length));
+            } else {
+              rootNode.content.push(
+                this.parseEnhancedCharacter(marker, isNested, rootNode.content.length)
+              );
+            }
             break;
           case MarkerTypeEnum.NOTE:
-            rootNode.content.push(this.parseNote(marker, rootNode.content.length, rootNode));
+            rootNode.content.push(this.parseNote(marker, rootNode.content.length));
             break;
           case MarkerTypeEnum.MILESTONE:
-            rootNode.content.push(this.parseMilestone(marker, rootNode.content.length, rootNode));
+            rootNode.content.push(this.parseEnhancedMilestone(marker, rootNode.content.length));
             break;
         }
       } else if (this.isWhitespace(char)) {
@@ -188,591 +290,11 @@ export class USFMParser {
             `Context: ${context}\n` +
             `         ${pointer}`
         );
-        rootNode.content.push(this.parseText(false, rootNode.content.length, rootNode));
+        rootNode.content.push(this.parseEnhancedText(false, rootNode.content.length));
       }
     }
 
-    return rootNode.content;
-  }
-
-  /**
-   * Parses a paragraph marker and its content.
-   * @param {string} marker - The paragraph marker
-   * @param {number} index - The index of this node in its parent's content
-   * @param {USFMNodeUnion | RootNode} [parent] - The parent node
-   * @returns {ParagraphUSFMNode} The parsed paragraph node
-   * @private
-   */
-  private parseParagraph(
-    marker: string,
-    index: number,
-    parent?: USFMNodeUnion | RootNode
-  ): ParagraphUSFMNode {
-    const node = this.createNode<ParagraphNode>(
-      {
-        type: 'paragraph' as const,
-        marker,
-        content: [],
-      },
-      index,
-      parent
-    );
-
-    const markerInfo = this.markerRegistry.getMarkerInfo(marker);
-
-    // Break markers do not have any content, no need to look inside.
-    if (markerInfo?.role === 'break') {
-      return node;
-    }
-
-    // Skip exactly one space after marker
-    if (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
-      this.advance(false);
-    }
-
-    // Parse content until next paragraph marker
-    while (this.pos < this.input.length) {
-      this.movePosition(0, true, 'parseParagraph'); // Check for infinite loop without moving
-
-      const char = this.getCurrentCharacter();
-      if (/*New marker found*/ char === '\\') {
-        const savedPos = this.savePosition();
-        const { marker, isNested, markerInfo } = this.parseMarker();
-
-        if (markerInfo?.type === MarkerTypeEnum.PARAGRAPH) {
-          // Trim trailing whitespace from the last text node before ending paragraph
-          if (node.content.length > 0) {
-            const lastNode = node.content[node.content.length - 1];
-            if (lastNode.type === 'text') {
-              (lastNode as any).content = ((lastNode as any).content as string).trimEnd();
-            }
-          }
-          // Reset position to start of the paragraph marker we just found
-          this.restorePosition(savedPos, false);
-          break;
-        }
-
-        switch (markerInfo?.type) {
-          case MarkerTypeEnum.MILESTONE:
-            node.content.push(this.parseMilestone(marker, node.content.length, node));
-            break;
-          case MarkerTypeEnum.CHARACTER:
-            node.content.push(this.parseCharacter(marker, isNested, node.content.length, node));
-            break;
-          case MarkerTypeEnum.NOTE:
-            node.content.push(this.parseNote(marker, node.content.length, node));
-            break;
-          default:
-            node.content.push(this.parseText(true, node.content.length, node));
-            break;
-        }
-      } else if (this.isLineBreakingWhitespace(char)) {
-        //peek next marker if it's a paragraph marker or unknown marker then break;
-        const { marker: nextMarker, markerInfo: nextMarkerInfo } = this.getFollowingMarker();
-
-        if (!nextMarker) {
-          node.content.push(this.parseText(true, node.content.length, node));
-          continue;
-        }
-
-        if (!nextMarkerInfo || nextMarkerInfo.type === MarkerTypeEnum.PARAGRAPH) {
-          break;
-        }
-
-        if (node.content.length === 0) continue;
-
-        /**
-         * For cases where each verse is in one line, or where, to facilitate readability,
-         * the USFM is split into more lines than usual, even within the same paragraph,
-         * then the end of each line represents a whitespace.
-         *
-         * Example:
-         * \v1 \w In\w*
-         * \w The\w*
-         * \w Beginning\w*
-         */
-        const lastNode = node.content[node.content.length - 1];
-        if (lastNode.type === 'text') {
-          lastNode.content = (lastNode.content as string).trimEnd() + ' ';
-          continue;
-        }
-
-        node.content.push(
-          this.createNode<TextNode>({ type: 'text', content: ' ' }, node.content.length, node)
-        );
-        continue;
-      } else {
-        node.content.push(this.parseText(true, node.content.length, node));
-      }
-    }
-
-    return node;
-  }
-
-  /**
-   * Parses a character marker and its content.
-   * @param {string} marker - The character marker
-   * @param {boolean} [isNested=false] - Whether this is a nested character marker
-   * @param {number} index - The index of this node in its parent's content
-   * @param {USFMNodeUnion | RootNode} [parent] - The parent node
-   * @returns {CharacterUSFMNode} The parsed character node
-   * @private
-   */
-  private parseCharacter(
-    marker: string,
-    isNested: boolean = false,
-    index: number,
-    parent?: USFMNodeUnion | RootNode
-  ): CharacterUSFMNode {
-    const node = this.createNode<CharacterNode>(
-      {
-        type: 'character',
-        marker,
-        content: [],
-      },
-      index,
-      parent
-    );
-
-    // Special handling for verse numbers
-    if (marker === 'v') {
-      // Skip any non-line-breaking whitespace before verse number
-      while (
-        this.pos < this.input.length &&
-        this.isNonLineBreakingWhitespace(this.getCurrentCharacter())
-      ) {
-        this.advance(false);
-      }
-
-      let number = '';
-      while (this.pos < this.input.length) {
-        const char = this.getCurrentCharacter();
-        if (this.isWhitespace(char)) {
-          break;
-        }
-        number += char;
-        this.advance(false);
-      }
-      node.content.push(
-        this.createNode<TextNode>({ type: 'text', content: number }, node.content.length, node)
-      );
-
-      // Skip any whitespace after verse number
-      while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
-        this.advance(false);
-      }
-      return this.createNode<CharacterNode>(node, index, parent);
-    }
-
-    // Skip non-line-breaking whitespace before content
-    while (
-      this.pos < this.input.length &&
-      this.isNonLineBreakingWhitespace(this.getCurrentCharacter())
-    ) {
-      this.advance(false);
-    }
-
-    let textContent = '';
-
-    // Parse content until closing marker
-    const closingMarker = `\\${isNested ? '+' : ''}${marker}*`;
-    while (this.pos < this.input.length) {
-      // Check for closing marker and move
-      if (this.input.startsWith(closingMarker, this.pos)) {
-        if (textContent) {
-          node.content.push(
-            this.createNode<TextNode>(
-              { type: 'text', content: textContent },
-              node.content.length,
-              node
-            )
-          );
-          textContent = '';
-        }
-        this.pos += closingMarker.length;
-        break;
-      }
-
-      const char = this.input[this.pos];
-
-      if (char === '\\') {
-        const { marker: nextMarker, markerInfo: nextMarkerInfo } = this.peekMarker();
-        if (nextMarkerInfo?.type === MarkerTypeEnum.PARAGRAPH) {
-          break;
-        }
-
-        // Implicit closing for table cell markers: close when another table cell marker is encountered
-        if (this.isTableCellMarker(marker) && this.isTableCellMarker(nextMarker)) {
-          if (textContent) {
-            node.content.push(
-              this.createNode<TextNode>(
-                { type: 'text', content: textContent },
-                node.content.length,
-                node
-              )
-            );
-            textContent = '';
-          }
-          break;
-        }
-
-        if (textContent) {
-          node.content.push(
-            this.createNode<TextNode>(
-              { type: 'text', content: textContent },
-              node.content.length,
-              node
-            )
-          );
-          textContent = '';
-        }
-
-        const { marker: parsedMarker, isNested, markerInfo } = this.parseMarker();
-
-        switch (markerInfo?.type) {
-          case MarkerTypeEnum.NOTE:
-            node.content.push(this.parseNote(parsedMarker, node.content.length, node));
-            break;
-          case MarkerTypeEnum.MILESTONE:
-            node.content.push(this.parseMilestone(parsedMarker, node.content.length, node));
-            break;
-          default:
-            node.content.push(
-              this.parseCharacter(parsedMarker, isNested, node.content.length, node)
-            );
-            break;
-        }
-      } else if (char === '|') {
-        node.attributes = this.parseAttributes(marker);
-      } else if (this.isLineBreakingWhitespace(char)) {
-        break;
-      } else {
-        textContent += char;
-        this.advance(false);
-      }
-    }
-
-    if (textContent) {
-      node.content.push(
-        this.createNode<TextNode>({ type: 'text', content: textContent }, node.content.length, node)
-      );
-    }
-
-    return node;
-  }
-
-  /**
-   * Parses a note marker and its content.
-   * @param {string} marker - The note marker
-   * @param {number} index - The index of this node in its parent's content
-   * @param {USFMNodeUnion | RootNode} [parent] - The parent node
-   * @returns {NoteUSFMNode} The parsed note node
-   * @private
-   */
-  private parseNote(
-    marker: string,
-    index: number,
-    parent?: USFMNodeUnion | RootNode
-  ): NoteUSFMNode {
-    const node = this.createNode<NoteNode>(
-      {
-        type: 'note',
-        marker,
-        content: [],
-      },
-      index,
-      parent
-    );
-
-    // Skip whitespace after marker
-    while (this.pos < this.input.length && this.input[this.pos] === ' ') {
-      this.advance(false);
-    }
-
-    // Parse caller for cross references
-    if (marker === 'x' || marker === 'fe' || marker === 'f') {
-      const nextChar = this.input[this.pos];
-      const charAfterNext = this.pos + 1 < this.input.length ? this.input[this.pos + 1] : '';
-
-      if (nextChar !== ' ' && nextChar !== '\\' && this.isWhitespace(charAfterNext)) {
-        node.caller = nextChar;
-        this.advance(false); // Move past the caller
-
-        // Skip any following whitespace
-        while (this.pos < this.input.length && this.isWhitespace(this.input[this.pos])) {
-          this.advance(false);
-        }
-      }
-    }
-
-    let textContent = '';
-
-    // Parse content until closing marker
-    const closingMarker = `\\${marker}*`;
-    while (this.pos < this.input.length) {
-      this.movePosition(0, true, 'parseNote'); // Check for infinite loop without moving
-
-      // Check for closing marker first
-      if (this.input.startsWith(closingMarker, this.pos)) {
-        if (textContent) {
-          node.content.push(
-            this.createNode<TextNode>(
-              { type: 'text', content: textContent },
-              node.content.length,
-              node
-            )
-          );
-          textContent = '';
-        }
-        this.setPosition(this.pos + closingMarker.length, false);
-        break;
-      }
-
-      const char = this.input[this.pos];
-
-      if (char === '\\') {
-        const { markerInfo: nextMarkerInfo } = this.peekMarker();
-        if (nextMarkerInfo?.type === MarkerTypeEnum.PARAGRAPH) {
-          break;
-        }
-
-        if (textContent) {
-          node.content.push(
-            this.createNode<TextNode>(
-              { type: 'text', content: textContent },
-              node.content.length,
-              node
-            )
-          );
-          textContent = '';
-        }
-
-        const { marker, isNested, markerInfo } = this.parseMarker();
-
-        if (markerInfo?.context?.includes('NoteContent')) {
-          node.content.push(this.parseNoteContent(marker, node.content.length, node));
-        } else {
-          switch (markerInfo?.type) {
-            case MarkerTypeEnum.MILESTONE:
-              node.content.push(this.parseMilestone(marker, node.content.length, node));
-              break;
-            case MarkerTypeEnum.CHARACTER:
-              node.content.push(this.parseCharacter(marker, isNested, node.content.length, node));
-              break;
-            default:
-              node.content.push(this.parseCharacter(marker, isNested, node.content.length, node));
-              break;
-          }
-        }
-      } else if (this.isLineBreakingWhitespace(char)) {
-        break;
-      } else {
-        textContent += char;
-        this.advance(false);
-      }
-    }
-
-    if (textContent) {
-      node.content.push(
-        this.createNode<TextNode>({ type: 'text', content: textContent }, node.content.length, node)
-      );
-    }
-
-    return node;
-  }
-
-  private parseNoteContent(
-    marker: string,
-    index: number,
-    parent?: USFMNodeUnion
-  ): CharacterUSFMNode {
-    const node = this.createNode<CharacterNode>(
-      { type: 'character', marker, content: [] },
-      index,
-      parent
-    );
-
-    // Skip whitespace after marker
-    while (this.pos < this.input.length && this.input[this.pos] === ' ') {
-      this.advance(false);
-    }
-
-    let textContent = '';
-
-    // Parse until next marker or explicit closing marker
-    const closingMarker = `\\${marker}*`;
-    while (this.pos < this.input.length) {
-      this.movePosition(0, true, 'parseNoteContent'); // Check for infinite loop without moving
-
-      // Check for explicit closing marker
-      if (this.input.startsWith(closingMarker, this.pos)) {
-        if (textContent) {
-          node.content.push(
-            this.createNode<TextNode>(
-              { type: 'text', content: textContent },
-              node.content.length,
-              node
-            )
-          );
-          textContent = '';
-        }
-        this.pos += closingMarker.length;
-        break;
-      }
-
-      const char = this.input[this.pos];
-      if (char === '\\') {
-        const { cleanMarker: nextCleanMarker, markerInfo } = this.peekMarker();
-        // Implicit closing: another note content marker or the note's closing marker
-        if (
-          markerInfo?.context?.includes('NoteContent') ||
-          markerInfo?.type === MarkerTypeEnum.NOTE
-        ) {
-          if (textContent) {
-            node.content.push(
-              this.createNode<TextNode>(
-                { type: 'text', content: textContent },
-                node.content.length,
-                node
-              )
-            );
-            textContent = '';
-          }
-          break;
-        }
-        // Handle nested character markers
-        if (textContent) {
-          node.content.push(
-            this.createNode<TextNode>(
-              { type: 'text', content: textContent },
-              node.content.length,
-              node
-            )
-          );
-          textContent = '';
-        }
-        const { marker: nestedMarker, isNested, markerInfo: nestedMarkerInfo } = this.parseMarker();
-        if (nestedMarkerInfo?.type === MarkerTypeEnum.MILESTONE) {
-          this.logWarning(`Milestone marker found within note: ${marker}`);
-          if (textContent) {
-            node.content.push(
-              this.createNode<TextNode>(
-                { type: 'text', content: textContent },
-                node.content.length,
-                node
-              )
-            );
-            textContent = '';
-          }
-          node.content.push(this.parseMilestone(marker, node.content.length, node));
-        } else {
-          node.content.push(this.parseCharacter(nestedMarker, isNested, node.content.length, node));
-        }
-      } else if (this.isLineBreakingWhitespace(char)) {
-        //ignore line breaking whitespace in note content
-        this.advance(false);
-      } else {
-        textContent += char;
-        this.advance(false);
-      }
-    }
-
-    if (textContent) {
-      node.content.push(
-        this.createNode<TextNode>({ type: 'text', content: textContent }, node.content.length, node)
-      );
-    }
-
-    return node;
-  }
-
-  /**
-   * Parses text content until a marker or whitespace is encountered.
-   * @param {boolean} [isInsideParagraph=false] - Whether parsing is occurring inside a paragraph
-   * @param {number} index - The index of this node in its parent's content
-   * @param {USFMNodeUnion | RootNode} [parent] - The parent node
-   * @returns {TextUSFMNode} The parsed text node
-   * @private
-   */
-  private parseText(
-    isInsideParagraph: boolean = false,
-    index: number,
-    parent?: USFMNodeUnion | RootNode
-  ): TextUSFMNode {
-    let content = '';
-
-    while (this.pos < this.input.length) {
-      this.movePosition(0, true, 'parseText'); // Check for infinite loop without moving
-      const char = this.input[this.pos];
-      if (char === '\\') {
-        break;
-      }
-
-      if (this.isLineBreakingWhitespace(char)) {
-        break;
-      } else {
-        content += char;
-        this.advance(false);
-      }
-    }
-
-    return this.createNode<TextNode>(
-      {
-        type: 'text' as const,
-        content,
-      },
-      index,
-      parent
-    );
-  }
-
-  /**
-   * Parses a milestone marker and its attributes.
-   * @param {string} marker - The milestone marker
-   * @param {number} index - The index of this node in its parent's content
-   * @param {USFMNodeUnion | RootNode} [parent] - The parent node
-   * @returns {MilestoneUSFMNode} The parsed milestone node
-   * @private
-   */
-  private parseMilestone(
-    marker: string,
-    index: number,
-    parent?: USFMNodeUnion | RootNode
-  ): MilestoneUSFMNode {
-    // Determine milestone type
-    let milestoneType: 'start' | 'end' | 'standalone' = 'standalone';
-    let cleanMarker = marker;
-
-    if (marker.endsWith('-s')) {
-      milestoneType = 'start';
-      cleanMarker = marker.slice(0, -2);
-    } else if (marker.endsWith('-e')) {
-      milestoneType = 'end';
-      cleanMarker = marker.slice(0, -2);
-    }
-
-    // Parse attributes if present
-    let attributes: MilestoneAttributes | null = null;
-    if (this.pos < this.input.length && this.input[this.pos] === '|') {
-      attributes = this.parseAttributes(cleanMarker);
-    }
-
-    // Skip to closing *
-    while (this.pos < this.input.length && this.input[this.pos] !== '*') {
-      this.advance(false);
-    }
-    this.advance(false); // Skip *
-
-    return this.createNode<MilestoneNode>(
-      {
-        type: 'milestone' as const,
-        marker,
-        milestoneType,
-        ...(attributes && { attributes }),
-      },
-      index,
-      parent
-    );
+    return rootNode;
   }
 
   private logWarning(message: string): void {
@@ -808,6 +330,61 @@ export class USFMParser {
 
   private isNewline(char: string): boolean {
     return this.isLineBreakingWhitespace(char);
+  }
+
+  /**
+   * Intelligently handles newline normalization to avoid double spaces.
+   * Normalizes content and skips whitespace after newlines to ensure exactly one space.
+   * @param content - Current text content
+   * @param currentPos - Current position in input
+   * @returns Object with normalized content and positions to skip
+   */
+  private normalizeNewlineToSpace(
+    content: string,
+    currentPos: number
+  ): { normalizedContent: string; skipToPos: number } {
+    // Normalize any trailing whitespace in content to single space or remove it
+    const trimmedContent = content.trimEnd();
+    const hadTrailingWhitespace = content.length !== trimmedContent.length;
+
+    // Skip over all whitespace characters after the newline
+    let nextPos = currentPos + 1; // Start after the newline
+    const hasWhitespaceAfter =
+      nextPos < this.input.length && this.isNonLineBreakingWhitespace(this.input[nextPos]);
+
+    while (nextPos < this.input.length && this.isNonLineBreakingWhitespace(this.input[nextPos])) {
+      nextPos++;
+    }
+
+    // Check what comes after the whitespace
+    const nextChar = nextPos < this.input.length ? this.input[nextPos] : '';
+    const isFollowedByMarker = nextChar === '\\';
+    const isFollowedByLineBreak = this.isLineBreakingWhitespace(nextChar);
+
+    // Determine the normalized content:
+    // - Preserve space if there was explicit whitespace in the original input
+    // - Add space for content separation unless followed by end of input
+    let normalizedContent;
+    if (trimmedContent.length === 0) {
+      normalizedContent = '';
+    } else if (nextChar === '') {
+      // Text ends at end of input - no space needed
+      normalizedContent = trimmedContent;
+    } else if (hadTrailingWhitespace || hasWhitespaceAfter) {
+      // There was whitespace and we're followed by content (text or marker)
+      normalizedContent = trimmedContent + ' ';
+    } else if (isFollowedByLineBreak) {
+      // Newline followed by another line break - no space needed
+      normalizedContent = trimmedContent;
+    } else {
+      // Newline between content (including markers) with no explicit whitespace - add space
+      normalizedContent = trimmedContent + ' ';
+    }
+
+    return {
+      normalizedContent,
+      skipToPos: nextPos, // Position after all whitespace
+    };
   }
 
   private normalizeWhitespace(input: string): string {
@@ -1030,7 +607,7 @@ export class USFMParser {
     this.movePosition(delta, trackVisits);
   }
 
-  private savePosition(): number {
+  private getCurrentPosition(): number {
     return this.pos;
   }
 
@@ -1045,9 +622,23 @@ export class USFMParser {
     marker: string;
     isNested: boolean;
     cleanMarker: string;
+    isClosingMarker: boolean;
     markerInfo: USFMMarkerInfo | undefined;
   } {
     this.advance(false); // Skip backslash, no need to track simple advances
+
+    // Check for milestone closing marker \*
+    if (this.pos < this.input.length && this.input[this.pos] === '*') {
+      // This is a milestone closing marker, skip it and return empty marker
+      this.advance(false);
+      return {
+        marker: '',
+        isNested: false,
+        cleanMarker: '',
+        markerInfo: undefined,
+        isClosingMarker: false,
+      };
+    }
 
     const isNested = this.pos < this.input.length && this.input[this.pos] === '+';
     if (isNested) {
@@ -1065,16 +656,24 @@ export class USFMParser {
       this.advance(true); // Track visits here as we're in a loop
     }
 
+    const isClosingMarker = this.pos < this.input.length && this.input[this.pos] === '*';
+
     // Preserve significant whitespace after marker
     this.preserveSignificantWhitespace();
 
     let markerInfo = this.markerRegistry.getMarkerInfo(marker);
 
-    if (!markerInfo) {
+    if (!markerInfo && marker) {
       markerInfo = this.handleCustomMarker(marker);
     }
 
-    return { marker, isNested, cleanMarker: this.cleanMarkerSuffix(marker), markerInfo };
+    return {
+      marker,
+      isNested,
+      cleanMarker: this.cleanMarkerSuffix(marker),
+      markerInfo,
+      isClosingMarker,
+    };
   }
 
   private handleCustomMarker(marker: string): USFMMarkerInfo | undefined {
@@ -1130,7 +729,7 @@ export class USFMParser {
   }
 
   private checkForPrecedingLineBreak(marker: string): boolean {
-    const savedPos = this.savePosition();
+    const savedPos = this.getCurrentPosition();
 
     // Move position back past the marker and backslash
     this.pos -= marker.length + 2;
@@ -1157,13 +756,19 @@ export class USFMParser {
       return true;
     }
 
-    // Check for self-closing marker
-    const savedPos = this.savePosition();
+    // Check for self-closing marker pattern
+    const savedPos = this.getCurrentPosition();
     let isSelfClosing = false;
 
+    // Look ahead to see if we find \* pattern
     while (this.pos < this.input.length) {
-      if (this.input[this.pos] === '\\') {
-        isSelfClosing = this.input[this.pos + 1] === '*';
+      const char = this.input[this.pos];
+      if (char === '\\' && this.pos + 1 < this.input.length && this.input[this.pos + 1] === '*') {
+        isSelfClosing = true;
+        break;
+      }
+      if (char === '\\' || this.isLineBreakingWhitespace(char)) {
+        // Found another marker or line break, not self-closing
         break;
       }
       this.advance(false);
@@ -1229,7 +834,7 @@ export class USFMParser {
     cleanMarker: string;
     markerInfo: USFMMarkerInfo | undefined;
   } {
-    const savedPos = this.savePosition();
+    const savedPos = this.getCurrentPosition();
     this.advance(false); // Skip backslash
     let marker = '';
 
@@ -1251,6 +856,14 @@ export class USFMParser {
 
   private getCurrentCharacter(): string {
     return this.input[this.pos];
+  }
+
+  private getNextCharacter(offset: number = 1): string {
+    return this.input[this.pos + offset];
+  }
+
+  private getPreviousCharacter(offset: number = 1): string {
+    return this.input[this.pos - offset];
   }
 
   private parseAttributes(currentMarker: string): Record<string, string> {
@@ -1292,7 +905,7 @@ export class USFMParser {
       let defaultValue = '';
       while (this.pos < this.input.length) {
         const char = this.input[this.pos];
-        if (char === '\\' || char === ' ') {
+        if (char === '\\') {
           break;
         }
         defaultValue += char;
@@ -1353,7 +966,18 @@ export class USFMParser {
 
       // Add character to current attribute or value
       if (inValue) {
-        currentValue += char;
+        // Normalize newlines to spaces in quoted attribute values
+        if (inQuotes && this.isNewline(char)) {
+          // Only add space if the last character isn't already a space
+          if (
+            currentValue.length === 0 ||
+            !this.isWhitespace(currentValue[currentValue.length - 1])
+          ) {
+            currentValue += ' ';
+          }
+        } else {
+          currentValue += char;
+        }
       } else {
         currentAttr += char;
       }
@@ -1369,69 +993,1143 @@ export class USFMParser {
     return attributes;
   }
 
-  private createNode<T extends USFMNode>(
-    baseNode: T,
-    index: number,
-    parent?: USFMNodeUnion | RootNode
-  ): NodeInstanceType<T> {
-    if (baseNode.type === 'root') {
-      return baseNode as unknown as NodeInstanceType<T>;
-    }
-
-    if (isParagraphNode(baseNode)) {
-      return new ParagraphUSFMNode({
-        marker: baseNode.marker,
-        content: baseNode.content || [],
-        index,
-        parent,
-      }) as NodeInstanceType<T>;
-    }
-
-    if (isCharacterNode(baseNode)) {
-      return new CharacterUSFMNode({
-        marker: baseNode.marker,
-        content: baseNode.content || [],
-        index,
-        parent,
-      }) as NodeInstanceType<T>;
-    }
-
-    if (isTextNode(baseNode)) {
-      return new TextUSFMNode({
-        content: baseNode.content as string,
-        index,
-        parent,
-      }) as NodeInstanceType<T>;
-    }
-
-    if (isNoteNode(baseNode)) {
-      return new NoteUSFMNode({
-        marker: baseNode.marker,
-        content: baseNode.content || [],
-        index,
-        parent,
-      }) as NodeInstanceType<T>;
-    }
-
-    if (isMilestoneNode(baseNode)) {
-      return new MilestoneUSFMNode({
-        marker: baseNode.marker,
-        milestoneType: baseNode.milestoneType,
-        index,
-        parent,
-        attributes: baseNode.attributes,
-      }) as NodeInstanceType<T>;
-    }
-
-    throw new Error(`Unknown node type: ${(baseNode as any).type}`);
-  }
-
   // Add visitor methods to the parser
   visit<T>(visitor: BaseUSFMVisitor<T>): T[] {
-    return this.nodes.map((node) => node.accept(visitor));
+    return this.getNodes().map((node) => node.accept(visitor));
   }
 
   visitWithContext<T, C>(visitor: USFMVisitorWithContext<T, C>, context: C): T[] {
-    return this.nodes.map((node) => node.acceptWithContext(visitor, context));
+    return this.getNodes().map((node) => node.acceptWithContext(visitor, context));
+  }
+
+  // Enhanced parsing methods for USJ nodes
+
+  /**
+   * Parses a book identifier marker (\id)
+   */
+  private parseBook(marker: string, index: number): ParsedBookNode {
+    // Skip whitespace after marker
+    while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
+      this.advance(false);
+    }
+
+    // Parse book code (first word)
+    let code = '';
+    while (this.pos < this.input.length) {
+      const char = this.getCurrentCharacter();
+      if (this.isWhitespace(char)) {
+        break;
+      }
+      code += char;
+      this.advance(false);
+    }
+
+    // Update context tracking for sid generation
+    this.currentBookCode = code;
+    this.currentChapter = '';
+    this.currentVerse = '';
+
+    // Parse remaining content as description
+    const content: string[] = [];
+    let textContent = '';
+
+    while (this.pos < this.input.length) {
+      const char = this.getCurrentCharacter();
+      if (char === '\\') {
+        // Check if this is a new paragraph marker
+        const { markerInfo } = this.peekMarker();
+        if (markerInfo?.type === MarkerTypeEnum.PARAGRAPH) {
+          break;
+        }
+      }
+
+      if (this.isLineBreakingWhitespace(char)) {
+        break;
+      }
+
+      textContent += char;
+      this.advance(false);
+    }
+
+    if (textContent.trim()) {
+      content.push(textContent.trim());
+    }
+
+    return createParsedBook(code, content, index);
+  }
+
+  /**
+   * Parses a chapter marker (\c)
+   */
+  private parseChapter(marker: string, index: number): ParsedChapterNode {
+    // Skip whitespace after marker
+    while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
+      this.advance(false);
+    }
+
+    // Parse chapter number
+    let number = '';
+    while (this.pos < this.input.length) {
+      const char = this.getCurrentCharacter();
+      if (this.isWhitespace(char) || char === '\\') {
+        break;
+      }
+      number += char;
+      this.advance(false);
+    }
+
+    // Update context tracking for sid generation
+    this.currentChapter = number;
+    this.currentVerse = '';
+
+    // Generate sid attribute: "BOOK CH" (only if we have valid book code)
+    const sid =
+      this.currentBookCode && this.currentBookCode.trim()
+        ? `${this.currentBookCode} ${number}`
+        : undefined;
+
+    const node = createParsedChapter(number, { sid, index });
+
+    // Handle mergeable markers like \ca and \cp inline
+    while (this.pos < this.input.length) {
+      this.skipWhitespace();
+
+      if (this.pos >= this.input.length || this.getCurrentCharacter() !== '\\') {
+        break;
+      }
+
+      const savedPos = this.getCurrentPosition();
+      const { marker: nextMarker, markerInfo } = this.parseMarker();
+
+      // Check if mergeable to current chapter
+      if (this.canMarkerMergeInto(markerInfo, 'c') && markerInfo?.mergeAs) {
+        // Handle inline: parse content based on marker type
+        this.skipWhitespace();
+        let content = '';
+
+        // For character markers like \ca, parse until closing marker
+        if (markerInfo.type === 'character') {
+          const closingMarker = '\\' + nextMarker + '*';
+          while (this.pos < this.input.length) {
+            if (this.input.startsWith(closingMarker, this.pos)) {
+              this.pos += closingMarker.length;
+              break;
+            }
+            content += this.getCurrentCharacter();
+            this.advance(false);
+          }
+        } else {
+          // For paragraph markers, parse until line break or next marker
+          content = this.parseSpecialContent();
+        }
+
+        (node as any)[markerInfo.mergeAs] = content.trim();
+        continue; // Keep looking for more mergeable markers
+      } else {
+        // Not mergeable, restore position and exit
+        this.restorePosition(savedPos, false);
+        break;
+      }
+    }
+
+    return node;
+  }
+
+  /**
+   * Parses a verse marker (\v)
+   */
+  private parseVerse(marker: string, index: number): ParsedVerseNode {
+    // Skip whitespace after marker
+    while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
+      this.advance(false);
+    }
+
+    // Parse verse number
+    let number = '';
+    while (this.pos < this.input.length) {
+      const char = this.getCurrentCharacter();
+      if (this.isWhitespace(char) || char === '\\') {
+        break;
+      }
+      number += char;
+      this.advance(false);
+    }
+
+    // Update context tracking for sid generation
+    this.currentVerse = number;
+
+    // Generate sid attribute: "BOOK CH:V" (only if we have valid book code and chapter)
+    const sid =
+      this.currentBookCode &&
+      this.currentBookCode.trim() &&
+      this.currentChapter &&
+      this.currentChapter.trim()
+        ? `${this.currentBookCode} ${this.currentChapter}:${number}`
+        : undefined;
+
+    // IMPORTANT: Consume the space after verse number to prevent it from
+    // becoming part of the following text content
+    if (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
+      this.advance(false);
+    }
+
+    const node = createParsedVerse(marker, number, { sid, index });
+
+    // Handle mergeable markers like \va and \vp inline
+    while (this.pos < this.input.length) {
+      this.skipWhitespace();
+
+      if (this.pos >= this.input.length || this.getCurrentCharacter() !== '\\') {
+        break;
+      }
+
+      const savedPos = this.getCurrentPosition();
+      const { marker: nextMarker, markerInfo } = this.parseMarker();
+
+      // Check if mergeable to current verse
+      if (this.canMarkerMergeInto(markerInfo, 'v') && markerInfo?.mergeAs) {
+        // Handle inline: parse content based on marker type
+        this.skipWhitespace();
+        let content = '';
+
+        // For character markers like \va, parse until closing marker
+        if (markerInfo.type === 'character') {
+          const closingMarker = '\\' + nextMarker + '*';
+          while (this.pos < this.input.length) {
+            if (this.input.startsWith(closingMarker, this.pos)) {
+              this.pos += closingMarker.length;
+              break;
+            }
+            content += this.getCurrentCharacter();
+            this.advance(false);
+          }
+        } else {
+          // For paragraph markers, parse until line break or next marker
+          content = this.parseSpecialContent();
+        }
+
+        (node as any)[markerInfo.mergeAs] = content.trim();
+        continue; // Keep looking for more mergeable markers
+      } else {
+        // Not mergeable, restore position and exit
+        this.restorePosition(savedPos, false);
+        break;
+      }
+    }
+
+    return node;
+  }
+
+  /**
+   * Parses a paragraph using enhanced USJ nodes
+   */
+  private parseEnhancedParagraph(marker: string, index: number): ParsedParagraphNode {
+    const node = createParsedParagraph(marker, [], { index });
+    const markerInfo = this.markerRegistry.getMarkerInfo(marker);
+
+    // Break markers do not have any content
+    if (markerInfo?.role === 'break') {
+      return node;
+    }
+
+    // Skip exactly one space after marker
+    if (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
+      this.advance(false);
+    }
+
+    // Parse content until next paragraph marker
+    while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseEnhancedParagraph');
+
+      const char = this.getCurrentCharacter();
+      if (char === '\\') {
+        const savedPos = this.getCurrentPosition();
+        const { marker, isNested, markerInfo } = this.parseMarker();
+
+        if (markerInfo?.type === MarkerTypeEnum.PARAGRAPH) {
+          // Trim trailing whitespace from the last text node before ending paragraph
+          if (node.content.length > 0) {
+            const lastNode = node.content[node.content.length - 1];
+            if (lastNode.type === 'text') {
+              (lastNode as ParsedTextNode).content = (lastNode as ParsedTextNode).content.trimEnd();
+            }
+          }
+          this.restorePosition(savedPos, false);
+          break;
+        }
+
+        switch (markerInfo?.type) {
+          case MarkerTypeEnum.MILESTONE:
+            node.content.push(this.parseEnhancedMilestone(marker, node.content.length));
+            break;
+          case MarkerTypeEnum.CHARACTER:
+            if (marker === 'v') {
+              node.content.push(this.parseVerse(marker, node.content.length));
+            } else {
+              node.content.push(this.parseEnhancedCharacter(marker, isNested, node.content.length));
+            }
+            break;
+          case MarkerTypeEnum.NOTE:
+            node.content.push(this.parseNote(marker, node.content.length));
+            break;
+          default:
+            node.content.push(this.parseEnhancedText(true, node.content.length));
+            break;
+        }
+      } else if (char === '/' && this.getNextCharacter() === '/') {
+        // This is an optbreak marker, create an optbreak node
+        this.advance(false);
+        this.advance(false);
+        const { createParsedOptbreak } = require('../nodes/enhanced-usj-nodes');
+        node.content.push(createParsedOptbreak(node.content.length));
+      } else if (this.isLineBreakingWhitespace(char)) {
+        const { marker: nextMarker, markerInfo: nextMarkerInfo } = this.getFollowingMarker();
+
+        if (!nextMarker) {
+          node.content.push(this.parseEnhancedText(true, node.content.length));
+          continue;
+        }
+
+        if (!nextMarkerInfo || nextMarkerInfo.type === MarkerTypeEnum.PARAGRAPH) {
+          break;
+        }
+
+        if (node.content.length === 0) continue;
+
+        // Handle line breaks within paragraphs
+        const lastNode = node.content[node.content.length - 1];
+        if (lastNode.type === 'text') {
+          (lastNode as ParsedTextNode).content =
+            (lastNode as ParsedTextNode).content.trimEnd() + ' ';
+          continue;
+        }
+
+        node.content.push(createParsedText(' ', node.content.length));
+        continue;
+      } else {
+        node.content.push(this.parseEnhancedText(true, node.content.length));
+      }
+    }
+
+    return node;
+  }
+
+  /**
+   * Parses a character marker using enhanced USJ nodes
+   */
+  private parseEnhancedCharacter(
+    marker: string,
+    isNested: boolean,
+    index: number
+  ): ParsedCharacterNode | ParsedRefNode {
+    // Special handling for \ref markers
+    if (marker === 'ref') {
+      return this.parseRefMarker(index);
+    }
+
+    const node = createParsedCharacter(marker, [], {}, index);
+
+    // NOTE: Do NOT skip whitespace here! The space immediately after
+    // a character marker is significant and should be preserved as content.
+    // This is required for proper USFM whitespace handling.
+
+    let textContent = '';
+    const closingMarker = `\\${isNested ? '+' : ''}${marker}*`;
+
+    while (this.pos < this.input.length) {
+      if (this.input.startsWith(closingMarker, this.pos)) {
+        if (textContent) {
+          node.content.push(createParsedText(textContent, node.content.length));
+          textContent = '';
+        }
+        this.pos += closingMarker.length;
+        break;
+      }
+
+      const char = this.input[this.pos];
+
+      if (char === '\\') {
+        const { marker: nextMarker, markerInfo: nextMarkerInfo } = this.peekMarker();
+        if (nextMarkerInfo?.type === MarkerTypeEnum.PARAGRAPH) {
+          break;
+        }
+
+        if (textContent) {
+          node.content.push(createParsedText(textContent, node.content.length));
+          textContent = '';
+        }
+
+        const { marker: parsedMarker, isNested, markerInfo } = this.parseMarker();
+
+        switch (markerInfo?.type) {
+          case MarkerTypeEnum.NOTE:
+            node.content.push(this.parseNote(parsedMarker, node.content.length));
+            break;
+          case MarkerTypeEnum.MILESTONE:
+            node.content.push(this.parseEnhancedMilestone(parsedMarker, node.content.length));
+            break;
+          default:
+            const characterNode = this.parseEnhancedCharacter(parsedMarker, isNested, 0);
+
+            if (node.content.length > 0) {
+              node.content.push(characterNode);
+            } else {
+              node.content.push(characterNode);
+            }
+            break;
+        }
+      } else if (char === '/' && this.getNextCharacter() === '/') {
+        // This is an optbreak marker, create an optbreak node
+        if (textContent) {
+          node.content.push(createParsedText(textContent, node.content.length));
+          textContent = '';
+        }
+        this.advance(false);
+        this.advance(false);
+        const { createParsedOptbreak } = require('../nodes/enhanced-usj-nodes');
+        node.content.push(createParsedOptbreak(node.content.length));
+      } else if (char === '|') {
+        const attributes = this.parseAttributes(marker);
+        // Set attributes on the node
+        Object.entries(attributes).forEach(([key, value]) => {
+          (node as any)[key] = value;
+        });
+      } else if (this.isLineBreakingWhitespace(char)) {
+        // Normalize newlines to spaces in text content, avoiding double spaces
+        const normalization = this.normalizeNewlineToSpace(textContent, this.pos);
+        textContent = normalization.normalizedContent;
+        this.pos = normalization.skipToPos; // Skip over newline and following whitespace
+      } else {
+        textContent += char;
+        this.advance(false);
+      }
+    }
+
+    if (textContent) {
+      node.content.push(createParsedText(textContent, node.content.length));
+    }
+
+    return node;
+  }
+
+  /**
+   * Parses a \ref marker into a ParsedRefNode
+   */
+  private parseRefMarker(index: number): ParsedRefNode {
+    let contentText = '';
+    let locationText = '';
+    let inLocation = false;
+    const closingMarker = '\\ref*';
+
+    while (this.pos < this.input.length) {
+      if (this.input.startsWith(closingMarker, this.pos)) {
+        this.pos += closingMarker.length;
+        break;
+      }
+
+      const char = this.input[this.pos];
+
+      if (char === '|' && !inLocation) {
+        inLocation = true;
+        this.advance(false);
+        continue;
+      }
+
+      if (inLocation) {
+        locationText += char;
+      } else {
+        contentText += char;
+      }
+
+      this.advance(false);
+    }
+
+    // Create content nodes from the text content
+    const content = contentText.trim() ? [createParsedText(contentText.trim(), 0)] : [];
+
+    return createParsedRef(locationText.trim(), content, undefined, index);
+  }
+
+  /**
+   * Parses a note using enhanced USJ nodes
+   */
+  private parseNote(marker: string, index: number): ParsedNoteNode {
+    const noteNode = createParsedNote(marker, [], undefined, undefined, index);
+
+    // Skip whitespace after marker
+    while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
+      this.advance(false);
+    }
+
+    const currentMarkerInfo = this.markerRegistry.getMarkerInfo(marker);
+
+    // Parse caller for cross references and footnotes (caller is a character used to identify the note)
+    if (currentMarkerInfo?.type === MarkerTypeEnum.NOTE) {
+      const nextChar = this.getCurrentCharacter(); // Get the character after the note marker
+      const charAfterNext = this.pos + 1 < this.input.length ? this.getNextCharacter() : '';
+
+      const isNextCharCaller = !this.isWhitespace(nextChar) && this.isWhitespace(charAfterNext);
+
+      if (isNextCharCaller) {
+        noteNode.caller = nextChar;
+        this.advance(false); // Skip the caller character
+
+        // Skip any following whitespace
+        this.skipWhitespace();
+      }
+    }
+
+    // Handle mergeable markers like \cat that come after caller
+    while (this.pos < this.input.length) {
+      this.skipWhitespace();
+
+      // If we're at the end of the input or the next character is not a backslash, break
+      if (this.pos >= this.input.length || this.getCurrentCharacter() !== '\\') {
+        break;
+      }
+
+      const savedPos = this.getCurrentPosition();
+      const { marker: nextMarker, markerInfo } = this.parseMarker();
+
+      // Check if this marker can merge into the current note
+      if (this.canMarkerMergeInto(markerInfo, marker) && markerInfo?.mergeAs) {
+        // Handle inline: parse content based on marker type
+        this.skipWhitespace();
+        let content = '';
+
+        // For character markers, parse until closing marker
+        if (markerInfo.type === 'character') {
+          const closingMarker = '\\' + nextMarker + '*';
+          while (this.pos < this.input.length) {
+            if (this.input.startsWith(closingMarker, this.pos)) {
+              this.pos += closingMarker.length;
+              break;
+            }
+            content += this.getCurrentCharacter();
+            this.advance(false);
+          }
+        } else {
+          // For paragraph markers, parse until line break or next marker
+          content = this.parseSpecialContent();
+        }
+
+        (noteNode as any)[markerInfo.mergeAs] = content.trim();
+        continue; // Keep looking for more mergeable markers
+      } else {
+        // Not a mergeable marker, restore position and exit
+        this.restorePosition(savedPos, false);
+        break;
+      }
+    }
+
+    //Handle Note Content
+
+    let textContent = '';
+    let unclosedNoteContentNode: ParsedCharacterNode | null = null;
+    const noteClosingMarker = `\\${marker}*`; // Note closing marker (e.g. \f*, \x*)
+
+    while (this.pos < this.input.length) {
+      // Handle case: The note is closing
+      if (this.input.startsWith(noteClosingMarker, this.pos)) {
+        // Close any pending content
+        if (textContent) {
+          if (unclosedNoteContentNode) {
+            unclosedNoteContentNode.content.push(
+              createParsedText(
+                textContent,
+                unclosedNoteContentNode.content.length,
+                unclosedNoteContentNode
+              )
+            );
+          } else {
+            noteNode.content.push(createParsedText(textContent, noteNode.content.length, noteNode));
+          }
+          textContent = '';
+        }
+        // Close current note content marker if any
+        if (unclosedNoteContentNode) {
+          noteNode.content.push(unclosedNoteContentNode);
+          unclosedNoteContentNode = null;
+        }
+        this.pos += noteClosingMarker.length;
+        break;
+      }
+
+      const char = this.getCurrentCharacter();
+
+      if (char === '\\') {
+        const {
+          marker: innerMarker,
+          isNested: isInnerMarkerNested,
+          markerInfo: innerMarkerInfo,
+          isClosingMarker: isInnerMarkerClosing,
+        } = this.parseMarker();
+
+        // Check if this is a note content marker
+        const isNoteContentMarker = (innerMarkerInfo: USFMMarkerInfo) =>
+          innerMarkerInfo?.context?.includes('NoteContent');
+
+        if (
+          isInnerMarkerClosing &&
+          unclosedNoteContentNode &&
+          unclosedNoteContentNode.marker === innerMarker
+        ) {
+          // This is an explicit closing for the current note content marker
+          if (textContent) {
+            unclosedNoteContentNode.content.push(
+              createParsedText(textContent, unclosedNoteContentNode.content.length)
+            );
+          }
+          noteNode.content.push(unclosedNoteContentNode);
+          unclosedNoteContentNode = null;
+          textContent = '';
+          this.advance(false); // Skip the * character
+          const currentChar = this.getCurrentCharacter();
+          const nextChar = this.getNextCharacter();
+
+          continue;
+        }
+
+        if (innerMarkerInfo && isNoteContentMarker(innerMarkerInfo)) {
+          // Close any pending text content
+          if (textContent) {
+            if (unclosedNoteContentNode) {
+              unclosedNoteContentNode.content.push(
+                createParsedText(textContent, unclosedNoteContentNode.content.length)
+              );
+            } else {
+              noteNode.content.push(createParsedText(textContent, noteNode.content.length));
+            }
+            textContent = '';
+          }
+
+          // Close current note content marker (implicit closing)
+          if (unclosedNoteContentNode) {
+            noteNode.content.push(unclosedNoteContentNode);
+          }
+
+          // Start new note content marker
+
+          unclosedNoteContentNode = createParsedCharacter(innerMarker, [], {}, 0);
+        } else {
+          // This is a regular character marker or explicit closing marker
+
+          // Handle explicit closing markers for note content (e.g., \dc*)
+          const explicitClosingPattern = `\\${innerMarker}*`;
+          if (
+            unclosedNoteContentNode &&
+            innerMarker === unclosedNoteContentNode.marker &&
+            this.input.startsWith(explicitClosingPattern, this.pos - innerMarker.length - 1)
+          ) {
+            // This is an explicit closing for the current note content marker
+            if (textContent) {
+              unclosedNoteContentNode.content.push(
+                createParsedText(textContent, unclosedNoteContentNode.content.length)
+              );
+              textContent = '';
+            }
+            noteNode.content.push(unclosedNoteContentNode);
+            unclosedNoteContentNode = null;
+            // Skip the * character
+            if (this.pos < this.input.length && this.input[this.pos] === '*') {
+              this.advance(false);
+            }
+          } else {
+            // Regular character marker - becomes nested in current note content marker
+            if (textContent) {
+              if (unclosedNoteContentNode) {
+                unclosedNoteContentNode.content.push(
+                  createParsedText(textContent, unclosedNoteContentNode.content.length)
+                );
+              } else {
+                noteNode.content.push(createParsedText(textContent, noteNode.content.length));
+              }
+              textContent = '';
+            }
+
+            if (unclosedNoteContentNode) {
+              const characterNode = this.parseEnhancedCharacter(
+                innerMarker,
+                isInnerMarkerNested,
+                unclosedNoteContentNode.content.length
+              );
+              unclosedNoteContentNode.content.push(characterNode);
+            } else {
+              const characterNode = this.parseEnhancedCharacter(
+                innerMarker,
+                isInnerMarkerNested,
+                noteNode.content.length
+              );
+              noteNode.content.push(characterNode);
+            }
+          }
+        }
+      } else if (char === '/' && this.getNextCharacter() === '/') {
+        // This is an optbreak marker, create an optbreak node
+        if (textContent) {
+          if (unclosedNoteContentNode) {
+            unclosedNoteContentNode.content.push(
+              createParsedText(textContent, unclosedNoteContentNode.content.length)
+            );
+          } else {
+            noteNode.content.push(createParsedText(textContent, noteNode.content.length));
+          }
+          textContent = '';
+        }
+        this.advance(false);
+        this.advance(false);
+        const { createParsedOptbreak } = require('../nodes/enhanced-usj-nodes');
+
+        if (unclosedNoteContentNode) {
+          unclosedNoteContentNode.content.push(
+            createParsedOptbreak(unclosedNoteContentNode.content.length)
+          );
+        } else {
+          noteNode.content.push(createParsedOptbreak(noteNode.content.length));
+        }
+      } else if (this.isLineBreakingWhitespace(char)) {
+        // Normalize newlines to spaces in text content, avoiding double spaces
+        const normalization = this.normalizeNewlineToSpace(textContent, this.pos);
+        textContent = normalization.normalizedContent;
+        this.pos = normalization.skipToPos; // Skip over newline and following whitespace
+      } else {
+        textContent += char;
+        this.advance(false);
+      }
+    }
+
+    // Handle any remaining content
+    if (textContent) {
+      if (unclosedNoteContentNode) {
+        unclosedNoteContentNode.content.push(
+          createParsedText(textContent, unclosedNoteContentNode.content.length)
+        );
+      } else {
+        noteNode.content.push(createParsedText(textContent, noteNode.content.length));
+      }
+    }
+
+    // Close any remaining note content marker
+    if (unclosedNoteContentNode) {
+      noteNode.content.push(unclosedNoteContentNode);
+    }
+
+    return noteNode;
+  }
+
+  /**
+   * Parses a milestone using enhanced USJ nodes
+   */
+  private parseEnhancedMilestone(marker: string, index: number): ParsedMilestoneNode {
+    let attributes: Record<string, string> = {};
+
+    // Check if there are attributes (indicated by |)
+    if (this.pos < this.input.length && this.input[this.pos] === '|') {
+      attributes = this.parseAttributes(marker);
+    }
+
+    // Skip to the closing \*
+    while (this.pos < this.input.length) {
+      if (
+        this.input[this.pos] === '\\' &&
+        this.pos + 1 < this.input.length &&
+        this.input[this.pos + 1] === '*'
+      ) {
+        this.pos += 2; // Skip \*
+        break;
+      }
+      this.advance(false);
+    }
+
+    return createParsedMilestone(marker, attributes, { index });
+  }
+
+  /**
+   * Parses text content using enhanced USJ nodes
+   */
+  private parseEnhancedText(isInsideParagraph: boolean, index: number): ParsedTextNode {
+    let content = '';
+
+    while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseEnhancedText');
+      const char = this.input[this.pos];
+
+      if (char === '/' && this.getNextCharacter() === '/') {
+        // This is an optbreak marker, stop text parsing and let parent handle it
+        break;
+      }
+
+      if (char === '\\') {
+        break;
+      }
+
+      if (this.isLineBreakingWhitespace(char)) {
+        // Normalize newlines to spaces in text content, avoiding double spaces
+        const normalization = this.normalizeNewlineToSpace(content, this.pos);
+        content = normalization.normalizedContent;
+        this.pos = normalization.skipToPos; // Skip over newline and following whitespace
+      } else {
+        content += char;
+        this.advance(false);
+      }
+    }
+
+    return createParsedText(content, index);
+  }
+
+  private parseSection(marker: string, index: number): ParsedSidebarNode {
+    const markerInfo = this.markerRegistry.getMarkerInfo(marker);
+    const closingMarker = markerInfo?.closedBy;
+
+    const node = createParsedSidebar([], undefined, index);
+
+    // Skip whitespace after marker
+    this.skipWhitespace();
+
+    // Check for contiguous markers that should be merged (e.g., \cat after \esb)
+    while (this.pos < this.input.length) {
+      this.skipWhitespace();
+
+      if (this.pos >= this.input.length || this.getCurrentCharacter() !== '\\') {
+        break;
+      }
+
+      const savedPos = this.getCurrentPosition();
+      const { marker: nextMarker, markerInfo } = this.parseMarker();
+
+      // Check if mergeable to current sidebar
+      if (this.canMarkerMergeInto(markerInfo, 'esb') && markerInfo?.mergeAs) {
+        // Handle inline: parse content based on marker type
+        this.skipWhitespace();
+        let content = '';
+
+        // For character markers like \cat, parse until closing
+        if (markerInfo.type === 'character') {
+          const closingMarker = '\\' + nextMarker + '*';
+          while (this.pos < this.input.length) {
+            if (this.input.startsWith(closingMarker, this.pos)) {
+              this.pos += closingMarker.length;
+              break;
+            }
+            content += this.getCurrentCharacter();
+            this.advance(false);
+          }
+        } else {
+          // For paragraph markers, parse until line break or next marker
+          content = this.parseSpecialContent();
+        }
+
+        (node as any)[markerInfo.mergeAs] = content.trim();
+        continue; // Keep looking for more mergeable markers
+      } else {
+        // Not mergeable, restore position and exit
+        this.restorePosition(savedPos, false);
+        break;
+      }
+    }
+
+    // Parse content until closing marker
+    while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseSection');
+
+      const char = this.getCurrentCharacter();
+      if (char === '\\') {
+        const savedPos = this.getCurrentPosition();
+        const { marker: nextMarker } = this.parseMarker();
+
+        // Check if this is our closing marker
+        if (nextMarker === closingMarker) {
+          break;
+        }
+
+        // Reset position and parse the marker as content
+        this.restorePosition(savedPos, false);
+        const { marker: contentMarker, markerInfo: contentMarkerInfo } = this.parseMarker();
+
+        if (contentMarkerInfo?.type === MarkerTypeEnum.PARAGRAPH) {
+          node.content.push(this.parseEnhancedParagraph(contentMarker, node.content.length));
+        } else if (contentMarkerInfo?.type === MarkerTypeEnum.CHARACTER) {
+          // For character markers, we need to parse them as part of paragraph content
+          // Reset position and let the paragraph parser handle it
+          this.restorePosition(savedPos, false);
+          node.content.push(this.parseEnhancedText(false, node.content.length));
+        } else {
+          // Handle other marker types within section
+          this.restorePosition(savedPos, false);
+          node.content.push(this.parseEnhancedText(false, node.content.length));
+        }
+      } else if (this.isWhitespace(char)) {
+        this.advance(false);
+      } else {
+        node.content.push(this.parseEnhancedText(false, node.content.length));
+      }
+    }
+
+    return node;
+  }
+
+  private parseBreakParagraph(marker: string, index: number): ParsedParagraphNode {
+    // Break paragraphs like \b don't have content
+    return createParsedParagraph(marker, [], { index });
+  }
+
+  private skipWhitespace(): void {
+    while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
+      this.advance(false);
+    }
+  }
+
+  private parseSpecialContent(): string {
+    let content = '';
+    while (
+      this.pos < this.input.length &&
+      !this.isLineBreakingWhitespace(this.getCurrentCharacter()) &&
+      this.getCurrentCharacter() !== '\\'
+    ) {
+      content += this.getCurrentCharacter();
+      this.advance(false);
+    }
+    return content.trim();
+  }
+
+  /**
+   * Checks if a marker can merge into a target marker based on marker name, type, or role
+   */
+  private canMarkerMergeInto(
+    sourceMarkerInfo: USFMMarkerInfo | undefined,
+    targetMarker: string
+  ): boolean {
+    if (!sourceMarkerInfo?.mergesInto) return false;
+
+    // Get target marker info to check its type and role
+    const targetMarkerInfo = this.markerRegistry.getMarkerInfo(targetMarker);
+
+    return this.checkMergeSpecification(
+      sourceMarkerInfo.mergesInto,
+      targetMarker,
+      targetMarkerInfo
+    );
+  }
+
+  /**
+   * Checks if a merge specification matches a target marker
+   */
+  private checkMergeSpecification(
+    mergeSpec: any, // MergeIntoSpecification from types
+    targetMarker: string,
+    targetMarkerInfo: USFMMarkerInfo | undefined
+  ): boolean {
+    // Handle single sophisticated object
+    if (mergeSpec && typeof mergeSpec === 'object' && !Array.isArray(mergeSpec)) {
+      return this.checkMergeTargetObject(mergeSpec, targetMarker, targetMarkerInfo);
+    }
+
+    // Handle array of sophisticated objects
+    if (Array.isArray(mergeSpec)) {
+      return mergeSpec.some((target) =>
+        this.checkMergeTargetObject(target, targetMarker, targetMarkerInfo)
+      );
+    }
+
+    return false;
+  }
+
+  /**
+   * Checks a sophisticated merge target object
+   */
+  private checkMergeTargetObject(
+    target: any, // MarkerMergeTarget
+    targetMarker: string,
+    targetMarkerInfo: USFMMarkerInfo | undefined
+  ): boolean {
+    if (!target || typeof target !== 'object') return false;
+
+    // Check specific marker names
+    if (target.markers && Array.isArray(target.markers)) {
+      if (target.markers.includes(targetMarker)) return true;
+    }
+
+    // Check marker types
+    if (target.types && Array.isArray(target.types) && targetMarkerInfo?.type) {
+      if (target.types.includes(targetMarkerInfo.type)) return true;
+    }
+
+    // Check marker roles
+    if (target.roles && Array.isArray(target.roles) && targetMarkerInfo?.role) {
+      if (target.roles.includes(targetMarkerInfo.role)) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Parses a table starting with the current \tr marker
+   * Continues parsing until a non-\tr paragraph marker is encountered
+   */
+  private parseTable(index: number): ParsedTableNode {
+    const tableRows: ParsedTableRowNode[] = [];
+
+    // Parse the first \tr row (we're already positioned after the \tr marker)
+    tableRows.push(this.parseTableRow(tableRows.length));
+
+    // Parse consecutive \tr markers
+    while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseTable');
+
+      const char = this.getCurrentCharacter();
+      if (char === '\\') {
+        const savedPos = this.getCurrentPosition();
+        const { marker, markerInfo } = this.parseMarker();
+
+        if (marker === 'tr') {
+          // Parse this table row
+          tableRows.push(this.parseTableRow(tableRows.length));
+        } else if (markerInfo?.type === MarkerTypeEnum.PARAGRAPH) {
+          // Hit a different paragraph marker, end table
+          this.restorePosition(savedPos, false);
+          break;
+        } else {
+          // Not a paragraph marker, restore position and break
+          this.restorePosition(savedPos, false);
+          break;
+        }
+      } else if (this.isWhitespace(char)) {
+        this.advance(false);
+      } else {
+        // Regular text outside table rows - end table
+        break;
+      }
+    }
+
+    return createParsedTable(tableRows, index);
+  }
+
+  /**
+   * Parses a single table row (\tr marker with table cell content)
+   */
+  private parseTableRow(index: number): ParsedTableRowNode {
+    const tableCells: ParsedTableCellNode[] = [];
+
+    // Skip whitespace after \tr marker
+    this.skipWhitespace();
+
+    // Parse table cell markers until end of row
+    while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseTableRow');
+
+      const char = this.getCurrentCharacter();
+      if (char === '\\') {
+        const savedPos = this.getCurrentPosition();
+        const { marker, markerInfo } = this.parseMarker();
+
+        // Check if this is a table cell marker
+        if (this.isTableCellMarker(marker)) {
+          tableCells.push(this.parseTableCell(marker, tableCells.length));
+        } else if (markerInfo?.type === MarkerTypeEnum.PARAGRAPH) {
+          // Hit another paragraph marker, end this row
+          this.restorePosition(savedPos, false);
+          break;
+        } else {
+          // Other marker types - put back and break
+          this.restorePosition(savedPos, false);
+          break;
+        }
+      } else if (this.isLineBreakingWhitespace(char)) {
+        // End of row
+        break;
+      } else if (this.isWhitespace(char)) {
+        this.advance(false);
+      } else {
+        // Regular text outside cell markers - unexpected, but handle gracefully
+        break;
+      }
+    }
+
+    return createParsedTableRow(tableCells, index);
+  }
+
+  /**
+   * Parses a single table cell (e.g., \tc1, \thr2, \tcr1-2)
+   */
+  private parseTableCell(marker: string, index: number): ParsedTableCellNode {
+    const { align, colspan, baseMarker } = this.parseTableCellProperties(marker);
+    const content: EnhancedUSJNode[] = [];
+
+    // Parse content until next marker or end of row
+    let textContent = '';
+
+    while (this.pos < this.input.length) {
+      this.movePosition(0, true, 'parseTableCell');
+
+      const char = this.getCurrentCharacter();
+      if (char === '\\') {
+        // Check if this is another table cell marker or other marker
+        const { marker: nextMarker } = this.peekMarker();
+
+        if (this.isTableCellMarker(nextMarker) || nextMarker === 'tr') {
+          // End of this cell
+          break;
+        }
+
+        // Handle other markers within cell content (like character markers)
+        if (textContent) {
+          content.push(createParsedText(textContent, content.length));
+          textContent = '';
+        }
+
+        const { marker: parsedMarker, isNested, markerInfo } = this.parseMarker();
+
+        if (markerInfo?.type === MarkerTypeEnum.CHARACTER) {
+          content.push(this.parseEnhancedCharacter(parsedMarker, isNested, content.length));
+        } else {
+          // Other marker types, treat as text
+          textContent += '\\' + parsedMarker + ' ';
+        }
+      } else if (this.isLineBreakingWhitespace(char)) {
+        // End of row/cell
+        break;
+      } else {
+        textContent += char;
+        this.advance(false);
+      }
+    }
+
+    if (textContent) {
+      content.push(createParsedText(textContent, content.length));
+    }
+
+    return createParsedTableCell(baseMarker, align, content, colspan, index);
+  }
+
+  /**
+   * Determines alignment and colspan from table cell marker
+   */
+  private parseTableCellProperties(marker: string): {
+    align: 'start' | 'center' | 'end';
+    colspan?: string;
+    baseMarker: string;
+  } {
+    // Extract alignment from marker prefix
+    let align: 'start' | 'center' | 'end' = 'start';
+
+    if (marker.startsWith('thr') || marker.startsWith('tcr')) {
+      align = 'end';
+    } else if (marker.startsWith('thc') || marker.startsWith('tcc')) {
+      align = 'center';
+    }
+
+    // Extract colspan from marker suffix (e.g., tcr1-2 means colspan=2)
+    let colspan: string | undefined;
+    let baseMarker = marker;
+    const rangeMatch = marker.match(/(\d+)-(\d+)$/);
+    if (rangeMatch) {
+      const start = parseInt(rangeMatch[1], 10);
+      const end = parseInt(rangeMatch[2], 10);
+      colspan = (end - start + 1).toString();
+      // Remove the range suffix to get the base marker (e.g., tcr1-2 -> tcr1)
+      baseMarker = marker.replace(/-\d+$/, '');
+    }
+
+    return { align, colspan, baseMarker };
   }
 }

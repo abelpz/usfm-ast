@@ -170,3 +170,9 @@ export interface USFMVisitorWithContext<T = void, C = any> {
 
 // USFM Formatting Types (includes MarkerTypeEnum and MarkerType)
 export * from './formatting';
+
+// Universal Visitor System (USJ-Enhanced AST)
+export * from './universal-visitor';
+export * from './enhanced-usj-nodes';
+export * from './enhanced-usj-implementations';
+export * from './usj-adapter';

@@ -1,0 +1,12 @@
+<usx version="3.1">
+  <book code="HAB" style="id"/>
+  <chapter number="3" style="c" sid="HAB 3"/>
+  <para style="q1">
+    <verse number="2" style="v" sid="HAB 3:2"/>O <char style="nd">Lord</char>, 
+    I have heard of what you have done,</para>
+  <para style="q2" vid="HAB 3:2">and I am filled with awe.</para>
+  <para style="q1" vid="HAB 3:2">Now do again in our times</para>
+  <para style="q2" vid="HAB 3:2">the great deeds you used to do.</para>
+  <para style="q1" vid="HAB 3:2">Be merciful, even when you are angry.
+    <verse eid="HAB 3:2"/></para>
+</usx>

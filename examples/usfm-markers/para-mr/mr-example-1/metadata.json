@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Psalm 1 (Book 1 division) (GNT)",
+    "usx": "Psalm 1 (Book 1 division) (GNT)",
+    "usj": "Psalm 1 (Book 1 division) (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

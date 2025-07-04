@@ -1,0 +1,14 @@
+<usx version="3.1">
+  <book code="MRK" style="id"/>
+  <para style="q1">“Someone is shouting in the desert,</para>
+  <para style="q2">‘Prepare a road for the Lord;</para>
+  <para style="q2">make a straight path for him to travel!’ ”</para>
+  <sidebar style="esb" category="people">
+    <para style="ms"><char style="jmp" id="article-john_the_baptist" />John the 
+      Baptist</para>
+    <para style="p">John is sometimes called the last “Old Testament prophet” 
+      because of the warnings he  brought about God's judgment and because he 
+      announced the coming of God's “Chosen One” (Messiah).</para>
+    ...
+  </sidebar>
+</usx>

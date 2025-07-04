@@ -1,0 +1,61 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "marker": "qt",
+          "content": [
+            "..............."
+          ],
+          "type": "char"
+        },
+        " ..............",
+        {
+          "marker": "qt",
+          "content": [
+            "........"
+          ],
+          "type": "char"
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        {
+          "marker": "qt",
+          "content": [
+            "....."
+          ],
+          "type": "char"
+        },
+        " ................................"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        ".................................................."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        {
+          "marker": "qt",
+          "content": [
+            "........................................."
+          ],
+          "type": "char"
+        }
+      ]
+    }
+  ]
+}

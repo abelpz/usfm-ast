@@ -1,0 +1,15 @@
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <chapter number="5" style="c" sid="MAT 5"/>
+  <para style="p">
+    <verse number="13" style="v" sid="MAT 5:13"/>
+    <note caller="-" style="x">
+      <char style="xo">5.13: </char>
+      <char style="xt">
+        <ref loc="MRK 9:50" gen="true">Mk 9.50</ref>; <ref loc="LUK 14:34"
+          gen="true">Lk 14.34</ref>,<ref loc="LUK 14:35" 
+          gen="true">35</ref>.</char>
+    </note>“You are like salt for the whole human race. But if salt loses its 
+    saltiness, there is no way to make it salty again. It has become worthless, 
+    so it is thrown out and people trample on it.<verse eid="MAT 5:13"/></para>
+</usx>

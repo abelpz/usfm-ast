@@ -1,0 +1,44 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "GEN",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "ip",
+      "content": [
+        "... One of these brothers, Joseph, had become the governor of Egypt. But Joseph knew that God would someday keep his promise to his people:"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "ib"
+    },
+    {
+      "type": "para",
+      "marker": "imq",
+      "content": [
+        "Before Joseph died, he told his brothers, “I won't live much longer. But God will take care of you and lead you out of Egypt to the land he promised Abraham, Isaac, and Jacob.”"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "ipr",
+      "content": [
+        "(50.24)"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "iot",
+      "content": [
+        "A QUICK LOOK AT THIS BOOK ..."
+      ]
+    }
+  ]
+}

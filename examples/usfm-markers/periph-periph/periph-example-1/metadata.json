@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Front Matter (GNT)",
+    "usx": "Front Matter (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

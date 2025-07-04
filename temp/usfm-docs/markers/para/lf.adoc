@@ -1,0 +1,122 @@
+= lf
+:description: List footer
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/lf.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: List footer. Some lists include an introductory (xref:para:lists/lh.adoc[lh]) and concluding remark. They are an integral part of the list content, but are not list items. A list does not require either or both of these elements.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\lf ++``#__content__#
+* *USX:* ``++<para style="lf">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]`
+// tag::spec[]
+Added:: 3.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.1 Chronicles 27:16-22 (GNT - markup adapted)
+[source#src-usfm-para-lf_1,usfm,highlight=7]
+----
+\id 1CH
+\c 27
+\li1 ...
+\li1 East Manasseh - Iddo son of Zechariah
+\li1 Benjamin - Jaasiel son of Abner
+\li1 Dan - Azarel son of Jeroham
+\lf This was the list of the administrators of the tribes of Israel.
+----
+USX::
++
+.1 Chronicles 27:16-22 (GNT - markup adapted)
+[source#src-usx-para-lf_1,xml,highlight=8]
+----
+<usx version="3.1">
+  <book code="1CH" style="id"/>
+  <chapter number="27" style="c" sid="1CH 27"/>
+  <para style="li1" vid="1CH 27:16-22">...</para>
+  <para style="li1" vid="1CH 27:16-22">East Manasseh - Iddo son of Zechariah</para>
+  <para style="li1" vid="1CH 27:16-22">Benjamin - Jaasiel son of Abner</para>
+  <para style="li1" vid="1CH 27:16-22">Dan - Azarel son of Jeroham</para>
+  <para style="lf" vid="1CH 27:16-22">This was the list of the administrators of the
+    tribes of Israel.<verse eid="1CH 27:16-22"/></para>
+</usx>
+----
+USJ::
++
+.1 Chronicles 27:16-22 (GNT - markup adapted)
+[source#src-usj-para-lf_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "1CH",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "27",
+      "sid": "1CH 27"
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": ["..."]
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": ["East Manasseh - Iddo son of Zechariah"]
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": ["Benjamin - Jaasiel son of Abner"]
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": ["Dan - Azarel son of Jeroham"]
+    },
+    {
+      "type": "para",
+      "marker": "lf",
+      "content": [
+        "This was the list of the administrators of the tribes of Israel."
+      ]
+    }
+  ]
+}
+----
+======
+
+image::para/lf_1.jpg[1 Chronicles 27:16-22 (GNT),300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

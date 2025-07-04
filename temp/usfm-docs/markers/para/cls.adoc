@@ -1,0 +1,117 @@
+= cls
+:description: Letter closing
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/cls.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Letter closing.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\cls ++``#__content__#
+* *USX:* ``++<para style="cls">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Colossians 4.18 (GNT)
+[source#src-usfm-para-cls_1,usfm,highlight=6]
+----
+\id
+\c 4
+\p
+\v 18 With my own hand I write this: \sig Greetings from Paul\sig*. Do not 
+forget my chains!
+\cls May God's grace be with you.
+----
+USX::
++
+.Colossians 4.18 (GNT)
+[source#src-usx-para-cls_1,xml,highlight=7]
+----
+<usx version="3.1">
+  <book code="COL" style="id"/>
+  <chapter number="4" style="c" sid="COL 4"/>
+  <para style="p">
+    <verse number="18" style="v" sid="COL 4:18"/>With my own hand I write this: 
+    <char style="sig">Greetings from Paul</char>. Do not forget my chains!</para>
+  <para style="cls" vid="COL 4:18">May God's grace be with you.
+    <verse eid="COL 4:18"/></para>
+</usx>
+----
+USJ::
++
+.Colossians 4.18 (GNT)
+[source#src-usj-para-cls_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "COL",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "4",
+      "sid": "COL 4"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "18",
+          "sid": "COL 4:18"
+        },
+        "With my own hand I write this: ",
+        {
+          "type": "char",
+          "marker": "sig",
+          "content": ["Greetings from Paul"]
+        },
+        ". Do not forget my chains!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "cls",
+      "content": ["May God's grace be with you."]
+    }
+  ]
+}
+----
+======
+
+image::para/cls_1.jpg[Colossians 4.18 (GNT),300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Jude 5-8 (ULB) - standalone milestones",
+    "usx": "Jude 5-8 (ULB) - standalone milestones"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

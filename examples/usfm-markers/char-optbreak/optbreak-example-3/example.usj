@@ -1,0 +1,57 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "HEB",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "HEB 1"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "3",
+          "sid": "HEB 1:3"
+        },
+        "He reflects the glory of God",
+        {
+          "type": "note",
+          "marker": "f",
+          "caller": "+",
+          "content": [
+            {
+              "type": "char",
+              "marker": "fr",
+              "content": [
+                "1.3: "
+              ]
+            },
+            {
+              "type": "char",
+              "marker": "ft",
+              "content": [
+                "Greek ",
+                {
+                  "type": "optbreak"
+                },
+                " Hebrew"
+              ]
+            }
+          ]
+        },
+        " and sustains all things by his powerful word."
+      ]
+    }
+  ]
+}

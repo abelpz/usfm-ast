@@ -1,0 +1,84 @@
+= sts
+:description: Project/file status tracking
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/sts.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Project/file status tracking.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\sts ++``#__content__#
+* *USX:* ``++<para style="sts">++``#__content__#``++</para>++``
+#content#::: The content of the status marker can be defined by the downstream system being used to track project status. For example: A project management approach which identifies 4 stages for a scripture translation's development might record numbers `1`, `2`, `3`, or `4` for xref:para:identification/sts.adoc[sts] content.
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-headers[BookHeaders]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Any project
+[source#src-usfm-para-sts_1,usfm,highlight=2]
+----
+\id MRK
+\sts 2
+----
+USX::
++
+.Any project
+[source#src-usx-para-sts_1,xml,highlight=3]
+----
+<usx version="3.1">
+  <book code="MRK" style="id"/>
+  <para style="sts">2</para>
+</usx>
+----
+USJ::
++
+.Any project
+[source#src-usj-para-sts_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "sts",
+      "content": ["2"]
+    }
+  ]
+}
+----
+======
+
+image::para/missing.jpg[,300]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph, nonpublishable, nonvernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

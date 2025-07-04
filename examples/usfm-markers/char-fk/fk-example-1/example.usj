@@ -1,0 +1,90 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "20",
+          "type": "verse"
+        },
+        "Adam",
+        {
+          "marker": "f",
+          "content": [
+            {
+              "marker": "fr",
+              "content": [
+                "3.20: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "fk",
+              "content": [
+                "Adam: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "ft",
+              "content": [
+                "This name in Hebrew means “all human beings.”"
+              ],
+              "type": "char"
+            }
+          ],
+          "caller": "+",
+          "type": "note"
+        },
+        " named his wife Eve,",
+        {
+          "marker": "f",
+          "content": [
+            {
+              "marker": "fr",
+              "content": [
+                "3.20: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "fk",
+              "content": [
+                "Eve: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "ft",
+              "content": [
+                "This name sounds similar to the Hebrew word for “living,” which is rendered in this context as “human beings.”"
+              ],
+              "type": "char"
+            }
+          ],
+          "caller": "+",
+          "type": "note"
+        },
+        " because she was the mother of all human beings. ",
+        {
+          "marker": "v",
+          "number": "21",
+          "type": "verse"
+        },
+        "And the ",
+        {
+          "marker": "nd",
+          "content": [
+            "Lord"
+          ],
+          "type": "char"
+        },
+        " God made clothes out of animal skins for Adam and his wife, and he clothed them."
+      ]
+    }
+  ]
+}

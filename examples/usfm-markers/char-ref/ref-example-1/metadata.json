@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Target references in \\xt without \\ref - Matthew 5.13 (GNT)",
+    "usx": "Corresponding target references with auto-generated ref tags - Matthew 5.13 (GNT)",
+    "usj": "Corresponding target references with auto-generated ref tags - Matthew 5.13 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

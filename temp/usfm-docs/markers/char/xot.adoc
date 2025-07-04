@@ -1,0 +1,56 @@
+= xot
+:description: Cross Reference - OT references
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/xot.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: xref:note:crossref/index.adoc[Cross Reference] - OT target references. The marked target references (xref:notes:crossref/xt[xt]) are relevant for publications which include Old Testament (OT) books.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\xot ++``#__content__#``++\xot*++``
+* *USX:* ``++<char style="xot">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:note:crossref/index.adoc[CrossReference]]`
+// tag::spec[]
+Added:: 2.2
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Missing
+[source#src-usfm-char-xot_1,usfm,highlight=1]
+----
+Missing
+----
+USX::
++
+.Missing
+[source#src-usx-char-xot_1,xml,highlight=1]
+----
+Missing
+----
+======
+
+image::char/missing.jpg[,300]
+
+== Properties
+
+TextType:: NoteText
+TextProperties:: publishable, vernacular, note
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

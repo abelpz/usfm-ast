@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "After Romans 16 (KJV54 - BFBS)",
+    "usx": "After Romans 16 (KJV54 - BFBS)",
+    "usj": "After Romans 16 (KJV54 - BFBS)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

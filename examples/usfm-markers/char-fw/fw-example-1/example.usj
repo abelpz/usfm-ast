@@ -1,0 +1,34 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "marker": "f",
+      "content": [
+        {
+          "marker": "fr",
+          "content": [
+            "28,14 "
+          ],
+          "type": "char"
+        },
+        {
+          "marker": "ft",
+          "content": [
+            "υπο "
+          ],
+          "type": "char"
+        },
+        {
+          "marker": "fw",
+          "content": [
+            "B D 0148. 892"
+          ],
+          "type": "char"
+        }
+      ],
+      "caller": "⸀",
+      "type": "note"
+    }
+  ]
+}

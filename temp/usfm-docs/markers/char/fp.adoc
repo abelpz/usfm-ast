@@ -1,0 +1,56 @@
+= fp
+:description: Footnote - Additional paragraph
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/fp.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: xref:note:footnote/index.adoc[Footnote] - Additional paragraph. Use to indicate the start of a new paragraph within a footnote (uncommon).
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\fp ++``#__content__#
+* *USX:* ``++<char style="fp">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:note:footnote/index.adoc[Footnote]]`
+// tag::spec[]
+Added:: 2.03
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Missing
+[source#src-usfm-char-pl_1,usfm]
+----
+Missing
+----
+USX::
++
+.Missing
+[source#src-usx-char-fp_1,xml]
+----
+Missing
+----
+======
+
+image::char/missing.jpg[,300]
+
+== Properties
+
+TextType:: NoteText
+TextProperties:: publishable, vernacular, note
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Matthew 28.14 (Nestle-Aland 29)",
+    "usx": "Matthew 28.14 (Nestle-Aland 29)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

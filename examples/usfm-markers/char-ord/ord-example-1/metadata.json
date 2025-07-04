@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "1st",
+    "usx": "1st",
+    "usj": "1st"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

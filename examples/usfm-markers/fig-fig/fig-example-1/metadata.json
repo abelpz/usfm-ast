@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Spanning Columns - Mark 1.18 (GNT)",
+    "usx": "Spanning Columns - Mark 1.18 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

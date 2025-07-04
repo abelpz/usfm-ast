@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Jonah 1.1-5 (Bulgarian Orthodox Bible)",
+    "usx": "Jonah 1.1-5 (Bulgarian Orthodox Bible)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

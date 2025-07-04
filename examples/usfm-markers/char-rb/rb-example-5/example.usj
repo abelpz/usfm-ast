@@ -1,0 +1,20 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "rb",
+          "content": [
+            "神の子"
+          ],
+          "type": "char",
+          "gloss": "かみ::こ"
+        }
+      ]
+    }
+  ]
+}

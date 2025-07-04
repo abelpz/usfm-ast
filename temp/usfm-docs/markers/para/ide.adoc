@@ -1,0 +1,84 @@
+= ide
+:description: Character encoding scheme
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/ide.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Specify the character encoding scheme used for the file contents. _(optional)_.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\ide ++``#__encoding__#
+* *USX:* ``++<para style="ide">++``#__encoding__#``++</para>++``
+#encoding#::: Character encoding scheme (e.g. `CP-1252`, `CP-1251`, `UTF-8`, `UTF-16LE`, `UTF-16BE`, `UTF-32LE`, `UTF-32BE`, or `Custom`). _Texts which rely upon a custom encoding and font solution should be converted to Unicode, if at all possible._
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-headers[BookHeaders]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Any project
+[source#src-usfm-para-ide_1,usfm,highlight=2]
+----
+\id MRK
+\ide UTF-8
+----
+USX::
++
+.Any project
+[source#src-usx-para-ide_1,xml,highlight=3]
+----
+<usx version="3.1">
+  <book code="MRK" style="id"/>
+  <para style="ide">UTF-8</para>
+</usx>
+----
+USJ::
++
+.Any project
+[source#src-usj-para-ide_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "ide",
+      "content": ["UTF-8"]
+    }
+  ]
+}
+----
+======
+
+image::para/missing.jpg[,300]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph, nonpublishable, nonvernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

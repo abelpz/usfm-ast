@@ -1,0 +1,83 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "marker": "v",
+      "number": "9",
+      "type": "verse"
+    },
+    {
+      "marker": "x",
+      "content": [
+        {
+          "marker": "xo",
+          "content": [
+            "2.9: "
+          ],
+          "type": "char"
+        },
+        {
+          "marker": "xt",
+          "content": [
+            "Rev 2.7; 22.2,14."
+          ],
+          "type": "char"
+        }
+      ],
+      "caller": "-",
+      "type": "note"
+    },
+    "He made all kinds of beautiful trees grow there and produce good fruit. In the middle of the garden stood the tree that gives life and the tree that gives knowledge of what is good and what is bad.",
+    {
+      "marker": "f",
+      "content": [
+        {
+          "marker": "fr",
+          "content": [
+            "2.9: "
+          ],
+          "type": "char"
+        },
+        {
+          "marker": "fq",
+          "content": [
+            "knowledge of what is good and what is bad; "
+          ],
+          "type": "char"
+        },
+        {
+          "marker": "ft",
+          "content": [
+            "or "
+          ],
+          "type": "char"
+        },
+        {
+          "marker": "fq",
+          "content": [
+            "knowledge of everything."
+          ],
+          "type": "char"
+        }
+      ],
+      "caller": "+",
+      "type": "note"
+    },
+    "... ",
+    {
+      "marker": "v",
+      "number": "17",
+      "type": "verse"
+    },
+    "except the tree that gives knowledge of what is good and what is bad.",
+    {
+      "marker": "fm",
+      "content": [
+        "GEN 2:9"
+      ],
+      "type": "char"
+    },
+    " You must not eat the fruit of that tree; if you do, you will die the same day.”"
+  ]
+}

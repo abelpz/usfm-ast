@@ -1,0 +1,46 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "COL",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "4",
+      "sid": "COL 4"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "18",
+          "sid": "COL 4:18"
+        },
+        "With my own hand I write this: ",
+        {
+          "type": "char",
+          "marker": "sig",
+          "content": [
+            "Greetings from Paul"
+          ]
+        },
+        ". Do not forget my chains!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "cls",
+      "content": [
+        "May God's grace be with you."
+      ]
+    }
+  ]
+}

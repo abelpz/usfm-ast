@@ -1,0 +1,214 @@
+= ior
+:description: Introduction outline references
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/ior.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Introduction outline references.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\ior ++``#__content__#``++\ior*++``
+* *USX:* ``++<char style="ior">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Introduction to Mark (GNT)
+[source#src-usfm-char-ior_1,usfm,highlight=2..7]
+----
+\id MRK
+\io1 The beginning of the gospel \ior (1.1-13)\ior*
+\io1 Jesus' public ministry in Galilee \ior (1.14–9.50)\ior*
+\io1 From Galilee to Jerusalem \ior (10.1-52)\ior*
+\io1 The last week in and near Jerusalem \ior (11.1–15.47)\ior*
+\io1 The resurrection of Jesus \ior (16.1-8)\ior*
+\io1 The appearances and ascension of the risen Lord \ior (16.9-20)\ior*
+----
+USX::
++
+.Introduction to Mark (GNT)
+[source#src-usx-char-ior_1,xml,highlight=4;6;8;10;12;14]
+----
+<usx version="3.1">
+  <book code="MRK" style="id"/>
+  <para style="io1">The beginning of the gospel 
+    <char style="ior">(<ref loc="MRK 1:1-13">1.1-13</ref>)</char></para>
+  <para style="io1">Jesus' public ministry in Galilee 
+    <char style="ior">(<ref loc="MRK 1:14-9:50">1.14–9.50</ref>)</char></para>
+  <para style="io1">From Galilee to Jerusalem 
+    <char style="ior">(<ref loc="MRK 10:1-52">10.1-52</ref>)</char></para>
+  <para style="io1">The last week in and near Jerusalem 
+    <char style="ior">(<ref loc="MRK 11:1-15:47">11.1–15.47</ref>)</char></para>
+  <para style="io1">The resurrection of Jesus 
+    <char style="ior">(<ref loc="MRK 16:1-8">16.1-8</ref>)</char></para>
+  <para style="io1">The appearances and ascension of the risen Lord 
+    <char style="ior">(<ref loc="MRK 16:9-20">16.9-20</ref>)</char></para>
+</usx>
+----
+USJ::
++
+.Introduction to Mark (GNT)
+[source#src-usj-char-ior_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": [
+        "The beginning of the gospel ",
+        {
+          "type": "char",
+          "marker": "ior",
+          "content": [
+            "(",
+            {
+              "type": "ref",
+              "loc": "MRK 1:1-13",
+              "content": ["1.1-13"]
+            },
+            ")"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": [
+        "Jesus' public ministry in Galilee ",
+        {
+          "type": "char",
+          "marker": "ior",
+          "content": [
+            "(",
+            {
+              "type": "ref",
+              "loc": "MRK 1:14-9:50",
+              "content": ["1.14–9.50"]
+            },
+            ")"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": [
+        "From Galilee to Jerusalem ",
+        {
+          "type": "char",
+          "marker": "ior",
+          "content": [
+            "(",
+            {
+              "type": "ref",
+              "loc": "MRK 10:1-52",
+              "content": ["10.1-52"]
+            },
+            ")"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": [
+        "The last week in and near Jerusalem ",
+        {
+          "type": "char",
+          "marker": "ior",
+          "content": [
+            "(",
+            {
+              "type": "ref",
+              "loc": "MRK 11:1-15:47",
+              "content": ["11.1–15.47"]
+            },
+            ")"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": [
+        "The resurrection of Jesus ",
+        {
+          "type": "char",
+          "marker": "ior",
+          "content": [
+            "(",
+            {
+              "type": "ref",
+              "loc": "MRK 16:1-8",
+              "content": ["16.1-8"]
+            },
+            ")"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": [
+        "The appearances and ascension of the risen Lord ",
+        {
+          "type": "char",
+          "marker": "ior",
+          "content": [
+            "(",
+            {
+              "type": "ref",
+              "loc": "MRK 16:9-20",
+              "content": ["16.9-20"]
+            },
+            ")"
+          ]
+        }
+      ]
+    }
+  ]
+}
+----
+======
+
+image::char/ior_1.jpg[Introduction to Mark (GNT),400]
+
+== Properties
+
+TextType:: Other
+TextProperties:: publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

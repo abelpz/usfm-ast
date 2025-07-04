@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Introduction to the Deuterocanonicals/Apocrypha (CEV)",
+    "usx": "Introduction to the Deuterocanonicals/Apocrypha (CEV)",
+    "usj": "Introduction to the Deuterocanonicals/Apocrypha (CEV)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

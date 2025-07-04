@@ -1,0 +1,76 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "ACT",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "h",
+      "content": [
+        "Acts"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "toc1",
+      "content": [
+        "The Acts of the Apostles"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "toc2",
+      "content": [
+        "Acts"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt1",
+      "content": [
+        "THE ACTS"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt2",
+      "content": [
+        "of the Apostles"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "is",
+      "content": [
+        "Introduction"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "ip",
+      "content": [
+        {
+          "type": "char",
+          "marker": "bk",
+          "content": [
+            "The Acts of the Apostles"
+          ]
+        },
+        " is a continuation of ",
+        {
+          "type": "char",
+          "marker": "bk",
+          "content": [
+            "The Gospel according to Luke"
+          ]
+        },
+        "."
+      ]
+    }
+  ]
+}

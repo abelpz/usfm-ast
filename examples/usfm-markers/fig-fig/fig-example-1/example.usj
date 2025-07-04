@@ -1,0 +1,40 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "16",
+          "type": "verse"
+        },
+        "As Jesus walked along the shore of Lake Galilee, he saw two fishermen, Simon and his brother Andrew, catching fish with a net. ",
+        {
+          "marker": "v",
+          "number": "17",
+          "type": "verse"
+        },
+        "Jesus said to them, “Come with me, and I will teach you to catch people.” ",
+        {
+          "marker": "v",
+          "number": "18",
+          "type": "verse"
+        },
+        "At once they left their nets and went with him. ",
+        {
+          "marker": "fig",
+          "content": [
+            "At once they left their nets."
+          ],
+          "type": "char",
+          "src": "avnt016.jpg",
+          "size": "span",
+          "ref": "1.18"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+= fl
+:description: Footnote - Label
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/fl.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: xref:note:footnote/index.adoc[Footnote] - Label text. Use for marking structural words or abbreviations used consistently in many translation notes (such as the words “Or” in an alternative translation note, “Others”, “Heb.”, “LXX” etc.).
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\fl ++``#__content__#
+* *USX:* ``++<char style="fl">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:note:footnote/index.adoc[Footnote]]`
+// tag::spec[]
+Added:: 2.03
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Missing
+[source#src-usfm-char-fl_1,usfm]
+----
+Missing
+----
+USX::
++
+.Missing
+[source#src-usx-char-fl_1,xml]
+----
+Missing
+----
+======
+
+image::char/missing.jpg[,300]
+
+== Properties
+
+TextType:: NoteText
+TextProperties:: publishable, vernacular, note
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

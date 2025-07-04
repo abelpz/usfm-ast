@@ -1,0 +1,81 @@
+= fq
+:description: Footnote - Translation quotation
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/fq.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: xref:note:footnote/index.adoc[Footnote] - Translation quotation.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\fq ++``#__content__#
+* *USX:* ``++<char style="fq">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:note:footnote/index.adoc[Footnote]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Mark 1.1; 1.4 (GNT)
+[source#src-usfm-char-fq_1,usfm,highlight=3;7]
+----
+\p
+\v 1 This is the Good News about Jesus Christ, the Son of God.\f + \fr 1.1: 
+\ft Some manuscripts do not have \fq the Son of God.\f*
+...
+\p
+\v 4 So John appeared in the desert, baptizing and preaching.\f + \fr 1.4: 
+\fq John appeared in the desert, baptizing and preaching; \ft some manuscripts 
+have \fqa John the Baptist appeared in the desert, preaching.\f* “Turn away 
+from your sins and be baptized,” he told the people, “and God will forgive 
+your sins.”
+----
+USX::
++
+.Mark 1.1; 1.4 (GNT)
+[source#src-usx-char-fq_1,xml,highlight=6;13]
+----
+<para style="p">
+  <verse number="1" style="v" sid="MRK 1:1"/>This is the Good News about Jesus
+  Christ, the Son of God.<note caller="+" style="f">
+    <char style="fr">1.1: </char>
+    <char style="ft">Some manuscripts do not have </char>
+    <char style="fq">the Son of God.</char></note>
+  <verse eid="MRK 1:1"/></para>
+...
+<para style="p">
+  <verse number="4" style="v" sid="MRK 1:4"/>So John appeared in the desert,
+  baptizing and preaching.<note caller="+" style="f">
+    <char style="fr">1.4: </char>
+    <char style="fq">John appeared in the desert, baptizing and preaching; </char>
+    <char style="ft">some manuscripts have </char>
+    <char style="fqa">John the Baptist appeared in the desert, preaching.</char>
+    </note> “Turn away from your sins and be baptized,” he told the people, 
+  “and God will forgive your sins.”<verse eid="MRK 1:4"/></para>
+----
+======
+
+image::char/fq_1.jpg[Mark 1.1 and 1.4 (GNT),600]
+
+== Properties
+
+TextType:: NoteText
+TextProperties:: publishable, vernacular, note
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

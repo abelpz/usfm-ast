@@ -1,0 +1,80 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "code": "MAT",
+      "content": [],
+      "type": "book",
+      "marker": "id"
+    },
+    {
+      "number": "2",
+      "type": "chapter",
+      "marker": "c",
+      "sid": "MAT 2"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "22",
+          "type": "verse",
+          "sid": "MAT 2:22"
+        },
+        "But when Joseph heard that Archelaus had succeeded his father Herod as king of Judea, he was afraid to go there. He was given more instructions in a dream, so he went to the province of Galilee ",
+        {
+          "marker": "v",
+          "number": "23",
+          "type": "verse",
+          "sid": "MAT 2:23"
+        },
+        {
+          "marker": "x",
+          "content": [
+            {
+              "marker": "xo",
+              "content": [
+                "2.23: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xt",
+              "content": [
+                "Mk 1.24; Lk 2.39; Jn 1.45."
+              ],
+              "type": "char"
+            }
+          ],
+          "caller": "-",
+          "type": "note"
+        },
+        {
+          "marker": "ex",
+          "content": [
+            {
+              "marker": "xo",
+              "content": [
+                "2.23: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xt",
+              "content": [
+                "Mt 1.22; 4.13; Mk 1.9; Lk 1.26; 2.39; Jn 1.45; 1.46; 18.5."
+              ],
+              "type": "char"
+            }
+          ],
+          "caller": "-",
+          "type": "note"
+        },
+        "and made his home in a town named Nazareth. And so what the prophets had said came true: “He will be called a Nazarene.”"
+      ]
+    }
+  ]
+}

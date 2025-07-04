@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Genesis 2 (Russian Synodal Protestant Version)",
+    "usx": "Genesis 2 (Russian Synodal Protestant Version)",
+    "usj": "Genesis 2 (Russian Synodal Protestant Version)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

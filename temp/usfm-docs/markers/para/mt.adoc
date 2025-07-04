@@ -1,0 +1,167 @@
+= mt#
+:description: Main title
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/mt.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Main title.
+* The variable `#` (1-4) represents the level of division.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\mt# ++``#__content__#
+* *USX:* ``++<para style="mt#">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-titles[BookTitles]]`, `[xref:doc:index.adoc#doc-book-intro-end-titles[BookIntroductionEndTitles]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Introduction to Acts (GNT)
+[source#src-usfm-para-mt_1,usfm,highlight=5..6]
+----
+\id ACT
+\h Acts
+\toc1 The Acts of the Apostles
+\toc2 Acts
+\mt1 THE ACTS
+\mt2 of the Apostles
+\is Introduction
+\ip \bk The Acts of the Apostles\bk* is a continuation of \bk The Gospel 
+according to Luke\bk*.
+----
+USX::
++
+.Introduction to Acts (GNT)
+[source#src-usx-para-mt_1,xml,highlight=5..6]
+----
+<usx version="3.1">
+  <para style="h">Acts</para>
+  <para style="toc1">The Acts of the Apostles</para>
+  <para style="toc2">Acts</para>
+  <para style="mt1">THE ACTS</para>
+  <para style="mt2">of the Apostles</para>
+  <para style="is">Introduction</para>
+  <para style="ip">
+    <char style="bk">The Acts of the Apostles</char> is a continuation of 
+    <char style="bk">The Gospel according to Luke</char>.</para>
+</usx>
+----
+USJ::
++
+.Introduction to Acts (GNT)
+[source#src-usj-para-mt_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "h",
+      "content": ["Acts"]
+    },
+    {
+      "type": "para",
+      "marker": "toc1",
+      "content": ["The Acts of the Apostles"]
+    },
+    {
+      "type": "para",
+      "marker": "toc2",
+      "content": ["Acts"]
+    },
+    {
+      "type": "para",
+      "marker": "mt1",
+      "content": ["THE ACTS"]
+    },
+    {
+      "type": "para",
+      "marker": "mt2",
+      "content": ["of the Apostles"]
+    },
+    {
+      "type": "para",
+      "marker": "is",
+      "content": ["Introduction"]
+    },
+    {
+      "type": "para",
+      "marker": "ip",
+      "content": [
+        {
+          "type": "char",
+          "marker": "bk",
+          "content": ["The Acts of the Apostles"]
+        },
+        "is a continuation of",
+        {
+          "type": "char",
+          "marker": "bk",
+          "content": ["The Gospel according to Luke"]
+        },
+        "."
+      ]
+    }
+  ]
+}
+----
+======
+
+image::para/mt_1.jpg[Introduction to Acts (GNT),300]
+
+[tabs]
+======
+USFM::
++
+.Introduction to John (GNT)
+[source#src-usfm-para-mt_2,usfm,highlight=4..6]
+----
+\h John
+\toc1 The Gospel according to John
+\toc2 John
+\mt2 The Gospel
+\mt3 according to
+\mt1 JOHN
+\is Introduction
+----
+USX::
++
+.Introduction to John (GNT)
+[source#src-usx-para-mt_2,xml,highlight=4..6]
+----
+<para style="h">John</para>
+<para style="toc1">The Gospel according to John</para>
+<para style="toc2">John</para>
+<para style="mt2">The Gospel</para>
+<para style="mt3">according to</para>
+<para style="mt1">JOHN</para>
+<para style="is">Introduction</para>
+----
+======
+
+image::para/mt_2.jpg[Introduction to John (GNT),300]
+
+== Properties
+
+TextType:: Title
+TextProperties:: paragraph, publishable, vernacular, level_#
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

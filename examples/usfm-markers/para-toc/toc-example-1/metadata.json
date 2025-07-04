@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Matthew (GNT)",
+    "usx": "Matthew (GNT)",
+    "usj": "Matthew (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

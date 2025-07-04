@@ -1,0 +1,57 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "5",
+      "sid": "MAT 5"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "13",
+          "sid": "MAT 5:13"
+        },
+        "You are the salt of the earth",
+        {
+          "type": "note",
+          "marker": "x",
+          "caller": "-",
+          "content": [
+            {
+              "type": "char",
+              "marker": "xo",
+              "content": [
+                "5.13: "
+              ]
+            },
+            {
+              "type": "char",
+              "marker": "xt",
+              "content": [
+                "Mk 9.50; ",
+                {
+                  "type": "optbreak"
+                },
+                " Lk 14.34-35"
+              ]
+            }
+          ]
+        },
+        ". But if salt loses its taste, how can it be made salty again?"
+      ]
+    }
+  ]
+}

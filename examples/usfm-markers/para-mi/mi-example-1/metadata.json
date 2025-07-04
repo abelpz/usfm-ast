@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Matthew 11.18-19 (CEV)",
+    "usx": "Matthew 11.18-19 (CEV)",
+    "usj": "Matthew 11.18-19 (CEV)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

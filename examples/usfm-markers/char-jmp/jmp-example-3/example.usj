@@ -1,0 +1,67 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "MRK 1"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "“Someone is shouting in the desert,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "‘Prepare a road for the Lord;"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "make a straight path for him to travel!’ ”"
+      ]
+    },
+    {
+      "type": "sidebar",
+      "marker": "esb",
+      "category": "People",
+      "content": [
+        {
+          "type": "para",
+          "marker": "ms",
+          "content": [
+            {
+              "type": "char",
+              "marker": "jmp",
+              "id": "article-john_the_baptist",
+              "content": [
+                "John the Baptist"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "para",
+          "marker": "p",
+          "content": [
+            "John is sometimes called the last “Old Testament prophet” because of the warnings he brought about God's judgment and because he announced the coming of God's “Chosen One” (Messiah)."
+          ]
+        }
+      ]
+    }
+  ]
+}

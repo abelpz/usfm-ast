@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Nested within extended footnote text.",
+    "usx": "Reference to named target within the same project",
+    "usj": "Reference to named target within the same project"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

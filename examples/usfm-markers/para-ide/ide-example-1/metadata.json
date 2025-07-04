@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Any project",
+    "usx": "Any project",
+    "usj": "Any project"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

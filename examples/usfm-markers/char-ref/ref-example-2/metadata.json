@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Target references in \\xt with supplied \\ref - Matthew 5.13 (GNT)",
+    "usx": "Target references with ref tags - Matthew 5.13 (GNT)",
+    "usj": "Target references with ref tags - Matthew 5.13 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

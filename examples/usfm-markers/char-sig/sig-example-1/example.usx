@@ -1,0 +1,9 @@
+<usx version="3.1">
+  <book code="COL" style="id"/>
+  <chapter number="4" style="c" sid="COL 4"/>
+  <para style="p">
+    <verse number="18" style="v" sid="COL 4:18"/>With my own hand I write this: 
+    <char style="sig">Greetings from Paul</char>. Do not forget my chains!</para>
+  <para style="cls" vid="COL 4:18">May God's grace be with you.
+    <verse eid="COL 4:18"/></para>
+</usx>

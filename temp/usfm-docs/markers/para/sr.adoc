@@ -1,0 +1,126 @@
+= sr
+:description: Section reference range
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/sr.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Section reference range. References added under a section heading to indicate the scope of the section.
+- xref:para:titles-sections/sr.adoc[sr] is not equivalent to xref:para:titles-sections/r.adoc[r] which is used to mark parallel references.
+- See also: xref:para:titles-sections/mr.adoc[mr]
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\sr ++``#__content__#
+* *USX:* ``++<para style="sr">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]` > `[Section]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Proverbs 22.17 (GNT - markup adapted)
+[source#src-usfm-para-sr_1,usfm,highlight=5]
+----
+\id PRO
+\c 22
+\p ...
+\s1 The Thirty Wise Sayings
+\sr (22.17--24.22)
+\p
+\v 17 Listen, and I will teach you what the wise have said. 
+Study their teachings, ...
+----
+USX::
++
+.Proverbs 22.17 (GNT - markup adapted)
+[source#src-usx-para-sr_1,xml,highlight=6]
+----
+<usx version="3.1">
+  <book code="PRO" style="id"/>
+  <chapter number="22" style="c" sid="PRO 22"/>
+  <para style="p">...</para>
+  <para style="s1">The Thirty Wise Sayings</para>
+  <para style="sr">(22.17--24.22)</para>
+  <para style="p">
+    <verse number="17" style="v" sid="PRO 22:17"/>Listen, and I will teach you what
+    the wise have said. Study their teachings, ...<verse eid="PRO 22:17"/></para>
+</usx>
+----
+USJ::
++
+.Proverbs 22.17 (GNT - markup adapted)
+[source#src-usj-para-sr_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PRO",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "22",
+      "sid": "PRO 22"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": ["..."]
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": ["The Thirty Wise Sayings"]
+    },
+    {
+      "type": "para",
+      "marker": "sr",
+      "content": ["(22.17--24.22)"]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "17",
+          "sid": "PRO 22:17"
+        },
+        "Listen, and I will teach you what the wise have said. Study their teachings, ..."
+      ]
+    }
+  ]
+}
+----
+======
+
+image::para/sr_1.jpg[Proverbs 22.17 (GNT),300]
+
+== Properties
+
+TextType:: Section
+TextProperties:: paragraph, publishable, vernacular, level_#
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

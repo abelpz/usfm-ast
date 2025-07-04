@@ -1,0 +1,51 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": [
+        "The last week in and near Jerusalem (21.1–27.66)"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": [
+        "The resurrection and appearances of the Lord (28.1-20)"
+      ]
+    },
+    {
+      "number": "1",
+      "type": "chapter",
+      "marker": "c"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "The Ancestors of Jesus Christ"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "r",
+      "content": [
+        "(Luke 3.23-38)"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "1",
+          "type": "verse"
+        },
+        "This is the list of the ancestors of Jesus Christ, a descendant of David, who was a descendant of Abraham."
+      ]
+    }
+  ]
+}

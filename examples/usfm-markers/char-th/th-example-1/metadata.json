@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Numbers 7.12-83 (GNT)",
+    "usx": "Numbers 7.12-83 (GNT)",
+    "usj": "Numbers 7.12-83 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

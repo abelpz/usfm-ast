@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Introduction to Mark (GNT)",
+    "usx": "Introduction to Mark (GNT)",
+    "usj": "Introduction to Mark (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

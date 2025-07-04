@@ -1,0 +1,131 @@
+= mr
+:description: Major section reference range
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/mr.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Major section reference range. References added under a major section heading to indicate the scope of the section.
+- See also: xref:para:titles-sections/sr.adoc[sr]
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\mr ++``#__content__#
+* *USX:* ``++<para style="mr">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]` > `[Section]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Psalm 1 (Book 1 division) (GNT)
+[source#src-usfm-para-mr_1,usfm,highlight=4]
+----
+\id PSA
+\c 1
+\ms1 Book One
+\mr (Psalms 1–41)
+\s True Happiness
+\q1
+\v 1 Happy are those
+\q2 who reject the advice of evil people,
+----
+USX::
++
+.Psalm 1 (Book 1 division) (GNT)
+[source#src-usx-para-mr_1,xml,highlight=5]
+----
+ <usx version="3.1">
+  <book code="PSA" style="id"/>
+  <chapter number="1" style="c" sid="PSA 1"/>
+  <para style="ms1">Book One</para>
+  <para style="mr">(Psalms 1–41)</para>
+  <para style="s">True Happiness</para>
+  <para style="q1">
+    <verse number="1" style="v" sid="PSA 1:1"/>Happy are those</para>
+  <para style="q2" vid="PSA 1:1">who reject the advice of evil people,
+    <verse eid="PSA 1:1"/></para>
+</usx>
+----
+USJ::
++
+.Psalm 1 (Book 1 division) (GNT)
+[source#src-usj-para-mr_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PSA",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "PSA 1"
+    },
+    {
+      "type": "para",
+      "marker": "ms1",
+      "content": ["Book One"]
+    },
+    {
+      "type": "para",
+      "marker": "mr",
+      "content": ["(Psalms 1–41)"]
+    },
+    {
+      "type": "para",
+      "marker": "s",
+      "content": ["True Happiness"]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "PSA 1:1"
+        },
+        "Happy are those"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["who reject the advice of evil people,"]
+    }
+  ]
+}
+----
+======
+
+image::para/mr_1.jpg[Psalm 1 (Book 1 division) (GNT),300]
+
+== Properties
+
+TextType:: Section
+TextProperties:: paragraph, publishable, vernacular, level_#
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

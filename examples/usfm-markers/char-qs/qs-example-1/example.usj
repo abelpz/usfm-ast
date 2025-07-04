@@ -1,0 +1,77 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PSA",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "3",
+      "sid": "PSA 3"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": ["Trust in God under Adversity"]
+    },
+    {
+      "type": "para",
+      "marker": "d",
+      "content": ["A Psalm of David, when he fled from his son Absalom."]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "PSA 3:1"
+        },
+        "O ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": ["Lord"]
+        },
+        ", how many are my foes!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["Many are rising against me;"]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "PSA 3:2"
+        },
+        "many are saying to me,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "“There is no help for you ",
+        {
+          "type": "char",
+          "marker": "qs",
+          "content": ["Selah"]
+        }
+      ]
+    }
+  ]
+}

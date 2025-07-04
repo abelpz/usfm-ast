@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Un-glossed character occurring between glossed characters in a phrase",
+    "usx": "Un-glossed character occurring between glossed characters in a phrase",
+    "usj": "Un-glossed character occurring between glossed characters in a phrase"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

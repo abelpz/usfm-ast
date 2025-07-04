@@ -1,0 +1,84 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "HAB",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "3",
+      "sid": "HAB 3"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "18",
+          "sid": "HAB 3:18"
+        },
+        "yet I will rejoice in the ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": ["Lord"]
+        },
+        ","
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["I will be joyful in God my Savior."]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "19",
+          "sid": "HAB 3:19"
+        },
+        "The Sovereign ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": ["Lord"]
+        },
+        " is my strength;"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["he makes my feet like the feet of a deer,"]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["he enables me to tread on the heights."]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "qd",
+      "content": ["For the director of music. On my stringed instruments."]
+    }
+  ]
+}

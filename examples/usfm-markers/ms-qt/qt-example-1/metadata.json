@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Mark 15.2 (GNT) - no levels",
+    "usx": "Mark 15.2 (GNT) - no levels"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

@@ -1,0 +1,113 @@
+= ipi
+:description: Introduction indented paragraph
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/ipi.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Introduction indented paragraph.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\ipi ++``#__content__#
+* *USX:* ``++<para style="ipi">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Introduction to the Deuterocanonicals/Apocrypha (CEV)
+[source#src-usfm-para-ipi_1,usfm,highlight=4;7]
+----
+\id INT
+\ip The following lists summarize each Christian tradition’s views of the 
+books here designated as Deuterocanonicals/Apocrypha.
+\ipi Many Protestants consider the following books to be Apocrypha as 
+defined above: Tobit, Judith, additions to Esther (as found in Greek Esther 
+in the CEV) ...
+\ipi Roman Catholics consider the following books to be Deuterocanonical and 
+of equal status with all other books of the Old Testament: Tobit, Judith, 
+Greek Esther ...
+----
+USX::
++
+.Introduction to the Deuterocanonicals/Apocrypha (CEV)
+[source#src-usx-para-ipi_1,xml,highlight=5;8]
+----
+<usx version="3.1">
+  <book code="INT" style="id"/>
+  <para style="ip">The following lists summarize each Christian tradition’s views
+    of the books here designated as Deuterocanonicals/Apocrypha.</para>
+  <para style="ipi">Many Protestants consider the following books to be Apocrypha
+    as defined above: Tobit, Judith, additions to Esther (as found in Greek Esther
+    in the CEV) ...</para>
+  <para style="ipi">Roman Catholics consider the following books to be
+    Deuterocanonical and of equal status with all other books of the Old
+    Testament: Tobit, Judith, Greek Esther ...</para>
+</usx>
+----
+USJ::
++
+.Introduction to the Deuterocanonicals/Apocrypha (CEV)
+[source#src-usj-para-ipi_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "INT",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "ip",
+      "content": [
+        "The following lists summarize each Christian tradition’s views of the books here designated as Deuterocanonicals/Apocrypha."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "ipi",
+      "content": [
+        "Many Protestants consider the following books to be Apocrypha as defined above: Tobit, Judith, additions to Esther (as found in Greek Esther in the CEV) ..."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "ipi",
+      "content": [
+        "Roman Catholics consider the following books to be Deuterocanonical and of equal status with all other books of the Old Testament: Tobit, Judith, Greek Esther ..."
+      ]
+    }
+  ]
+}
+----
+======
+
+image::para/ipi_1.jpg[Introduction to the Deuterocanonicals/Apocrypha (GCEV),300]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

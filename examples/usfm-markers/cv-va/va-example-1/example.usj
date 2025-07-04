@@ -1,0 +1,81 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "number": "54",
+      "type": "chapter",
+      "marker": "c",
+      "altnumber": "53"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "A Prayer for Protection from Enemies"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "d",
+      "content": [
+        {
+          "marker": "va",
+          "content": [
+            "1"
+          ],
+          "type": "char"
+        },
+        " A poem by David, ",
+        {
+          "marker": "va",
+          "content": [
+            "2"
+          ],
+          "type": "char"
+        },
+        " after the men from Ziph went to Saul and told him that David was hiding in their territory."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "marker": "v",
+          "number": "1",
+          "type": "verse",
+          "altnumber": "3"
+        },
+        "Save me by your power, O God;"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "set me free by your might!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "marker": "v",
+          "number": "2",
+          "type": "verse",
+          "altnumber": "4"
+        },
+        "Hear my prayer, O God;"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "listen to my words!"
+      ]
+    }
+  ]
+}

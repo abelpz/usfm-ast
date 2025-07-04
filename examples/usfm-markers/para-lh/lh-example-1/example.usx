@@ -1,0 +1,11 @@
+<usx version="3.1">
+  <book code="1CH" style="id"/>
+  <chapter number="27" style="c" sid="1CH 27"/>
+  <para style="s1">Administration of the Tribes of Israel</para>
+  <para style="lh">
+    <verse number="16-22" style="v" sid="1CH 27:16-22"/>This is the list of the
+    administrators of the tribes of Israel:</para>
+  <para style="li1" vid="1CH 27:16-22">Reuben - Eliezer son of Zichri</para>
+  <para style="li1" vid="1CH 27:16-22">Simeon - Shephatiah son of Maacah</para>
+  <para style="li1" vid="1CH 27:16-22">Levi - Hashabiah son of Kemuel</para>
+</usx>

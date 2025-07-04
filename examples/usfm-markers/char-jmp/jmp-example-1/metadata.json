@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Link to other project text",
+    "usx": "Link to other project text",
+    "usj": "Link to other project text"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

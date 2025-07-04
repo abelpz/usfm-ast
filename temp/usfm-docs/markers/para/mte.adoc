@@ -1,0 +1,66 @@
+= mte#
+:description: Main title at introduction end
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/mte.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Main title at introduction end. May be used to repeat the main title at the end of the introduction, or to mark a major title which indicates the end of the introduction. The content is not necessarily identical to the main title (xref:para:titles-sections/mt.adoc[mt]).
+* The variable `#` (1-2) represents the level of division.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\mte# ++``#__content__#
+* *USX:* ``++<para style="mte#">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Missing
+[source#src-usfm-para-mte_1,usfm,highlight=1]
+----
+Missing
+----
+USX::
++
+.Missing
+[source#src-usx-para-mte_1,xml,highlight=1]
+----
+Missing
+----
+USJ::
++
+.Missing
+[source#src-usj-para-mte_1,json,highlight=]
+----
+Missing
+----
+======
+
+image::para/missing.jpg[,300]
+
+== Properties
+
+StyleType:: xref:para:index.adoc[Paragraph]
+OccursUnder:: `[BookIntroductionContent]`
+TextType:: Title
+TextProperties:: paragraph, publishable, vernacular, level_#
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

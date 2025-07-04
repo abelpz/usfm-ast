@@ -1,0 +1,92 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "HEB",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "HEB 1"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "... ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "4",
+          "sid": "HEB 1:4"
+        },
+        "The Son was made greater than the angels, just as the name that God gave him is greater than theirs. ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "5",
+          "sid": "HEB 1:5"
+        },
+        "For God never said to any of his angels,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "“You are my Son;"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "today I have become your Father.” ",
+        {
+          "type": "char",
+          "marker": "rq",
+          "content": [
+            "Psa 2.7"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "m",
+      "content": [
+        "Nor did God say about any angel,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "“I will be his Father,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "and he will be my Son.” ",
+        {
+          "type": "char",
+          "marker": "rq",
+          "content": [
+            "2Sa 7.14; 1Ch 17.13"
+          ]
+        }
+      ]
+    }
+  ]
+}

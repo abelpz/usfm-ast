@@ -48,6 +48,9 @@ export interface USFMVisitorOptions {
 /**
  * Clean, simplified USFM visitor that uses the new USFMFormatter API
  */
+// Export Universal Visitor System
+export * from './universal-usfm-visitor';
+
 export class USFMVisitor implements BaseUSFMVisitor {
   private result: string = '';
   private options: Required<
@@ -132,12 +135,84 @@ export class USFMVisitor implements BaseUSFMVisitor {
 
     children.forEach((child, index) => {
       this.currentChildIndex = index;
-      child.accept(this);
+
+      // Handle different types of children
+      if (typeof child === 'string') {
+        // Handle text content directly
+        this.visitText({ content: child } as TextUSFMNodeInterface);
+      } else if (
+        child &&
+        typeof child === 'object' &&
+        'accept' in child &&
+        typeof child.accept === 'function'
+      ) {
+        // Enhanced node with accept method
+        child.accept(this);
+      } else if (child && typeof child === 'object') {
+        // Plain object - route based on type or marker
+        this.routePlainObject(child);
+      }
     });
 
     // Restore previous context
     this.currentParent = prevParent;
     this.currentChildIndex = prevIndex;
+  }
+
+  /**
+   * Routes plain objects to the appropriate visitor method
+   */
+  private routePlainObject(obj: any): void {
+    if (!obj || typeof obj !== 'object') return;
+
+    // Determine object type and call appropriate visitor
+    if (
+      obj.type === 'para' ||
+      (!obj.type && obj.marker && this.getMarkerType(obj.marker) === 'paragraph')
+    ) {
+      this.visitParagraph(obj as ParagraphUSFMNodeInterface);
+    } else if (
+      obj.type === 'char' ||
+      (!obj.type && obj.marker && this.getMarkerType(obj.marker) === 'character')
+    ) {
+      this.visitCharacter(obj as CharacterUSFMNodeInterface);
+    } else if (
+      obj.type === 'note' ||
+      (!obj.type && obj.marker && this.getMarkerType(obj.marker) === 'note')
+    ) {
+      this.visitNote(obj as NoteUSFMNodeInterface);
+    } else if (
+      obj.type === 'ms' ||
+      (!obj.type && obj.marker && this.getMarkerType(obj.marker) === 'milestone')
+    ) {
+      this.visitMilestone(obj as MilestoneUSFMNodeInterface);
+    } else if (obj.content !== undefined && typeof obj.content === 'string') {
+      // Text node
+      this.visitText(obj as TextUSFMNodeInterface);
+    } else if (typeof obj === 'string') {
+      // Plain text
+      this.visitText({ content: obj } as TextUSFMNodeInterface);
+    }
+  }
+
+  /**
+   * Gets marker type using the USFMMarkerRegistry
+   */
+  private getMarkerType(marker: string): string {
+    const registry = USFMMarkerRegistry.getInstance();
+    const markerType = registry.getMarkerInfo(marker, 'type');
+
+    if (markerType) {
+      return markerType;
+    }
+
+    // If not in registry, infer type based on common patterns
+    if (marker.endsWith('-s') || marker.endsWith('-e')) {
+      return 'milestone';
+    }
+
+    // Default to character if we can't determine
+    return 'character';
   }
 
   /**
@@ -153,9 +228,32 @@ export class USFMVisitor implements BaseUSFMVisitor {
     const formatted = this.formatter.addMarker(this.result, marker);
     this.result = formatted.normalizedOutput;
 
-    // Visit children (content)
-    if (Array.isArray(node.content)) {
-      this.visitChildren(node, node.content);
+    // Handle special paragraph markers like ID
+    if (marker === 'id') {
+      // For ID markers, check for code and content properties
+      if ((node as any).code) {
+        const code = (node as any).code;
+        const codeFormatted = this.formatter.addTextContent(this.result, code);
+        this.result = codeFormatted.normalizedOutput;
+
+        // Add content if it exists
+        if (
+          (node as any).content &&
+          Array.isArray((node as any).content) &&
+          (node as any).content.length > 0
+        ) {
+          const contentText = (node as any).content.join(' ');
+          if (contentText.trim()) {
+            const contentFormatted = this.formatter.addTextContent(this.result, ' ' + contentText);
+            this.result = contentFormatted.normalizedOutput;
+          }
+        }
+      }
+    } else {
+      // Visit children (content) for other paragraph types
+      if (Array.isArray(node.content)) {
+        this.visitChildren(node, node.content);
+      }
     }
 
     // Pop context from stack
@@ -182,25 +280,42 @@ export class USFMVisitor implements BaseUSFMVisitor {
     const openingFormatted = this.formatter.addMarker(this.result, effectiveMarker);
     this.result = openingFormatted.normalizedOutput;
 
-    // Visit children (content) FIRST
-    if (Array.isArray(node.content)) {
-      this.visitChildren(node, node.content);
+    // Handle special content for verses, chapters, and ID markers
+    if (marker === 'v' || marker === 'c') {
+      // For verses and chapters, the content might be structured
+      this.handleSpecialMarkerContent(node, marker);
+    } else {
+      // Visit children (content) FIRST
+      if (Array.isArray(node.content)) {
+        this.visitChildren(node, node.content);
+      }
     }
 
-    // Add attributes AFTER content
-    if (node.attributes && Object.keys(node.attributes).length > 0) {
+    // Add attributes AFTER content (for non-special markers)
+    if (
+      marker !== 'v' &&
+      marker !== 'c' &&
+      node.attributes &&
+      Object.keys(node.attributes).length > 0
+    ) {
       // Filter out undefined values to match expected type
       const validAttributes = Object.fromEntries(
-        Object.entries(node.attributes).filter(([_, value]) => value !== undefined)
+        Object.entries(node.attributes).filter(
+          ([_, value]) => value !== undefined && value !== null
+        )
       ) as Record<string, string>;
-      const attributesFormatted = this.formatter.addAttributes(this.result, validAttributes);
-      this.result = attributesFormatted.normalizedOutput;
+
+      if (Object.keys(validAttributes).length > 0) {
+        const attributesFormatted = this.formatter.addAttributes(this.result, validAttributes);
+        this.result = attributesFormatted.normalizedOutput;
+      }
     }
 
     // Add closing marker for character markers (not verses or note content)
     const isVerse = marker === 'v';
+    const isChapter = marker === 'c';
     const isNoteContent = noteContentMarkers.has(marker);
-    const needsClosing = !isVerse && !isNoteContent;
+    const needsClosing = !isVerse && !isChapter && !isNoteContent;
 
     if (needsClosing) {
       // Use effectiveMarker for nested characters
@@ -212,6 +327,37 @@ export class USFMVisitor implements BaseUSFMVisitor {
     this.contextStack.pop();
 
     return this.result;
+  }
+
+  /**
+   * Handles special content for verse and chapter markers
+   */
+  private handleSpecialMarkerContent(node: CharacterUSFMNodeInterface, marker: string): void {
+    if (marker === 'v') {
+      // For verses, add the verse number directly
+      if ((node as any).number) {
+        const verseNumber = (node as any).number;
+        const formatted = this.formatter.addTextContent(this.result, verseNumber + ' ');
+        this.result = formatted.normalizedOutput;
+      }
+
+      // Visit children for verse content
+      if (Array.isArray(node.content)) {
+        this.visitChildren(node, node.content);
+      }
+    } else if (marker === 'c') {
+      // For chapters, add the chapter number directly
+      if ((node as any).number) {
+        const chapterNumber = (node as any).number;
+        const formatted = this.formatter.addTextContent(this.result, chapterNumber);
+        this.result = formatted.normalizedOutput;
+      }
+
+      // Visit children for chapter content
+      if (Array.isArray(node.content)) {
+        this.visitChildren(node, node.content);
+      }
+    }
   }
 
   /**
@@ -294,9 +440,9 @@ export class USFMVisitor implements BaseUSFMVisitor {
     const openingFormatted = this.formatter.addMarker(this.result, marker);
     this.result = openingFormatted.normalizedOutput;
 
-    // Add note caller (+ for footnotes, - for cross-references, etc.)
+    // Add note caller with proper spacing (+ for footnotes, - for cross-references, etc.)
     if (node.caller) {
-      const callerFormatted = this.formatter.addTextContent(this.result, node.caller);
+      const callerFormatted = this.formatter.addTextContent(this.result, ` ${node.caller} `);
       this.result = callerFormatted.normalizedOutput;
     }
 

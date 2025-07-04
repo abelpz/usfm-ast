@@ -1,0 +1,179 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "NUM",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "2",
+      "sid": "NUM 2"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "10-16",
+          "sid": "NUM 2:10-16"
+        },
+        "On the south, those under the banner of the division of Reuben shall camp in their groups, under their leaders, as follows:"
+      ]
+    },
+    {
+      "type": "table",
+      "content": [
+        {
+          "type": "table:row",
+          "marker": "tr",
+          "content": [
+            {
+              "type": "table:cell",
+              "marker": "th1",
+              "align": "start",
+              "content": [
+                "Tribe "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "th2",
+              "align": "start",
+              "content": [
+                "Leader "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "thr3",
+              "align": "end",
+              "content": [
+                "Number"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "table:row",
+          "marker": "tr",
+          "content": [
+            {
+              "type": "table:cell",
+              "marker": "tc1",
+              "align": "start",
+              "content": [
+                "Reuben "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "tc2",
+              "align": "start",
+              "content": [
+                "Elizur son of Shedeur "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "tcr3",
+              "align": "end",
+              "content": [
+                "46,500"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "table:row",
+          "marker": "tr",
+          "content": [
+            {
+              "type": "table:cell",
+              "marker": "tc1",
+              "align": "start",
+              "content": [
+                "Simeon "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "tc2",
+              "align": "start",
+              "content": [
+                "Shelumiel son of Zurishaddai "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "tcr3",
+              "align": "end",
+              "content": [
+                "59,300"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "table:row",
+          "marker": "tr",
+          "content": [
+            {
+              "type": "table:cell",
+              "marker": "tc1",
+              "align": "start",
+              "content": [
+                "Gad "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "tc2",
+              "align": "start",
+              "content": [
+                "Eliasaph son of Deuel "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "tcr3",
+              "align": "end",
+              "content": [
+                "45,650"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "table:row",
+          "marker": "tr",
+          "content": [
+            {
+              "type": "table:cell",
+              "marker": "tcr1",
+              "align": "end",
+              "colspan": "2",
+              "content": [
+                "Total: "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "tcr3",
+              "align": "end",
+              "content": [
+                "151,450"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

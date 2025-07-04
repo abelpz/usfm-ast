@@ -1,0 +1,36 @@
+<usx version="3.1">
+  <book code="PSA" style="id"/>
+  <chapter number="3" style="c" sid="PSA 3"/>
+  <para style="s1">Morning Prayer for Help</para>
+  <para style="q1">
+    <verse number="1" style="v" sid="PSA 3:1"/>I have so many enemies, 
+    <char style="nd">Lord</char>,</para>
+  <para style="q2" vid="PSA 3:1">so many who turn against me!<verse eid="PSA 3:1"/>
+    </para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PSA 3:2"/>They talk about me and say,</para>
+  <para style="q2" vid="PSA 3:2">“God will not help him.”<verse eid="PSA 3:2"/>
+    </para>
+  <para style="b"/>
+  <para style="q1">
+    <verse number="3" style="v" sid="PSA 3:3"/>But you, O 
+    <char style="nd">Lord</char>, are always my shield from danger;</para>
+  <para style="q2" vid="PSA 3:3">you give me victory</para>
+  <para style="q2" vid="PSA 3:3">and restore my courage.<verse eid="PSA 3:3"/>
+    </para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PSA 3:4"/>I call to the 
+    <char style="nd">Lord</char>for help,</para>
+  <para style="q2" vid="PSA 3:4">and from his sacred hill he answers me.
+    <verse eid="PSA 3:4"/></para>
+  <para style="b"/>
+  <para style="q1">
+    <verse number="5" style="v" sid="PSA 3:5"/>I lie down and sleep,</para>
+  <para style="q2" vid="PSA 3:5">and all night long the 
+    <char style="nd">Lord</char>protects me.<verse eid="PSA 3:5"/></para>
+  <para style="q1">
+    <verse number="6" style="v" sid="PSA 3:6"/>I am not afraid of the thousands of
+    enemies</para>
+  <para style="q2" vid="PSA 3:6">who surround me on every side.
+    <verse eid="PSA 3:6"/></para>
+</usx>

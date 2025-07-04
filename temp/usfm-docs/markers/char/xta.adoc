@@ -1,0 +1,72 @@
+= xta
+:description: Cross Reference - Target references added text
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/xta.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: xref:note:crossref/index.adoc[Cross Reference] - Target references added text. Used for marking additional publishable text within in the list of target references (xref:notes:crossref/xt[xt]) which can be ignored when identifying references or generating links.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\xta ++``#__content__#
+* *USX:* ``++<char style="xta">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:note:crossref/index.adoc[CrossReference]]`
+// tag::spec[]
+Added:: 3.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Matthew 3.0 (GNT - text and markup adapted)
+[source#src-usfm-char-xta_1,usfm,highlight=3]
+----
+\c 3
+\s1 The Preaching of John the Baptist\x - \xo 3.0 \xta Compare with \xt Mk 
+1.1-8; Lk 3.1-18; \xta and \xt Jn 1.19-28 \xta parallel passages.\x*
+\p
+\v 1 At that time John the Baptist came to the desert of Judea and started 
+preaching.
+----
+USX::
++
+.Matthew 3.0 (GNT - text and markup adapted)
+[source#src-usx-char-xta_1,xml,highlight=4;7;9]
+----
+<chapter number="3" style="c" sid="MAT 3"/>
+<para style="s1">The Preaching of John the Baptist<note caller="-" style="x">
+    <char style="xo">3.0 </char>
+    <char style="xta">Compare with </char>
+    <char style="xt"><ref loc="MRK 1:1-8">Mk 1.1-8</ref>; 
+    <ref loc="LUK 3:1-18">Lk 3.1-18</ref>; </char>
+    <char style="xta">and </char>
+    <char style="xt"><ref loc="JHN 1:19-28">Jn 1.19-28</ref></char>
+    <char style="xta">parallel passages.</char></note></para>
+<para style="p">
+  <verse number="1" style="v" sid="MAT 3:1"/>At that time John the Baptist came to
+  the desert of Judea and started preaching.<verse eid="MAT 3:1"/></para>
+----
+======
+
+image::char/xta_1.jpg[Matthew 3.0 (GNT - text and markup adapted),500]
+
+== Properties
+
+TextType:: NoteText
+TextProperties:: publishable, vernacular, note
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

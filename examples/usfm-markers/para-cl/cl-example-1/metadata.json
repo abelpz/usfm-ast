@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Psalm 1 (GNT - markup adapted - general chapter label)",
+    "usx": "Psalm 1 (GNT - markup adapted - general chapter label)",
+    "usj": "Psalm 1 (GNT - markup adapted - general chapter label)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

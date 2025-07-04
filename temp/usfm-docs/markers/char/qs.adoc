@@ -1,0 +1,164 @@
+= qs
+:description: Selah
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/qs.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Used to mark the expression “Selah”. Commonly found in Psalms and Habakkuk.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\qs ++``#__content__#``++\qs*++``
+* *USX:* ``++<char style="qs">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[Para]` (xref:para:poetry/index.adoc[Poetry])
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Psalm 3.2 (NRSV)
+[source#src-usfm-char-qs_1,usfm,highlight=10]
+----
+\id PSA
+\c 3
+\s1 Trust in God under Adversity
+\d A Psalm of David, when he fled from his son Absalom.
+\q1
+\v 1 O \nd Lord\nd*, how many are my foes!
+\q2 Many are rising against me;
+\q1
+\v 2 many are saying to me,
+\q2 “There is no help for you \qs Selah\qs*
+----
+USX::
++
+.Psalm 3.2 (NRSV)
+[source#src-usx-char-qs_1,xml,highlight=14]
+----
+<usx version="3.1">
+  <book code="PSA" style="id"/>
+  <chapter number="3" style="c" sid="PSA 3"/>
+  <para style="s1">Trust in God under Adversity</para>
+  <para style="d">A Psalm of David, when he fled from his son Absalom.</para>
+  <para style="q1">
+    <verse number="1" style="v" sid="PSA 3:1"/>O <char style="nd">Lord</char>,
+    how many are my foes!</para>
+  <para style="q2" vid="PSA 3:1">Many are rising against 
+    me;<verse eid="PSA 3:1"/></para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PSA 3:2"/>many are saying to me,</para>
+  <para style="q2" vid="PSA 3:2">“There is no help for you 
+    <char style="qs">Selah</char><verse eid="PSA 3:2"/></para>
+</usx>
+----
+USJ::
++
+.Psalm 3.2 (NRSV)
+[source#src-usj-char-qs_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PSA",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "3",
+      "sid": "PSA 3"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": ["Trust in God under Adversity"]
+    },
+    {
+      "type": "para",
+      "marker": "d",
+      "content": ["A Psalm of David, when he fled from his son Absalom."]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "PSA 3:1"
+        },
+        "O ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": ["Lord"]
+        },
+        ", how many are my foes!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["Many are rising against me;"]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "PSA 3:2"
+        },
+        "many are saying to me,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "“There is no help for you ",
+        {
+          "type": "char",
+          "marker": "qs",
+          "content": ["Selah"]
+        }
+      ]
+    }
+  ]
+}
+----
+======
+
+image::char/qs_1.jpg[Exodus 3.15 (GNT),300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: publishable, vernacular, poetic
+
+== Publication Issues
+
+* This text is frequently right aligned, and rendered on the same line as the previous poetic line, if space allows.
+
+// end::public[]
+
+== Discussion

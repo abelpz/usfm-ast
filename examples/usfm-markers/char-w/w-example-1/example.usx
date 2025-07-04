@@ -1,0 +1,10 @@
+<usx version="3.1">
+  <book code="NEH" style="id"/>
+  <chapter number="9" style="c" sid="NEH 9"/>
+  <para style="q1">
+    <verse number="31" style="v" sid="NEH 9:31"/>And yet, because your mercy is
+    great,</para>
+  <para style="q2" vid="NEH 9:31">you did not forsake or destroy them.</para>
+  <para style="q1" vid="NEH 9:31">You are a <char style="w">gracious</char> and
+    merciful God!<verse eid="NEH 9:31"/></para>
+</usx>

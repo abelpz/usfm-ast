@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Two Han characters with a single ruby phrase gloss",
+    "usx": "Two Han characters with a single ruby phrase gloss",
+    "usj": "Two Han characters with a single ruby phrase gloss"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

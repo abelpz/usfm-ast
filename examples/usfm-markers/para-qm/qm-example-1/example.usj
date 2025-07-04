@@ -1,0 +1,63 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "1CH",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "18",
+      "sid": "1CH 18"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "18",
+          "sid": "1CH 18:18"
+        },
+        "God's spirit took control of one of them, Amasai, who later became the commander of “The Thirty,” and he called out:"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "qm1",
+      "content": [
+        "“David son of Jesse, we are yours!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "qm1",
+      "content": [
+        "Success to you and those who help you!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "qm1",
+      "content": [
+        "God is on your side.”"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "m",
+      "content": [
+        "David welcomed them and made them officers in his army."
+      ]
+    }
+  ]
+}

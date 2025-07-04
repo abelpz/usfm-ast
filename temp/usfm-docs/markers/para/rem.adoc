@@ -1,0 +1,87 @@
+= rem
+:description: Remarks/comments
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/rem.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Remarks/comments. For adding brief comments by a translator, consultant, or supporter. This content is not a type of footnote, and is not intended for publication. When xref:para:identification/rem.adoc[rem] is used, it is often found at the top of a file together with other xref:para:identification/index.adoc[identification] content. However, xref:para:identification/rem.adoc[rem] can be used for adding non-publishable remarks/comments anywhere within a text.
+[CAUTION]
+====
+Adding names of individuals, initials, or other personal information directly within scripture text files is strongly discouraged.
+====
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\rem ++``#__content__#
+* *USX:* ``++<para style="rem">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-headers[BookHeaders]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Any project
+[source#src-usfm-para-rem_1,usfm,highlight=2]
+----
+\id MRK
+\rem First draft complete, waiting for checks.
+----
+USX::
++
+.Any project
+[source#src-usx-para-rem_1,xml,highlight=3]
+----
+<usx version="3.1">
+  <book code="MRK" style="id"/>
+  <para style="rem">First draft complete, waiting for checks.</para>
+</usx>
+----
+USJ::
++
+.Any project
+[source#src-usj-para-rem_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "rem",
+      "content": ["First draft complete, waiting for checks."]
+    }
+  ]
+}
+----
+======
+
+image::para/missing.jpg[,300]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph, nonpublishable, nonvernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

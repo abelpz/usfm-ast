@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Matthew 3.0 (GNT - text and markup adapted)",
+    "usx": "Matthew 3.0 (GNT - text and markup adapted)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

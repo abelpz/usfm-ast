@@ -1,0 +1,129 @@
+= r
+:description: Parallel passage reference(s)
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/r.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Parallel passage reference(s). A list of references to parallel passages, usually added under a section heading.
+- xref:para:titles-sections/r.adoc[r] is not equivalent to xref:para:titles-sections/sr.adoc[sr] which is used to mark references indicating the scope of the following section.
+- See also: xref:para:titles-sections/mr.adoc[mr], xref:para:titles-sections/sr.adoc[sr]
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\r ++``#__content__#
+* *USX:* ``++<para style="r">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]` > `[Section]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Matthew 3.1 (GNT)
+[source#src-usfm-para-r_1,usfm,highlight=4]
+----
+\id MAT
+\c 3
+\s1 The Preaching of John the Baptist
+\r (Mark 1.1-8; Luke 3.1-18; John 1.19-28)
+\p
+\v 1 At that time John the Baptist came to the desert of Judea and 
+started preaching.
+\v 2 “Turn away from your sins,” he said, ...
+----
+USX::
++
+.Matthew 3.1 (GNT)
+[source#src-usx-para-r_1,xml,highlight=5]
+----
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <chapter number="3" style="c" sid="MAT 3"/>
+  <para style="s1">The Preaching of John the Baptist</para>
+  <para style="r">(Mark 1.1-8; Luke 3.1-18; John 1.19-28)</para>
+  <para style="p">
+    <verse number="1" style="v" sid="MAT 3:1"/>At that time John the Baptist came 
+    to the desert of Judea and started preaching. <verse eid="MAT 3:1"/>
+    <verse number="2" style="v" sid="MAT 3:2"/>“Turn away from your sins,” he 
+    said, ...<verse eid="MAT 3:2"/></para>
+</usx>
+----
+USJ::
++
+.Matthew 3.1 (GNT)
+[source#src-usj-para-r_1,json,highlight=5]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "3",
+      "sid": "MAT 3"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": ["The Preaching of John the Baptist"]
+    },
+    {
+      "type": "para",
+      "marker": "r",
+      "content": ["(Mark 1.1-8; Luke 3.1-18; John 1.19-28)"]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "MAT 3:1"
+        },
+        "At that time John the Baptist came to the desert of Judea and started preaching. ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "MAT 3:2"
+        },
+        "“Turn away from your sins,” he said, ..."
+      ]
+    }
+  ]
+}
+----
+======
+
+image::para/r_1.jpg[Matthew 3.1 (GNT),300]
+
+== Properties
+
+TextType:: Section
+TextProperties:: paragraph, publishable, vernacular, level_#
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

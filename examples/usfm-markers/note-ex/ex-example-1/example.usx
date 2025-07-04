@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<usx version="3.0">
+  <book code="MAT" style="id"/>
+  <chapter number="1" style="c" sid="MAT 1"/>
+  <para style="p">
+    <verse number="22" style="v" sid="MAT 1:22"/>But when Joseph heard that
+    Archelaus had succeeded his father Herod as king of Judea, he was afraid to 
+    go there. He was given more instructions in a dream, so he went to the 
+    province of Galilee 
+    <verse eid="MAT 1:22"/><verse number="23" style="v" sid="MAT 1:23"/><note
+      caller="-" style="x">
+      <char style="xo" closed="false">2.23: </char>
+      <char style="xt" closed="false"><ref loc="MRK 1:24">Mk 1.24</ref>; 
+      <ref loc="LUK 2:39">Lk 2.39</ref>; <ref loc="JHN 1:45">Jn 1.45</ref>.</char>
+    </note><note
+      caller="-" style="ex">
+      <char style="xo" closed="false">2.23: </char>
+      <char style="xt" closed="false"><ref loc="MAT 1:22">Mt 1.22</ref>; 
+      <ref loc="MAT 4:13">4.13</ref>; <ref loc="MRK 1:9">Mk 1.9</ref>; 
+      <ref loc="LUK 1:26">Lk 1.26</ref>; <ref loc="LUK 2:39">2.39</ref>; 
+      <ref loc="JHN 1:45">Jn 1.45</ref>; <ref loc="JHN 1:46">1.46</ref>; 
+      <ref loc="JHN 18:5">18.5</ref>.</char>
+    </note> and made his home in a town named Nazareth. And so what the prophets 
+    had said came true: “He will be called a Nazarene.”<verse eid="MAT 1:23"/>
+  </para>
+</usx>

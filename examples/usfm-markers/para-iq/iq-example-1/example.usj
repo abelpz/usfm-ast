@@ -1,0 +1,79 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "TIT",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "ip",
+      "content": [
+        "Paul also tells how we are saved:"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "ib"
+    },
+    {
+      "type": "para",
+      "marker": "iq1",
+      "content": [
+        "God our Savior showed us"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "iq2",
+      "content": [
+        "how good and kind he is."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "iq1",
+      "content": [
+        "He saved us because"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "iq2",
+      "content": [
+        "of his mercy,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "iq1",
+      "content": [
+        "and not because"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "iq2",
+      "content": [
+        "of any good things"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "iq2",
+      "content": [
+        "that we have done."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "ipr",
+      "content": [
+        "(3.4,5a)"
+      ]
+    }
+  ]
+}

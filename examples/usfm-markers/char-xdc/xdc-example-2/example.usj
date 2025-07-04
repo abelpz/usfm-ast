@@ -1,0 +1,46 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "51-52",
+          "type": "verse"
+        },
+        {
+          "marker": "x",
+          "content": [
+            {
+              "marker": "xo",
+              "content": [
+                "15.51,52: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xdc",
+              "content": [
+                "2Es 6.23; "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xt",
+              "content": [
+                "1Th 4.15-17."
+              ],
+              "type": "char"
+            }
+          ],
+          "caller": "-",
+          "type": "note"
+        },
+        " Listen to this secret truth: we shall not all die, but when the last trumpet sounds, we shall all be changed in an instant, as quickly as the blinking of an eye. For when the trumpet sounds, the dead will be raised, never to die again, and we shall all be changed."
+      ]
+    }
+  ]
+}

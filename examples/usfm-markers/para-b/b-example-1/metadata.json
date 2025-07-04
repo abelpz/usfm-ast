@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Psalm 3 (GNT)",
+    "usx": "Psalm 3 (GNT)",
+    "usj": "Psalm 3 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

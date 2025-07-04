@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Jude 5-8 (ULB) - milestone pairs",
+    "usx": "Jude 5-8 (ULB) - milestone pairs"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

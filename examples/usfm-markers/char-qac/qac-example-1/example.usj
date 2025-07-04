@@ -1,0 +1,161 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "LAM",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "LAM 1"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "Primer lamento acróstico"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "s2",
+      "content": [
+        "El profeta"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "LAM 1:1"
+        },
+        "¡",
+        {
+          "type": "char",
+          "marker": "qac",
+          "content": [
+            "P"
+          ]
+        },
+        "obrecita de ti, Jerusalén!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "Antes eras la más famosa"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "de todas las ciudades."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "¡Antes estabas llena de gente,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "pero te has quedado muy sola,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "te has quedado viuda!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "¡Fuiste la reina de las naciones,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "pero hoy eres esclava de ellas!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "LAM 1:2"
+        },
+        {
+          "type": "char",
+          "marker": "qac",
+          "content": [
+            "O"
+          ]
+        },
+        "lvidada y bañada en lágrimas"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "pasas todas las noches."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "Muchos decían que te amaban,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "pero hoy nadie te consuela."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "Los que se decían tus amigos"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "hoy son tus enemigos."
+      ]
+    }
+  ]
+}

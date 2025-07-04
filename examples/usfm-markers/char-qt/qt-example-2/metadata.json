@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Poetic format, where text is mixed (only some text is a quotation)",
+    "usx": "Poetic format, where text is mixed (only some text is a quotation)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

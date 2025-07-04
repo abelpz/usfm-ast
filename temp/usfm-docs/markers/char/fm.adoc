@@ -1,0 +1,78 @@
+= fm
+:description: Footnote - Reference mark
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/fm.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: xref:note:footnote/index.adoc[Footnote] - Reference mark. Use where multiple locations in the scripture text refer to a common footnote text.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\fm ++``#__content__#``++\fm*++``
+* *USX:* ``++<char style="fm">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:doc:index.adoc#doc-book-titles[BookTitles]]`, `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`, `[xref:doc:index.adoc#doc-book-intro-end-titles[BookIntroductionEndTitles]]`, `[xref:para:titles-sections/index.adoc[Section]]`, `[Para]` (xref:para:paragraphs/index.adoc[Body Paragraphs], xref:para:poetry/index.adoc[Poetry]), `[xref:para:lists/index.adoc[List]]`, `[xref:para:tables/index.adoc[Table]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Genesis 2.9 and 2.17 (GNT)
+[source#src-usfm-char-fm_1,usfm,highlight=4..5;8]
+----
+\v 9 \x - \xo 2.9: \xt Rev 2.7; 22.2,14.\x* He made all kinds of beautiful 
+trees grow there and produce good fruit. In the middle of the garden stood 
+the tree that gives life and the tree that gives knowledge of what is good 
+and what is bad.\f + \fr 2.9: \fq knowledge of what is good and what is bad; 
+\ft or \fq knowledge of everything.\f*
+...
+\v 17 except the tree that gives knowledge of what is good and what is 
+bad.\fm GEN 2:9\fm* You must not eat the fruit of that tree; if you do, you 
+will die the same day.” 
+----
+USX::
++
+.Genesis 2.9 and 2.17 (GNT)
+[source#src-usx-char-fm_1,xml,highlight=13]
+----
+<verse number="9" style="v" sid="GEN 2:9"/><note caller="-" style="x">
+  <char style="xo">2.9: </char>
+  <char style="xt">Rev 2.7; 22.2,14.</char></note> He made all kinds of
+beautiful trees grow there and produce good fruit. In the middle of the garden
+stood the tree that gives life and the tree that gives knowledge of what is good
+and what is bad.<note caller="+" style="f">
+  <char style="fr">2.9: </char>
+  <char style="fq">knowledge of what is good and what is bad; </char>
+  <char style="ft">or </char>
+  <char style="fq">knowledge of everything.</char></note><verse eid="GEN 2:9"/>
+...
+<verse number="17" style="v" sid="GEN 2:17"/>except the tree that gives knowledge 
+of what is good and what is bad.<char style="fm">GEN 2:9</char> You must not eat 
+the fruit of that tree; if you do, you will die the same day.”
+<verse eid="GEN 2:17"/>
+----
+======
+
+image::char/missing.jpg[,300]
+
+== Properties
+
+TextType:: NoteText
+TextProperties:: publishable, vernacular, note
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

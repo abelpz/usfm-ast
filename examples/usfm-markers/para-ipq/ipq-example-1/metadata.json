@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Introduction to Genesis (CEV)",
+    "usx": "Introduction to Genesis (CEV)",
+    "usj": "Introduction to Genesis (CEV)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

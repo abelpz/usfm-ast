@@ -1,0 +1,83 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "12",
+      "sid": "MRK 12"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "..."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "35",
+          "sid": "MRK 12:35"
+        },
+        "As Jesus was teaching in the Temple, he asked the question, “How can the teachers of the Law say that the Messiah will be the descendant of David? ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "36",
+          "sid": "MRK 12:36"
+        },
+        "The Holy Spirit inspired David to say:"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "‘The Lord said to my Lord:"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "Sit here at my right side"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "until I put your enemies under your feet.’"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "m",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "37",
+          "sid": "MRK 12:37"
+        },
+        "David himself called him ‘Lord’; so how can the Messiah be David's descendant?”"
+      ]
+    }
+  ]
+}

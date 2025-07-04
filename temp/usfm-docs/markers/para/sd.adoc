@@ -1,0 +1,180 @@
+= sd#
+:description: Semantic division
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/sd.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Semantic division. Use to identify the location of vertical space intended to divide the text into structural or hierachical sections. The purpose of xref:para:titles-sections/sd.adoc[sd] is distinct from xref:para:paragraphs/b.adoc[b] which is _primarily_ used to denote whitespace at poetic stanza breaks.
+* The variable `#` (1-4) represents the level of division being marked.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\sd#++``
+* *USX:* ``++<para style="sd#"/>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]` > `[Section]`
+// tag::spec[]
+Added:: 3.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Matthew 13.51-54 (NIV “Books of the Bible”).
+[source#src-usfm-para-sd_1,usfm,highlight=10]
+----
+\id MAT
+\p ...
+\m
+\v 51 “Have you understood all these things?” Jesus asked.
+\p “Yes,” they replied.
+\p
+\v 52 He said to them, “Therefore every teacher of the law who has been 
+instructed about the kingdom of heaven is like the owner of a house who 
+brings out of his storeroom new treasures as well as old.”
+\sd2
+\p
+\v 53 When Jesus had finished these parables, he moved on from there.
+\v 54 Coming to his hometown, he began teaching the people in their synagogue, 
+and they were amazed. “Where did this man get this wisdom and these miraculous 
+powers?” they asked.
+----
+USX::
++
+.Matthew 13.51-54 (NIV “Books of the Bible”).
+[source#src-usx-para-sd_1,xml,highlight=15]
+----
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <chapter number="13" style="c" sid="MAT 13"/>
+  <para style="p">...</para>
+  <para style="m">
+    <verse number="51" style="v" sid="MAT 13:51"/>“Have you understood all these
+    things?” Jesus asked.</para>
+  <para style="p" vid="MAT 13:51">“Yes,” they replied.<verse eid="MAT 13:51"/>
+    </para>
+  <para style="p">
+    <verse number="52" style="v" sid="MAT 13:52"/>He said to them, “Therefore every
+    teacher of the law who has been instructed about the kingdom of heaven is like
+    the owner of a house who brings out of his storeroom new treasures as well as
+    old.”<verse eid="MAT 13:52"/></para>
+  <para style="sd2"/>
+  <para style="p">
+    <verse number="53" style="v" sid="MAT 13:53"/>When Jesus had finished these
+    parables, he moved on from there. <verse eid="MAT 13:53"/>
+    <verse number="54" style="v" sid="MAT 13:54"/>Coming to his hometown, he began 
+    teaching the people in their synagogue, and they were amazed. “Where did this 
+    man get this wisdom and these miraculous powers?” they asked.
+    <verse eid="MAT 13:54"/></para>
+</usx>
+----
+USJ::
++
+.Matthew 13.51-54 (NIV “Books of the Bible”).
+[source#src-usj-para-sd_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "13",
+      "sid": "MAT 13"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": ["..."]
+    },
+    {
+      "type": "para",
+      "marker": "m",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "51",
+          "sid": "MAT 13:51"
+        },
+        "“Have you understood all these things?” Jesus asked."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": ["“Yes,” they replied."]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "52",
+          "sid": "MAT 13:52"
+        },
+        "He said to them, “Therefore every teacher of the law who has been instructed about the kingdom of heaven is like the owner of a house who brings out of his storeroom new treasures as well as old.”"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "sd2",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "53",
+          "sid": "MAT 13:53"
+        },
+        "When Jesus had finished these parables, he moved on from there. ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "54",
+          "sid": "MAT 13:54"
+        },
+        "Coming to his hometown, he began teaching the people in their synagogue, and they were amazed. “Where did this man get this wisdom and these miraculous powers?” they asked. "
+      ]
+    }
+  ]
+}
+----
+======
+
+NOTE: In this layout design, chapter and verse numbers are suppressed, and new sections begin with drop capital.
+
+image::para/sd_1.jpg[Matthew 13.51-54 (NIV “Books of the Bible”),500]
+
+== Properties
+
+TextType:: Section
+TextProperties:: paragraph, publishable, level_#
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

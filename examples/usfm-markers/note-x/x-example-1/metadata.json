@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Typical Cross Reference - Matthew 2.23 (GNT)",
+    "usx": "Typical Cross Reference - Matthew 2.23 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

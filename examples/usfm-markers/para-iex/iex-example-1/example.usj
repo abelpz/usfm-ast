@@ -1,0 +1,47 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "ROM",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "16",
+      "sid": "ROM 16"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "... ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "27",
+          "sid": "ROM 16:27"
+        },
+        "to God only wise, ",
+        {
+          "type": "char",
+          "marker": "add",
+          "content": [
+            "be"
+          ]
+        },
+        " glory through Jesus Christ for ever. Amen."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "iex",
+      "content": [
+        "Written to the Romans from Corinthus, and sent by Phebe servant of the church at Cenchrea."
+      ]
+    }
+  ]
+}

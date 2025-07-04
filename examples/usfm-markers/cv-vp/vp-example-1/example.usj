@@ -1,0 +1,60 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "ms1",
+      "content": [
+        "Addition B"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "cp",
+      "content": [
+        "B"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "A Copy of the Letter"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "14",
+          "type": "verse",
+          "pubnumber": "1b"
+        },
+        "This is a copy of the letter:"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "pmo",
+      "content": [
+        "From Artaxerxes, the Great King, to the governors and officials of my one hundred twenty-seven provinces from India to Ethiopia."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "pm",
+      "content": [
+        {
+          "marker": "v",
+          "number": "15",
+          "type": "verse",
+          "pubnumber": "2b"
+        },
+        "I rule many nations, and I am the most powerful king in the world. But I have never used my power in a proud or arrogant way. Instead, I have always been reasonable and kind to the people in my kingdom. I know they want peace, and so I have decided to make every part of my kingdom peaceful and safe for travel."
+      ]
+    }
+  ]
+}

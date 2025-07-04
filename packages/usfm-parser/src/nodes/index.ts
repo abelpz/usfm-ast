@@ -186,3 +186,6 @@ export type USFMNodeUnion =
   | MilestoneUSFMNode
   | TextUSFMNode
   | ParagraphUSFMNode;
+
+// Re-export enhanced USJ nodes
+export * from './enhanced-usj-nodes';

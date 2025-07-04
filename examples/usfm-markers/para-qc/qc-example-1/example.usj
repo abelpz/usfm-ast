@@ -1,0 +1,101 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PSA",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "72",
+      "sid": "PSA 72"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "18",
+          "sid": "PSA 72:18"
+        },
+        "Praise the ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": [
+            "Lord"
+          ]
+        },
+        ", the God of Israel!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "He alone does these wonderful things."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "19",
+          "sid": "PSA 72:19"
+        },
+        "Praise his glorious name forever!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "May his glory fill the whole world."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "qc",
+      "content": [
+        "Amen! Amen!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "20",
+          "sid": "PSA 72:20"
+        },
+        "This is the end of the prayers of David son of Jesse."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "qr",
+      "content": [
+        "God's love never fails."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "GEN",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "5",
+      "sid": "GEN 5"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": ["..."]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "29",
+          "sid": "GEN 5:29"
+        },
+        "И нарек ему имя: Ной, сказав: он утешит нас в работе нашей и в трудах рук наших при ",
+        {
+          "type": "char",
+          "marker": "add",
+          "content": ["возделывании"]
+        },
+        " земли, которую проклял Господь."
+      ]
+    }
+  ]
+}

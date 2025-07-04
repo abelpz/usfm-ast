@@ -1,0 +1,50 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "NEH",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "9",
+      "sid": "NEH 9"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "31",
+          "sid": "NEH 9:31"
+        },
+        "And yet, because your mercy is great,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["you did not forsake or destroy them."]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        "You are a ",
+        {
+          "type": "char",
+          "marker": "w",
+          "lemma": "grace",
+          "content": ["gracious"]
+        },
+        " and merciful God!"
+      ]
+    }
+  ]
+}

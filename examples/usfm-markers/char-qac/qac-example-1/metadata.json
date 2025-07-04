@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Lamentations 1.1-2 (Spanish TLA)",
+    "usx": "Lamentations 1.1-2 (Spanish TLA)",
+    "usj": "Lamentations 1.1-2 (Spanish TLA)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}
