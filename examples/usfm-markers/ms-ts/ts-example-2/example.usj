@@ -27,20 +27,20 @@
           "marker": "ts-e",
           "type": "ms",
           "eid": "ts.JUD.5-6"
-        }
+        },
+        {
+          "marker": "ts-s",
+          "type": "ms",
+          "sid": "ts.JUD.7-8"
+        },
+        {
+          "marker": "v",
+          "number": "7",
+          "type": "verse"
+        },
+        "It is just like Sodom and Gomorrah and the cities around them, which in a similar way gave themselves over to fornication and pursued unnatural desires. They were given as examples of those who suffer the punishment of eternal fire."
       ]
     },
-    {
-      "marker": "ts-s",
-      "type": "ms",
-      "sid": "ts.JUD.7-8"
-    },
-    {
-      "marker": "v",
-      "number": "7",
-      "type": "verse"
-    },
-    "It is just like Sodom and Gomorrah and the cities around them, which in a similar way gave themselves over to fornication and pursued unnatural desires. They were given as examples of those who suffer the punishment of eternal fire. ",
     {
       "type": "para",
       "marker": "p",

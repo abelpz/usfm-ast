@@ -1,4 +1,100 @@
-import { USFMMarkerInfo } from './types';
+import { MarkerSyntaxDefinition, USFMMarkerInfo, UsfmStyleType } from './types';
+
+/**
+ * whitespace:
+ * - optional
+ * - can be a single space or multiple spaces
+ * - can be a single line break or multiple line breaks
+ * - can be a single carriage return or multiple carriage returns
+ * - can be a single tab or multiple tabs
+ * - can be a single form feed or multiple form feeds
+ */
+
+/**
+ * default syntax and properties for each marker type
+ * These serve as fallbacks when individual markers don't explicitly define these properties
+ */
+export const syntaxByType: Record<UsfmStyleType, Partial<USFMMarkerInfo>> = {
+  paragraph: {
+    syntax: {
+      pattern: ['content'],
+      closedBy: [{ template: 'same-type' }],
+    },
+    allowsAttributes: false,
+    hasSpecialContent: false,
+    contentType: 'mixed',
+  },
+  character: {
+    syntax: {
+      pattern: ['content'],
+      closedBy: [
+        { template: 'closing-marker' },
+        { context: 'NoteContent' }, // Close when another NoteContent marker opens
+        {
+          type: 'paragraph', // This would be a validation error but we would automatically solve it by closing the character marker before opening the new paragraph
+        },
+      ],
+    },
+    allowsAttributes: false,
+    hasSpecialContent: false,
+    contentType: 'mixed',
+  },
+  milestone: {
+    syntax: {
+      pattern: ['attributes'],
+      closedBy: [{ template: 'self-closing' }],
+    },
+    allowsAttributes: true,
+    hasSpecialContent: false,
+    contentType: 'none',
+    implicitAttributes: {
+      sid: {
+        description: 'Section identifier',
+        type: 'string',
+      },
+      eid: {
+        description: 'End identifier',
+        type: 'string',
+      },
+    },
+  },
+  note: {
+    syntax: {
+      pattern: ['special-content', 'mergeable-markers', 'content'], // \nt |text\*
+      closedBy: [{ template: 'closing-marker' }, { type: 'paragraph' }],
+    },
+    allowsAttributes: false,
+    hasSpecialContent: true,
+    contentType: 'mixed',
+    specialContent: {
+      direct: {
+        attributeName: 'caller',
+        parseUntil: ['whitespace'],
+        required: true,
+        contentType: 'text',
+      },
+      mergeable: [
+        {
+          attributeName: 'category',
+          sourceMarkers: ['cat'],
+          extractionMethod: 'textContent',
+          parseOrder: 'immediate',
+          priority: 1,
+        },
+      ],
+    },
+    implicitAttributes: {
+      caller: {
+        description: 'The id of the note',
+        type: 'string',
+      },
+      category: {
+        description: 'The category of the note',
+        type: 'string',
+      },
+    },
+  },
+};
 
 // this registry data is extracted from: https://github.com/usfm-bible/tcdocs/blob/main/grammar/usfm3_1.sty and https://docs.usfm.bible/usfm/3.1.1/
 export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
@@ -289,8 +385,31 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   c: {
     displayName: 'Chapter number (necessary for normal Paratext operation)',
     type: 'paragraph',
-    hasSpecialContent: true,
+    hasSpecialContent: true, // Keep for backward compatibility
+    specialContent: {
+      direct: {
+        attributeName: 'number',
+        parseUntil: ['whitespace'],
+        required: true,
+        contentType: 'number',
+      },
+      mergeable: [
+        {
+          attributeName: 'altnumber',
+          sourceMarkers: ['ca'],
+          extractionMethod: 'specialContent',
+        },
+        {
+          attributeName: 'pubnumber',
+          sourceMarkers: ['cp'],
+          extractionMethod: 'specialContent',
+        },
+      ],
+    },
     styleType: 'chapter',
+    syntax: {
+      pattern: ['special-content', 'mergeable-markers'],
+    },
   },
   ca: {
     displayName:
@@ -326,8 +445,31 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   v: {
     displayName: 'A verse number (Necessary for normal paratext operation) (basic)',
     type: 'character',
-    hasSpecialContent: true,
+    hasSpecialContent: true, // Keep for backward compatibility
+    specialContent: {
+      direct: {
+        attributeName: 'number',
+        parseUntil: ['whitespace'],
+        required: true,
+        contentType: 'number-reference', // Can be ranges like "1-3"
+      },
+      mergeable: [
+        {
+          attributeName: 'altnumber',
+          sourceMarkers: ['va'],
+          extractionMethod: 'specialContent',
+        },
+        {
+          attributeName: 'pubnumber',
+          sourceMarkers: ['vp'],
+          extractionMethod: 'specialContent',
+        },
+      ],
+    },
     styleType: 'verse',
+    syntax: {
+      pattern: ['special-content', 'mergeable-markers'],
+    },
   },
   va: {
     displayName:
@@ -1034,7 +1176,24 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   f: {
     displayName: 'A Footnote text item (basic)',
     type: 'note',
-    hasSpecialContent: true,
+    hasSpecialContent: true, // Keep for backward compatibility
+    specialContent: {
+      direct: {
+        attributeName: 'caller',
+        parseUntil: ['whitespace'],
+        required: true,
+        contentType: 'text',
+      },
+      mergeable: [
+        {
+          attributeName: 'category',
+          sourceMarkers: ['cat'],
+          extractionMethod: 'textContent',
+          parseOrder: 'immediate',
+          priority: 1,
+        },
+      ],
+    },
     implicitAttributes: {
       caller: {
         description: 'The id of the footnote',
@@ -1051,7 +1210,24 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
     displayName: 'An Endnote text item',
     type: 'note',
     context: ['NoteContent'],
-    hasSpecialContent: true,
+    hasSpecialContent: true, // Keep for backward compatibility
+    specialContent: {
+      direct: {
+        attributeName: 'caller',
+        parseUntil: ['whitespace'],
+        required: true,
+        contentType: 'text',
+      },
+      mergeable: [
+        {
+          attributeName: 'category',
+          sourceMarkers: ['cat'],
+          extractionMethod: 'textContent',
+          parseOrder: 'immediate',
+          priority: 1,
+        },
+      ],
+    },
     implicitAttributes: {
       caller: {
         description: 'The id of the endnote',
@@ -1140,7 +1316,24 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   x: {
     displayName: 'A list of cross references (basic)',
     type: 'note',
-    hasSpecialContent: true,
+    hasSpecialContent: true, // Keep for backward compatibility
+    specialContent: {
+      direct: {
+        attributeName: 'caller',
+        parseUntil: ['whitespace'],
+        required: true,
+        contentType: 'text',
+      },
+      mergeable: [
+        {
+          attributeName: 'category',
+          sourceMarkers: ['cat'],
+          extractionMethod: 'textContent',
+          parseOrder: 'immediate',
+          priority: 1,
+        },
+      ],
+    },
     implicitAttributes: {
       caller: {
         description: 'The id of the cross reference',
@@ -1216,7 +1409,24 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   ef: {
     displayName: 'Study Bible extended footnote (basic)',
     type: 'note',
-    hasSpecialContent: true,
+    hasSpecialContent: true, // Keep for backward compatibility
+    specialContent: {
+      direct: {
+        attributeName: 'caller',
+        parseUntil: ['whitespace'],
+        required: true,
+        contentType: 'text',
+      },
+      mergeable: [
+        {
+          attributeName: 'category',
+          sourceMarkers: ['cat'],
+          extractionMethod: 'textContent',
+          parseOrder: 'immediate',
+          priority: 1,
+        },
+      ],
+    },
     implicitAttributes: {
       caller: {
         description: 'The id of the extended footnote',
@@ -1232,7 +1442,24 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   ex: {
     displayName: 'List of study Bible extended cross references',
     type: 'note',
-    hasSpecialContent: true,
+    hasSpecialContent: true, // Keep for backward compatibility
+    specialContent: {
+      direct: {
+        attributeName: 'caller',
+        parseUntil: ['whitespace'],
+        required: true,
+        contentType: 'text',
+      },
+      mergeable: [
+        {
+          attributeName: 'category',
+          sourceMarkers: ['cat'],
+          extractionMethod: 'textContent',
+          parseOrder: 'immediate',
+          priority: 1,
+        },
+      ],
+    },
     implicitAttributes: {
       caller: {
         description: 'The id of the extended cross reference',
@@ -1509,6 +1736,14 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
         type: 'string',
       },
     },
+    syntax: {
+      pattern: ['content', 'attributes'],
+      closedBy: [
+        {
+          template: 'closing-marker',
+        },
+      ],
+    },
   },
   wh: {
     displayName: 'A Hebrew wordlist text item',
@@ -1539,7 +1774,15 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
         type: 'string',
       },
     },
-    hasSpecialContent: true,
+    hasSpecialContent: true, // Keep for backward compatibility
+    specialContent: {
+      direct: {
+        attributeName: 'alt',
+        parseUntil: ['nextMarker', 'attributes'], // Parse until | or next marker
+        required: true,
+        contentType: 'text',
+      },
+    },
     implicitAttributes: {
       alt: {
         description: 'The type of peripheral content',
@@ -1648,6 +1891,7 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   ref: {
     displayName: 'Scripture reference',
     type: 'character',
+    styleType: 'ref',
     allowsAttributes: true,
     defaultAttribute: 'loc',
     attributes: {
@@ -1725,6 +1969,121 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
     displayName: "Translator's section",
     type: 'milestone',
     styleType: 'ms',
+    allowsAttributes: true,
+    attributes: {
+      sid: {
+        description: 'Section identifier for the translator section',
+        type: 'string',
+      },
+    },
+  },
+  'ts-s': {
+    displayName: "Translator's section start milestone",
+    type: 'milestone',
+    styleType: 'ms',
+    allowsAttributes: true,
+    attributes: {
+      sid: {
+        description: 'Section identifier for the translator section',
+        type: 'string',
+      },
+    },
+  },
+  'ts-e': {
+    displayName: "Translator's section end milestone",
+    type: 'milestone',
+    styleType: 'ms',
+    allowsAttributes: true,
+    attributes: {
+      eid: {
+        description: 'End identifier for the translator section',
+        type: 'string',
+      },
+    },
+  },
+  'qt-s': {
+    displayName: 'Quotation start milestone',
+    type: 'milestone',
+    styleType: 'ms',
+    allowsAttributes: true,
+    attributes: {
+      sid: {
+        description: 'Section identifier for the quotation',
+        type: 'string',
+      },
+      who: {
+        description: 'Who is speaking in the quotation',
+        type: 'string',
+      },
+    },
+  },
+  'qt-e': {
+    displayName: 'Quotation end milestone',
+    type: 'milestone',
+    styleType: 'ms',
+    allowsAttributes: true,
+    attributes: {
+      eid: {
+        description: 'End identifier for the quotation',
+        type: 'string',
+      },
+    },
+  },
+  'qt1-s': {
+    displayName: 'Quotation level 1 start milestone',
+    type: 'milestone',
+    styleType: 'ms',
+    allowsAttributes: true,
+    attributes: {
+      sid: {
+        description: 'Section identifier for the level 1 quotation',
+        type: 'string',
+      },
+      who: {
+        description: 'Who is speaking in the quotation',
+        type: 'string',
+      },
+    },
+  },
+  'qt1-e': {
+    displayName: 'Quotation level 1 end milestone',
+    type: 'milestone',
+    styleType: 'ms',
+    allowsAttributes: true,
+    attributes: {
+      eid: {
+        description: 'End identifier for the level 1 quotation',
+        type: 'string',
+      },
+    },
+  },
+  'qt2-s': {
+    displayName: 'Quotation level 2 start milestone',
+    type: 'milestone',
+    styleType: 'ms',
+    allowsAttributes: true,
+    attributes: {
+      sid: {
+        description: 'Section identifier for the level 2 quotation',
+        type: 'string',
+      },
+      who: {
+        description: 'Who is speaking in the quotation',
+        type: 'string',
+      },
+    },
+  },
+  'qt2-e': {
+    displayName: 'Quotation level 2 end milestone',
+    type: 'milestone',
+    styleType: 'ms',
+    allowsAttributes: true,
+    attributes: {
+      eid: {
+        description: 'End identifier for the level 2 quotation',
+        type: 'string',
+      },
+    },
   },
   t: {
     displayName: '',
@@ -1789,23 +2148,5 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   },
 };
 
-// Export note content markers for use in visitors
-export const noteContentMarkers = new Set([
-  'fr',
-  'ft',
-  'fk',
-  'fq',
-  'fqa',
-  'fl',
-  'fp',
-  'fv',
-  'fdc',
-  'fm',
-  'xo',
-  'xt',
-  'xk',
-  'xq',
-  'xot',
-  'xnt',
-  'xdc',
-]);
+// Note: noteContentMarkers Set removed - replaced with interface-driven context validation
+// Use USFMParser.isNoteContentMarker() or markerInfo.context?.includes('NoteContent') instead

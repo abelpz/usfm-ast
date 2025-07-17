@@ -1,5 +1,5 @@
-import { defaultMarkers } from './markers';
-import { USFMMarkerInfo } from './types';
+import { defaultMarkers, syntaxByType } from './markers';
+import { MarkerSyntaxDefinition, USFMMarkerInfo, UsfmStyleType } from './types';
 
 /**
  * Registry for USFM (Unified Standard Format Markers) markers.
@@ -78,6 +78,48 @@ export class USFMMarkerRegistry {
     ): USFMMarkerInfo | undefined {
       const info = this.markerData[markerToLookup];
       if (info) {
+        // Merge with fallback properties from syntaxByType
+        const fallbackProps = syntaxByType[info.type];
+        if (fallbackProps) {
+          // Create merged info with fallbacks for undefined properties
+          const mergedInfo: any = {
+            ...fallbackProps,
+            ...info, // Original marker info takes precedence
+          };
+
+          // Special handling for nested objects that need deep merging
+          if (fallbackProps.implicitAttributes && info.implicitAttributes) {
+            mergedInfo.implicitAttributes = {
+              ...fallbackProps.implicitAttributes,
+              ...info.implicitAttributes,
+            };
+          }
+
+          if (fallbackProps.attributes && 'attributes' in info && info.attributes) {
+            mergedInfo.attributes = {
+              ...fallbackProps.attributes,
+              ...info.attributes,
+            };
+          }
+
+          // For specialContent, prefer the explicit one but merge mergeable arrays if needed
+          if (fallbackProps.specialContent && info.specialContent) {
+            mergedInfo.specialContent = {
+              ...fallbackProps.specialContent,
+              ...info.specialContent,
+            };
+
+            // Merge mergeable arrays if both exist
+            if (fallbackProps.specialContent.mergeable && info.specialContent.mergeable) {
+              mergedInfo.specialContent.mergeable = [
+                ...fallbackProps.specialContent.mergeable,
+                ...info.specialContent.mergeable,
+              ];
+            }
+          }
+
+          return mergedInfo as USFMMarkerInfo;
+        }
         return info;
       }
 
@@ -87,7 +129,12 @@ export class USFMMarkerRegistry {
         const [, prefix] = tableCellMatch;
         // Look up the base pattern (e.g., 'tcr1' for 'tcr1-2')
         const baseKey = prefix + '1';
-        return this.markerData[baseKey];
+        const baseInfo = this.markerData[baseKey];
+        if (baseInfo) {
+          // Apply the same merging logic for table cells
+          const fallbackProps = syntaxByType[baseInfo.type];
+          return fallbackProps ? ({ ...fallbackProps, ...baseInfo } as USFMMarkerInfo) : baseInfo;
+        }
       }
 
       const match = markerToLookup.match(USFMMarkerRegistry.MARKER_PATTERN);
@@ -98,7 +145,14 @@ export class USFMMarkerRegistry {
       const [, baseMarker, level, milestoneSuffix] = match;
       const lookupKey = level && milestoneSuffix ? baseMarker + level : baseMarker;
 
-      return this.markerData[lookupKey];
+      const baseInfo = this.markerData[lookupKey];
+      if (baseInfo) {
+        // Apply the same merging logic for pattern-matched markers
+        const fallbackProps = syntaxByType[baseInfo.type];
+        return fallbackProps ? ({ ...fallbackProps, ...baseInfo } as USFMMarkerInfo) : baseInfo;
+      }
+
+      return undefined;
     }
 
     const info = lookupMarkerInfo.call(this, marker);
@@ -143,5 +197,25 @@ export class USFMMarkerRegistry {
    */
   public getMarkerType(marker: string): string | undefined {
     return this.getMarkerInfo(marker, 'type') as string | undefined;
+  }
+
+  /**
+   * Gets the syntax definition for a marker, including fallbacks from syntaxByType
+   */
+  public getMarkerSyntax(marker: string): MarkerSyntaxDefinition | undefined {
+    const info = this.getMarkerInfo(marker);
+
+    if (!info) {
+      return undefined;
+    }
+
+    // Check if marker has explicit syntax
+    if (info.syntax) {
+      return info.syntax;
+    }
+
+    // Fall back to syntax from syntaxByType
+    const fallbackProps = syntaxByType[info.type];
+    return fallbackProps?.syntax;
   }
 }

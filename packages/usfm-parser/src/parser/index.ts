@@ -209,6 +209,14 @@ export class USFMParser {
   }
 
   /**
+   * Gets the styleType for a marker, with caching for performance
+   * @private
+   */
+  private getMarkerStyleType(markerInfo: USFMMarkerInfo | undefined): string | undefined {
+    return markerInfo?.styleType;
+  }
+
+  /**
    * Parses USFM nodes from the loaded usfm text.
    * @returns {ParsedRootNode} The root node containing all parsed content
    * @private
@@ -241,15 +249,18 @@ export class USFMParser {
           continue;
         }
 
+        // Get styleType for efficient dispatch
+        const styleType = this.getMarkerStyleType(markerInfo);
+
         switch (markerInfo?.type) {
           case MarkerTypeEnum.PARAGRAPH:
-            // Handle special markers that should be book/chapter nodes
-            if (marker === 'id') {
+            // Use styleType-based dispatch instead of hardcoded marker comparisons
+            if (styleType === 'book') {
               rootNode.content.push(this.parseBook(marker, rootNode.content.length));
-            } else if (marker === 'c') {
+            } else if (styleType === 'chapter') {
               const chapterNode = this.parseChapter(marker, rootNode.content.length);
               rootNode.content.push(chapterNode);
-            } else if (marker === 'tr') {
+            } else if (styleType === 'table:row') {
               // Handle table parsing - parse consecutive \tr markers as a table
               rootNode.content.push(this.parseTable(rootNode.content.length));
             } else if (markerInfo.sectionContainer) {
@@ -266,7 +277,7 @@ export class USFMParser {
             }
             break;
           case MarkerTypeEnum.CHARACTER:
-            if (marker === 'v') {
+            if (styleType === 'verse') {
               rootNode.content.push(this.parseVerse(marker, rootNode.content.length));
             } else {
               rootNode.content.push(
@@ -337,11 +348,13 @@ export class USFMParser {
    * Normalizes content and skips whitespace after newlines to ensure exactly one space.
    * @param content - Current text content
    * @param currentPos - Current position in input
+   * @param isInsideParagraph - Whether we're inside a paragraph context
    * @returns Object with normalized content and positions to skip
    */
   private normalizeNewlineToSpace(
     content: string,
-    currentPos: number
+    currentPos: number,
+    isInsideParagraph: boolean = true
   ): { normalizedContent: string; skipToPos: number } {
     // Normalize any trailing whitespace in content to single space or remove it
     const trimmedContent = content.trimEnd();
@@ -361,14 +374,32 @@ export class USFMParser {
     const isFollowedByMarker = nextChar === '\\';
     const isFollowedByLineBreak = this.isLineBreakingWhitespace(nextChar);
 
+    // Check if the next marker is a milestone
+    let isFollowedByMilestone = false;
+    if (isFollowedByMarker) {
+      const nextMarker = this.peekNextMarker(this.input, nextPos + 1);
+      if (nextMarker) {
+        const nextMarkerInfo = this.markerRegistry.getMarkerInfo(nextMarker);
+        isFollowedByMilestone = nextMarkerInfo?.type === MarkerTypeEnum.MILESTONE;
+      }
+    }
+
     // Determine the normalized content:
     // - Preserve space if there was explicit whitespace in the original input
     // - Add space for content separation unless followed by end of input
     let normalizedContent;
     if (trimmedContent.length === 0) {
-      normalizedContent = '';
+      // Empty content - only add space if we're inside a paragraph and not followed by marker
+      if (!isInsideParagraph || isFollowedByMarker) {
+        normalizedContent = '';
+      } else {
+        normalizedContent = '';
+      }
     } else if (nextChar === '') {
-      // Text ends at end of input - no space needed
+      // Text ends at end of input - preserve original trailing whitespace
+      normalizedContent = hadTrailingWhitespace ? trimmedContent + ' ' : trimmedContent;
+    } else if (isFollowedByMilestone && !isInsideParagraph) {
+      // Don't add space before milestone markers at root level
       normalizedContent = trimmedContent;
     } else if (hadTrailingWhitespace || hasWhitespaceAfter) {
       // There was whitespace and we're followed by content (text or marker)
@@ -413,8 +444,10 @@ export class USFMParser {
         }
 
         const markerType = this.markerRegistry.getMarkerType(marker);
+        const markerInfo = this.markerRegistry.getMarkerInfo(marker);
+        const styleType = this.getMarkerStyleType(markerInfo);
 
-        // Handle whitespace before markers based on their structural role
+        // Handle whitespace before markers based on their structural role using styleType
         if (markerType === MarkerTypeEnum.PARAGRAPH) {
           // Paragraph markers should be preceded by a newline (unless at start)
           if (!lastWasNewline && result.length > 0) {
@@ -439,12 +472,12 @@ export class USFMParser {
             // Otherwise, add newline after paragraph marker for structural separation
             // This handles cases like paragraph followed by another paragraph marker
           }
-        } else if (marker === 'v') {
+        } else if (styleType === 'verse') {
           // NEW RULE: Verse markers should be preceded by a newline unless prev char is already newline
           if (!lastWasNewline && result.length > 0) {
             result = result.trimEnd() + '\n';
           }
-        } else if (marker === 'c') {
+        } else if (styleType === 'chapter') {
           // Chapter markers should be preceded by a newline
           if (!lastWasNewline && result.length > 0) {
             result = result.trimEnd() + '\n';
@@ -751,12 +784,18 @@ export class USFMParser {
   }
 
   private isMilestoneMarker(marker: string): boolean {
-    // Check for -s/-e suffix
+    // First check if marker is defined in registry as milestone
+    const markerInfo = this.markerRegistry.getMarkerInfo(marker);
+    if (markerInfo?.type === 'milestone') {
+      return true;
+    }
+
+    // Check for -s/-e suffix (milestone start/end pattern)
     if (marker.endsWith('-s') || marker.endsWith('-e')) {
       return true;
     }
 
-    // Check for self-closing marker pattern
+    // Check for self-closing marker pattern (\marker...\*)
     const savedPos = this.getCurrentPosition();
     let isSelfClosing = false;
 
@@ -782,7 +821,8 @@ export class USFMParser {
    * Checks if a marker is a table cell marker
    */
   private isTableCellMarker(marker: string): boolean {
-    return /^(th|tc|thr|tcr|thc|tcc)\d+(-\d+)?$/.test(marker);
+    const markerInfo = this.markerRegistry.getMarkerInfo(marker);
+    return this.getMarkerStyleType(markerInfo) === 'table:cell';
   }
 
   /**
@@ -1263,7 +1303,7 @@ export class USFMParser {
             node.content.push(this.parseEnhancedMilestone(marker, node.content.length));
             break;
           case MarkerTypeEnum.CHARACTER:
-            if (marker === 'v') {
+            if (this.getMarkerStyleType(markerInfo) === 'verse') {
               node.content.push(this.parseVerse(marker, node.content.length));
             } else {
               node.content.push(this.parseEnhancedCharacter(marker, isNested, node.content.length));
@@ -1322,8 +1362,12 @@ export class USFMParser {
     isNested: boolean,
     index: number
   ): ParsedCharacterNode | ParsedRefNode {
-    // Special handling for \ref markers
-    if (marker === 'ref') {
+    // Get marker info for styleType-based dispatch
+    const markerInfo = this.markerRegistry.getMarkerInfo(marker);
+    const styleType = this.getMarkerStyleType(markerInfo);
+
+    // Special handling for \ref markers using styleType
+    if (styleType === 'ref') {
       return this.parseRefMarker(index);
     }
 
@@ -1396,7 +1440,7 @@ export class USFMParser {
         });
       } else if (this.isLineBreakingWhitespace(char)) {
         // Normalize newlines to spaces in text content, avoiding double spaces
-        const normalization = this.normalizeNewlineToSpace(textContent, this.pos);
+        const normalization = this.normalizeNewlineToSpace(textContent, this.pos, true);
         textContent = normalization.normalizedContent;
         this.pos = normalization.skipToPos; // Skip over newline and following whitespace
       } else {
@@ -1741,6 +1785,10 @@ export class USFMParser {
       this.advance(false);
     }
 
+    // Skip any whitespace immediately following the milestone closing
+    // This prevents newlines after milestones from becoming text nodes
+    this.skipWhitespace();
+
     return createParsedMilestone(marker, attributes, { index });
   }
 
@@ -1765,7 +1813,7 @@ export class USFMParser {
 
       if (this.isLineBreakingWhitespace(char)) {
         // Normalize newlines to spaces in text content, avoiding double spaces
-        const normalization = this.normalizeNewlineToSpace(content, this.pos);
+        const normalization = this.normalizeNewlineToSpace(content, this.pos, isInsideParagraph);
         content = normalization.normalizedContent;
         this.pos = normalization.skipToPos; // Skip over newline and following whitespace
       } else {
@@ -1981,7 +2029,7 @@ export class USFMParser {
         const savedPos = this.getCurrentPosition();
         const { marker, markerInfo } = this.parseMarker();
 
-        if (marker === 'tr') {
+        if (this.getMarkerStyleType(markerInfo) === 'table:row') {
           // Parse this table row
           tableRows.push(this.parseTableRow(tableRows.length));
         } else if (markerInfo?.type === MarkerTypeEnum.PARAGRAPH) {
@@ -2022,8 +2070,8 @@ export class USFMParser {
         const savedPos = this.getCurrentPosition();
         const { marker, markerInfo } = this.parseMarker();
 
-        // Check if this is a table cell marker
-        if (this.isTableCellMarker(marker)) {
+        // Check if this is a table cell marker using styleType
+        if (this.getMarkerStyleType(markerInfo) === 'table:cell') {
           tableCells.push(this.parseTableCell(marker, tableCells.length));
         } else if (markerInfo?.type === MarkerTypeEnum.PARAGRAPH) {
           // Hit another paragraph marker, end this row
@@ -2066,7 +2114,10 @@ export class USFMParser {
         // Check if this is another table cell marker or other marker
         const { marker: nextMarker } = this.peekMarker();
 
-        if (this.isTableCellMarker(nextMarker) || nextMarker === 'tr') {
+        const nextMarkerInfo = this.markerRegistry.getMarkerInfo(nextMarker);
+        const nextStyleType = this.getMarkerStyleType(nextMarkerInfo);
+
+        if (nextStyleType === 'table:cell' || nextStyleType === 'table:row') {
           // End of this cell
           break;
         }
