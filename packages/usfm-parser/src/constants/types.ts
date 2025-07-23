@@ -116,14 +116,12 @@ export type SyntaxRule =
   | "no-structural-whitespace"         // No required whitespace after marker
   | "structural-whitespace-optional";  // Structural whitespace is optional
 
-export type ClosingCondition = 
-(
-    | { template: 'white-space' | 'same-type' | 'closing-marker' | 'self-closing' }
-    | { marker: string }
-    | { match: string | RegExp }
-    | { type: UsfmStyleType }
-    | { context: UsfmContextType }
-  )
+export type ClosingCondition =
+  | { template: 'white-space' | 'same-type' | 'closing-marker' | 'self-closing' | 'new-line' }
+  | { marker: string }
+  | { match: string | RegExp }
+  | { type: UsfmStyleType }
+  | { context: UsfmContextType };
 /**
  * Complete syntax definition for a marker
  */

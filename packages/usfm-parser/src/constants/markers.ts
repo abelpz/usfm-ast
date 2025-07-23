@@ -1,4 +1,4 @@
-import { MarkerSyntaxDefinition, USFMMarkerInfo, UsfmStyleType } from './types';
+import { MarkerSyntaxDefinition, USFMMarkerInfo, UsfmRole, UsfmStyleType } from './types';
 
 /**
  * whitespace:
@@ -96,6 +96,15 @@ export const syntaxByType: Record<UsfmStyleType, Partial<USFMMarkerInfo>> = {
   },
 };
 
+export const syntaxByRole: Partial<Record<UsfmRole, Partial<USFMMarkerInfo>>> = {
+  identification: {
+    syntax: {
+      pattern: ['special-content', 'content'],
+      closedBy: [{ template: 'new-line' }, { match: '\\' }],
+    },
+  },
+};
+
 // this registry data is extracted from: https://github.com/usfm-bible/tcdocs/blob/main/grammar/usfm3_1.sty and https://docs.usfm.bible/usfm/3.1.1/
 export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   id: {
@@ -104,7 +113,19 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
     context: ['ScriptureContent'],
     label: 'book',
     hasSpecialContent: true,
+    specialContent: {
+      direct: {
+        attributeName: 'code',
+        parseUntil: ['whitespace'],
+        required: true,
+        contentType: 'word',
+      },
+    },
     styleType: 'book',
+    syntax: {
+      pattern: ['special-content', 'content'],
+      closedBy: [{ template: 'new-line' }, { match: '\\' }],
+    },
   },
   usfm: {
     displayName: 'File markup version information',
@@ -122,6 +143,11 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
     type: 'paragraph',
     context: ['ScriptureContent'],
     styleType: 'para',
+    role: 'identification',
+    syntax: {
+      pattern: ['content'],
+      closedBy: [{ template: 'new-line' }, { match: '\\' }],
+    },
   },
   h1: {
     displayName: 'Running header text',
@@ -1791,6 +1817,10 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
     },
     type: 'paragraph',
     styleType: 'periph',
+    syntax: {
+      pattern: ['special-content', 'attributes', 'content'],
+      closedBy: [{ marker: 'periph' }],
+    },
   },
   p1: {
     displayName: 'Front or back matter text paragraph, level 1 (if multiple levels)',

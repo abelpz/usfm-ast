@@ -8,13 +8,39 @@ import { UsfmParser } from '../src/parser/UsfmParser';
 
 describe('UsfmParser', () => {
   test('Temp', () => {
-    const input = '\\w word\\w* \\v 2 some text';
+    const input = String.raw`\id MRK
+\ip The two endings to the Gospel, which are enclosed in brackets, are 
+generally regarded as written by someone other than the author of \bk Mark\bk*
+`;
     const parser = new UsfmParser(input, {});
     const response = parser.parse();
     expect(response.success).toBe(true);
     const result = response.result;
     console.log(JSON.stringify(result, null, 2));
-    expect(response.result).toBeDefined();
+    expect(response.result).toEqual({
+      type: 'USJ',
+      version: '3.1',
+      content: [
+        {
+          type: 'book',
+          marker: 'id',
+          code: 'MRK',
+          content: [],
+        },
+        {
+          type: 'para',
+          marker: 'ip',
+          content: [
+            'The two endings to the Gospel, which are enclosed in brackets, are generally regarded as written by someone other than the author of ',
+            {
+              type: 'char',
+              marker: 'bk',
+              content: ['Mark'],
+            },
+          ],
+        },
+      ],
+    });
   });
   describe('Basic Parsing', () => {
     test('should parse simple verse', () => {
@@ -248,6 +274,82 @@ describe('UsfmParser', () => {
         expect(tsInfo.implicitAttributes).toBeDefined(); // Should have sid/eid from fallback
         expect(tsInfo.implicitAttributes?.sid).toBeDefined();
       }
+    });
+  });
+
+  describe('Optional Input Functionality', () => {
+    test('should parse with input provided in constructor', () => {
+      const input = '\\v 1 This is verse one.';
+      const parser = new UsfmParser(input, {});
+      const result = parser.parse();
+
+      expect(result.success).toBe(true);
+      expect(result.result).toBeDefined();
+      if (result.result) {
+        expect(result.result.type).toBe('USJ');
+      }
+    });
+
+    test('should parse with input provided in parse method', () => {
+      const input = '\\v 1 This is verse one.';
+      const parser = new UsfmParser(); // No input in constructor
+      const result = parser.parse(input);
+
+      expect(result.success).toBe(true);
+      expect(result.result).toBeDefined();
+      if (result.result) {
+        expect(result.result.type).toBe('USJ');
+      }
+    });
+
+    test('should override constructor input with parse method input', () => {
+      const constructorInput = '\\v 1 First input.';
+      const parseInput = '\\v 2 Second input.';
+      const parser = new UsfmParser(constructorInput, {});
+      const result = parser.parse(parseInput);
+
+      expect(result.success).toBe(true);
+      expect(result.result).toBeDefined();
+      if (result.result) {
+        expect(result.result.type).toBe('USJ');
+        // Should have parsed the second input (from parse method)
+        expect(result.result.content.length).toBeGreaterThan(0);
+      }
+    });
+
+    test('should handle no input provided error case', () => {
+      const parser = new UsfmParser(); // No input in constructor
+      const result = parser.parse(); // No input in parse method
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('No input provided for parsing');
+    });
+
+    test('should handle empty string as valid input', () => {
+      const parser = new UsfmParser();
+      const result = parser.parse('');
+
+      expect(result.success).toBe(true);
+      expect(result.result).toBeDefined();
+      if (result.result) {
+        expect(result.result.type).toBe('USJ');
+        expect(result.result.content).toHaveLength(0);
+      }
+    });
+
+    test('should parse multiple inputs with same parser instance', () => {
+      const parser = new UsfmParser();
+
+      const result1 = parser.parse('\\v 1 First verse.');
+      expect(result1.success).toBe(true);
+      expect(result1.result?.type).toBe('USJ');
+
+      const result2 = parser.parse('\\v 2 Second verse.');
+      expect(result2.success).toBe(true);
+      expect(result2.result?.type).toBe('USJ');
+
+      // Results should be different (different content)
+      expect(result1.result?.content).not.toEqual(result2.result?.content);
     });
   });
 

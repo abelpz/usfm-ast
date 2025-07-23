@@ -14,6 +14,7 @@ export interface CursorPosition {
 export interface CursorOptions {
   trackPosition?: boolean;
   ignoreWhitespace?: boolean;
+  ignoredChars?: string[];
 }
 
 export class StringCursor {
@@ -22,24 +23,37 @@ export class StringCursor {
   private line: number = 1;
   private column: number = 1;
   private options: CursorOptions;
+  private ignoredChars: string[];
 
   constructor(input: string, options: CursorOptions = {}) {
     this.input = input;
     this.options = {
       trackPosition: true,
       ignoreWhitespace: false,
+      ignoredChars: [],
       ...options,
     };
+    this.ignoredChars = this.options.ignoredChars || [];
   }
 
   /**
    * Get the current character without advancing position
    */
   peek(offset: number = 0): string | null {
-    const pos = this.position + offset;
+    let pos = this.position + offset;
     if (pos >= this.input.length) {
       return null;
     }
+
+    // Skip ignored characters to show what next() would return
+    while (pos < this.input.length && this.shouldIgnoreChar(this.input[pos])) {
+      pos++;
+    }
+
+    if (pos >= this.input.length) {
+      return null;
+    }
+
     return this.input[pos];
   }
 
@@ -57,13 +71,14 @@ export class StringCursor {
   }
 
   /**
-   * Advance the position by one character
+   * Advance the position by one character, automatically skipping ignored characters
    */
   advance(): void {
     if (this.isAtEnd()) {
       return;
     }
 
+    // Move position and update line/column tracking for the current character
     if (this.options.trackPosition) {
       if (this.input[this.position] === '\n') {
         this.line++;
@@ -74,27 +89,40 @@ export class StringCursor {
     }
 
     this.position++;
+
+    // Skip ignored characters, but still count them for position tracking
+    while (!this.isAtEnd() && this.shouldIgnoreChar(this.input[this.position])) {
+      if (this.options.trackPosition) {
+        if (this.input[this.position] === '\n') {
+          this.line++;
+          this.column = 1;
+        } else {
+          this.column++;
+        }
+      }
+      this.position++;
+    }
   }
 
   /**
-   * Move back one character
+   * Move back one character, skipping over ignored characters
    */
   back(): void {
     if (this.position <= 0) {
       return;
     }
 
+    // Move back one position
     this.position--;
 
+    // Skip back over ignored characters
+    while (this.position > 0 && this.shouldIgnoreChar(this.input[this.position])) {
+      this.position--;
+    }
+
+    // Recalculate position tracking when moving backwards
     if (this.options.trackPosition) {
-      if (this.input[this.position] === '\n') {
-        this.line--;
-        // Would need to recalculate column by scanning back to previous newline
-        // For simplicity, we'll just decrement column
-        this.column = Math.max(1, this.column - 1);
-      } else {
-        this.column = Math.max(1, this.column - 1);
-      }
+      this.recalculatePosition(this.position);
     }
   }
 
@@ -155,14 +183,33 @@ export class StringCursor {
   }
 
   /**
-   * Match a specific string at current position
+   * Match a specific string at current position, skipping ignored characters
    */
   match(expected: string): boolean {
-    if (this.position + expected.length > this.input.length) {
-      return false;
+    let pos = this.position;
+    let expectedIndex = 0;
+
+    while (expectedIndex < expected.length && pos < this.input.length) {
+      // Skip ignored characters in the input
+      while (pos < this.input.length && this.shouldIgnoreChar(this.input[pos])) {
+        pos++;
+      }
+
+      // Check if we've reached end of input
+      if (pos >= this.input.length) {
+        return false;
+      }
+
+      // Compare current character with expected character
+      if (this.input[pos] !== expected[expectedIndex]) {
+        return false;
+      }
+
+      pos++;
+      expectedIndex++;
     }
 
-    return this.input.substring(this.position, this.position + expected.length) === expected;
+    return expectedIndex === expected.length;
   }
 
   /**
@@ -196,6 +243,23 @@ export class StringCursor {
    */
   private isWhitespace(char: string): boolean {
     return /\s/.test(char);
+  }
+
+  /**
+   * Check if a character should be ignored based on options
+   */
+  private shouldIgnoreChar(char: string): boolean {
+    // Check if it's in the explicitly ignored characters list
+    if (this.ignoredChars.includes(char)) {
+      return true;
+    }
+
+    // Check if it's whitespace and ignoreWhitespace is enabled
+    if (this.options.ignoreWhitespace && this.isWhitespace(char)) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -328,6 +392,39 @@ export class StringCursor {
     this.position = snapshot.position;
     this.line = snapshot.line;
     this.column = snapshot.column;
+  }
+
+  /**
+   * Add a character to the ignored characters list
+   */
+  addIgnoredChar(char: string): void {
+    if (!this.ignoredChars.includes(char)) {
+      this.ignoredChars.push(char);
+    }
+  }
+
+  /**
+   * Remove a character from the ignored characters list
+   */
+  removeIgnoredChar(char: string): void {
+    const index = this.ignoredChars.indexOf(char);
+    if (index !== -1) {
+      this.ignoredChars.splice(index, 1);
+    }
+  }
+
+  /**
+   * Get the current list of ignored characters
+   */
+  getIgnoredChars(): string[] {
+    return [...this.ignoredChars];
+  }
+
+  /**
+   * Clear all ignored characters
+   */
+  clearIgnoredChars(): void {
+    this.ignoredChars = [];
   }
 }
 

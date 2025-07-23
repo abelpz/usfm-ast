@@ -100,7 +100,7 @@ describe('Format Examples - USJ to USFM Conversion (Visitor)', () => {
       }
 
       // Parse the USJ and convert back to USFM using our visitor
-      const ast = parser.parseUSJ(files.usj);
+      const ast = parser.parse(files.usj);
       const visitor = new USFMVisitor();
       ast.visit(visitor);
       const actualUSFM = visitor.getResult().trim();
@@ -129,7 +129,7 @@ describe('Format Examples - USJ to USFM Conversion (Visitor)', () => {
         throw new Error('Required files not found');
       }
 
-      const ast = parser.parseUSJ(files.usj);
+      const ast = parser.parse(files.usj);
       const visitor = new USFMVisitor();
       ast.visit(visitor);
       const actualUSFM = visitor.getResult().trim();
@@ -159,7 +159,7 @@ describe('Format Examples - USJ to USFM Conversion (Visitor)', () => {
         return;
       }
 
-      const ast = parser.parseUSJ(files.usj);
+      const ast = parser.parse(files.usj);
       const visitor = new USFMVisitor();
       ast.visit(visitor);
       const actualUSFM = visitor.getResult().trim();
@@ -198,7 +198,7 @@ describe('Format Examples - USJ to USFM Conversion (Visitor)', () => {
         return;
       }
 
-      const ast = parser.parseUSJ(files.usj);
+      const ast = parser.parse(files.usj);
       const visitor = new USFMVisitor();
       ast.visit(visitor);
       const actualUSFM = visitor.getResult().trim();

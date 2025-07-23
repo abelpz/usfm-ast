@@ -30,16 +30,27 @@ export interface UsfmParseOptions extends ParseOptions {
 export class UsfmParser extends BaseParser {
   private readonly markersRegistry: USFMMarkerRegistry;
 
-  constructor(input: string, options: UsfmParseOptions = {}) {
-    super(input, options);
+  constructor(input?: string, options: UsfmParseOptions = {}) {
+    super(input, { ...options, ignoredChars: ['\n', '\r'] });
     this.markersRegistry = USFMMarkerRegistry.getInstance(options?.customMarkers);
   }
 
   /**
    * Parse USFM input and return USJ document
+   * @param input Optional USFM input to parse. If not provided, uses input from constructor.
    */
-  parse(): ParseResult<UsjDocument> {
+  parse(input?: string): ParseResult<UsjDocument> {
     try {
+      // If input is provided, update the parser's input
+      if (input !== undefined) {
+        this.setInput(input);
+      }
+
+      // Check if we have any input to parse
+      if (!this.cursor.getRemainingInput()) {
+        return this.createErrorResult('No input provided for parsing');
+      }
+
       const document = this.parseDocument() as unknown as UsjDocument;
 
       if (this.hasErrors()) {
@@ -59,7 +70,7 @@ export class UsfmParser extends BaseParser {
     return this.parseElement(
       {
         type: 'USJ',
-        version: '0.3.1',
+        version: '3.1',
       },
       {
         pattern: ['content'],
@@ -99,6 +110,7 @@ export class UsfmParser extends BaseParser {
     const element = this.parseElement(
       {
         type: markerInfo?.styleType || 'para',
+        marker: marker.name,
       },
       syntax || { pattern: ['content'], closedBy: [] },
       marker.name
@@ -112,7 +124,7 @@ export class UsfmParser extends BaseParser {
     syntax: MarkerSyntaxDefinition,
     markerName?: string
   ): USJNode {
-    const checkClosingConditions = this.createMarkerNodeClosingChecker(markerName);
+    const shouldCloseNode = this.createMarkerNodeClosingChecker(markerName);
 
     const pattern = syntax.pattern;
 
@@ -123,6 +135,7 @@ export class UsfmParser extends BaseParser {
     if (pattern) {
       for (const [index, syntaxElement] of pattern.entries()) {
         let reachedClosingCondition = false;
+
         switch (syntaxElement) {
           case 'content': {
             const remainingPattern = pattern.slice(index + 1);
@@ -131,17 +144,21 @@ export class UsfmParser extends BaseParser {
               element,
               markerName,
               remainingPattern || [],
-              checkClosingConditions
+              shouldCloseNode
             );
 
             break;
           }
           case 'special-content':
-            reachedClosingCondition = this.parseSpecialContent(element, markerName);
+            reachedClosingCondition = this.parseSpecialContent(
+              element,
+              markerName,
+              shouldCloseNode
+            );
             break;
 
           case 'attributes':
-            reachedClosingCondition = this.parseAttributes(element);
+            reachedClosingCondition = this.parseAttributes(element, markerName, shouldCloseNode);
             break;
 
           case 'mergeable-markers':
@@ -169,7 +186,9 @@ export class UsfmParser extends BaseParser {
    */
   private createMarkerNodeClosingChecker(markerName?: string): () => boolean {
     if (!markerName) {
-      return () => !this.cursor.isAtEnd();
+      return () => {
+        return this.cursor.isAtEnd();
+      };
     }
 
     const markerInfo = this.markersRegistry.getMarkerInfo(markerName);
@@ -177,7 +196,9 @@ export class UsfmParser extends BaseParser {
     const markerSyntax = this.markersRegistry.getMarkerSyntax(markerName);
 
     if (!markerName || !markerInfo) {
-      return () => !this.cursor.isAtEnd();
+      return () => {
+        return this.cursor.isAtEnd();
+      };
     }
 
     const markerType = markerInfo.type;
@@ -207,11 +228,15 @@ export class UsfmParser extends BaseParser {
       const currentChar = this.cursor.peek();
       const isMarker = currentChar === '\\';
 
-      // Check non-marker conditions first (they're cheaper)
       if (!isMarker) {
         // Check whitespace template condition
         if (templateConditions.some((c) => c.template === 'white-space')) {
-          return /\s/.test(currentChar || '');
+          return !!currentChar && /\s/.test(currentChar);
+        }
+
+        if (templateConditions.some((c) => c.template === 'new-line')) {
+          this.cursor.skipWhitespace();
+          return currentChar === '\n' || currentChar === '\r';
         }
 
         // Check match conditions for non-marker patterns
@@ -236,7 +261,7 @@ export class UsfmParser extends BaseParser {
       // Check specific marker conditions
       for (const condition of markerConditions) {
         const markerToMatch = `\\${condition.marker}`;
-        if (this.cursor.consume(markerToMatch)) {
+        if (this.cursor.match(markerToMatch)) {
           return true;
         }
       }
@@ -320,12 +345,12 @@ export class UsfmParser extends BaseParser {
     element: USJNode,
     markerName: string | undefined,
     remainingPattern: PatternElement[],
-    checkClosingConditions: () => boolean
+    shouldCloseMarkerNode: () => boolean
   ): boolean {
-    const stopConditions = this.createContentStopConditions(remainingPattern);
+    const shouldCloseContent = this.createContentStopConditions(remainingPattern);
 
     // Parse content until we hit a closing condition
-    while (!checkClosingConditions() && !stopConditions()) {
+    while (!shouldCloseMarkerNode() && !shouldCloseContent()) {
       const char = this.cursor.peek();
 
       // Check if we hit a marker
@@ -338,7 +363,7 @@ export class UsfmParser extends BaseParser {
         continue;
       } else {
         const textContent = this.parseText(
-          (char) => stopConditions(char) || checkClosingConditions()
+          (char) => shouldCloseContent(char) || shouldCloseMarkerNode()
         );
         if (textContent && element.content) {
           element.content.push(textContent);
@@ -349,7 +374,11 @@ export class UsfmParser extends BaseParser {
     return false;
   }
 
-  private parseSpecialContent(element: USJNode, markerName?: string): boolean {
+  private parseSpecialContent(
+    element: USJNode,
+    markerName?: string,
+    shouldCloseNode?: () => boolean
+  ): boolean {
     if (!markerName) {
       return false;
     }
@@ -363,9 +392,6 @@ export class UsfmParser extends BaseParser {
 
     const specialContentConfig = markerInfo.specialContent.direct;
     const { attributeName, parseUntil, required, contentType } = specialContentConfig;
-
-    // Skip any leading whitespace
-    this.cursor.skipWhitespace();
 
     let content = '';
     let found = false;
@@ -406,7 +432,10 @@ export class UsfmParser extends BaseParser {
       );
     }
 
-    return found;
+    // Skip whitespace after special content
+    this.cursor.skipWhitespace();
+
+    return !!shouldCloseNode && shouldCloseNode();
   }
 
   /**
@@ -416,7 +445,7 @@ export class UsfmParser extends BaseParser {
     const content = this.cursor.readWhile((char) => /[0-9]/.test(char));
 
     if (content && this.shouldStopParsing(parseUntil)) {
-      // Don't consume the whitespace - it's structural and needed for next parsing step
+      this.cursor.skipWhitespace();
       return content;
     }
 
@@ -431,6 +460,7 @@ export class UsfmParser extends BaseParser {
 
     if (content && this.shouldStopParsing(parseUntil)) {
       // Don't consume the whitespace - it's structural and needed for next parsing step
+      this.cursor.skipWhitespace();
       return content;
     }
 
@@ -496,7 +526,9 @@ export class UsfmParser extends BaseParser {
       for (const element of remainingPattern) {
         switch (element) {
           case 'attributes':
-            if (_char === '|') return true;
+            if (_char === '|') {
+              return true;
+            }
             break;
           // Add other syntax elements as needed
         }
@@ -589,23 +621,36 @@ export class UsfmParser extends BaseParser {
     return false;
   }
 
-  private parseAttributes(element: any): boolean {
+  private parseAttributes(
+    element: any,
+    markerName?: string,
+    shouldCloseNode?: () => boolean
+  ): boolean {
     const attributes: Record<string, string> = {};
     let foundAttributes = false;
 
-    // Look for attribute patterns like |attr="value" or |default-value
-    while (!this.cursor.isAtEnd() && this.cursor.peek() === '|') {
-      this.cursor.consume('|');
+    const shouldCloseAttributes = () => {
+      const char = this.cursor.peek();
+      return this.cursor.isAtEnd() || this.cursor.peek() === '\\';
+    };
 
-      // Parse attribute name
-      const attrName = this.cursor.readUntil(
-        (char) => char === '=' || char === ' ' || char === '\n' || char === '\\'
-      );
+    this.cursor.consume('|');
+
+    while (!shouldCloseAttributes()) {
+      if (shouldCloseNode && shouldCloseNode()) {
+        return true;
+      }
+
+      let attrName = this.cursor.readUntil((char) => {
+        return char === '=' || char === ' ' || char === '\n' || char === '\\';
+      });
+
       if (!attrName.trim()) {
         break;
       }
 
       let attrValue = '';
+
       if (this.cursor.consume('=')) {
         // Parse quoted value
         if (this.cursor.consume('"')) {
@@ -618,19 +663,28 @@ export class UsfmParser extends BaseParser {
           );
         }
       } else {
-        // Default attribute (no =value part)
         attrValue = attrName.trim();
+        if (markerName) {
+          const markerInfo = this.markersRegistry.getMarkerInfo(markerName);
+          if (markerInfo?.defaultAttribute) {
+            attrName = markerInfo.defaultAttribute;
+          }
+        }
+        // Default attribute (no =value part)
       }
 
       attributes[attrName.trim()] = attrValue;
+      this.cursor.skipWhitespace();
       foundAttributes = true;
     }
 
     if (foundAttributes) {
-      element.attributes = attributes;
+      for (const [key, value] of Object.entries(attributes)) {
+        element[key] = value;
+      }
     }
 
-    return foundAttributes;
+    return !!shouldCloseNode && shouldCloseNode();
   }
 
   /**

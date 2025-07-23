@@ -24,7 +24,7 @@ export class BaseParser {
   protected options: ParseOptions;
   private errors: string[] = [];
 
-  constructor(input: string, options: ParseOptions = {}) {
+  constructor(input?: string, options: ParseOptions = {}) {
     this.options = {
       trackPosition: true,
       strict: false,
@@ -32,10 +32,22 @@ export class BaseParser {
       ...options,
     };
 
+    // Initialize cursor with empty string if no input provided
+    this.cursor = new StringCursor(input || '', {
+      trackPosition: this.options.trackPosition,
+      ignoreWhitespace: this.options.ignoreWhitespace,
+    });
+  }
+
+  /**
+   * Set or update the input for parsing
+   */
+  protected setInput(input: string): void {
     this.cursor = new StringCursor(input, {
       trackPosition: this.options.trackPosition,
       ignoreWhitespace: this.options.ignoreWhitespace,
     });
+    this.errors = []; // Clear any previous errors
   }
 
   /**
