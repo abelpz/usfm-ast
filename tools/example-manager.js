@@ -220,7 +220,7 @@ function loadUSFMParser() {
       return USFMParser;
     } catch (error2) {
       console.error('❌ Could not load USFM parser. Make sure the parser package is built.');
-      console.error('💡 Try running: pnpm build');
+      console.error('💡 Try running: bun run build');
       console.error('💡 Error details:', error2.message);
       return null;
     }
@@ -317,7 +317,7 @@ function createUSJTemplates(options) {
   console.log(`\n📊 Created ${created} USJ template files`);
   console.log('📋 Next steps:');
   console.log('1. Edit the USJ files to match your USFM content');
-  console.log('2. Or run "pnpm examples generate" to auto-generate from USFM');
+  console.log('2. Or run "bun run examples generate" to auto-generate from USFM');
 }
 
 /**
@@ -359,7 +359,7 @@ function createExample(markerName, exampleName, options) {
   console.log(`📍 Location: ${exampleDir}`);
   console.log(`\n📋 Next steps:`);
   console.log(`1. Edit ${path.join(exampleDir, 'example.usfm')} with your USFM content`);
-  console.log(`2. Generate USJ: Use "pnpm examples generate" or "pnpm examples create-usj"`);
+  console.log(`2. Generate USJ: Use "bun run examples generate" or "bun run examples create-usj"`);
   console.log(`3. Update metadata.json if needed`);
 
   if (options.edit) {

@@ -4,7 +4,6 @@ import {
   MilestoneUSFMNode,
   ParagraphUSFMNode,
   TextUSFMNode,
-  noteContentMarkers,
 } from '@usfm-tools/parser';
 import {
   BaseUSFMVisitor,
@@ -43,6 +42,12 @@ export interface USFMVisitorOptions {
 
   /** @deprecated Use whitespaceHandling instead */
   trimParagraphEdges?: boolean;
+}
+
+/** Matches parser note-content detection: markers with `context` including NoteContent. */
+function isNoteContentMarkerName(marker: string): boolean {
+  const info = USFMMarkerRegistry.getInstance().getMarkerInfo(marker);
+  return Boolean(info?.context?.includes('NoteContent'));
 }
 
 /**
@@ -314,7 +319,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
     // Add closing marker for character markers (not verses or note content)
     const isVerse = marker === 'v';
     const isChapter = marker === 'c';
-    const isNoteContent = noteContentMarkers.has(marker);
+    const isNoteContent = isNoteContentMarkerName(marker);
     const needsClosing = !isVerse && !isChapter && !isNoteContent;
 
     if (needsClosing) {

@@ -36,6 +36,8 @@ export class BaseParser {
     this.cursor = new StringCursor(input || '', {
       trackPosition: this.options.trackPosition,
       ignoreWhitespace: this.options.ignoreWhitespace,
+      ignoredChars: this.options.ignoredChars,
+      debug: this.options.debug,
     });
   }
 
@@ -46,6 +48,8 @@ export class BaseParser {
     this.cursor = new StringCursor(input, {
       trackPosition: this.options.trackPosition,
       ignoreWhitespace: this.options.ignoreWhitespace,
+      ignoredChars: this.options.ignoredChars,
+      debug: this.options.debug,
     });
     this.errors = []; // Clear any previous errors
   }

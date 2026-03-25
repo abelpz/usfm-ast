@@ -1,0 +1,32 @@
+name: Human decision
+description: Product or architecture choice that needs a maintainer before implementation
+title: "[decision] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use for **decisions** that should not be delegated to an agent alone (compatibility, public API, breaking parser changes).
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question / tension
+      description: What must we decide?
+    validations:
+      required: true
+
+  - type: textarea
+    id: options
+    attributes:
+      label: Options considered
+      description: Short list with pros/cons if known.
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal (optional)
+      description: Maintainer or author’s leaning.
+    validations:
+      required: false

@@ -100,7 +100,7 @@ export const syntaxByRole: Partial<Record<UsfmRole, Partial<USFMMarkerInfo>>> = 
   identification: {
     syntax: {
       pattern: ['special-content', 'content'],
-      closedBy: [{ template: 'new-line' }, { match: '\\' }],
+      closedBy: [{ match: '\\' }],
     },
   },
 };
@@ -124,7 +124,7 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
     styleType: 'book',
     syntax: {
       pattern: ['special-content', 'content'],
-      closedBy: [{ template: 'new-line' }, { match: '\\' }],
+      closedBy: [{ match: '\\' }],
     },
   },
   usfm: {
@@ -146,7 +146,7 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
     role: 'identification',
     syntax: {
       pattern: ['content'],
-      closedBy: [{ template: 'new-line' }, { match: '\\' }],
+      closedBy: [{ match: '\\' }],
     },
   },
   h1: {

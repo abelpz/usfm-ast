@@ -1,7 +1,7 @@
 # 🚀 USFM/USJ Monorepo Migration Checklist
 
 ## Overview
-This checklist tracks the migration from the old structure to the new PNPM monorepo with 11 packages.
+This checklist tracks the migration from the old structure to the new **Bun workspaces + Turborepo** monorepo with 11 packages.
 
 **Migration Source:** `migration-backup-20250620-203644/src/`  
 **Migration Target:** `packages/*/src/`
@@ -26,7 +26,7 @@ This checklist tracks the migration from the old structure to the new PNPM monor
 ### Package Setup
 - [x] Package structure created
 - [x] TypeScript configuration
-- [x] PNPM workspace dependency on `@usfm-tools/types`
+- [x] Bun workspace dependency on `@usfm-tools/types`
 - [x] Build scripts configured (tsc)
 
 ### Constants Migration
@@ -35,7 +35,7 @@ This checklist tracks the migration from the old structure to the new PNPM monor
 - [x] **Step 2.2**: Copy `migration-backup-20250620-203644/src/grammar/constants/USMMarkersRegistry.ts`  
   → `packages/usfm-parser/src/constants/registry.ts`
 - [x] **Step 2.3**: Update imports in both files to use `@usfm-tools/types`
-- [x] **Step 2.4**: Test build: `pnpm --filter @usfm-tools/parser build`
+- [x] **Step 2.4**: Test build: `bun run do -- usfm-parser build`
 
 ### Node Classes Migration
 - [x] **Step 2.5**: Copy `migration-backup-20250620-203644/src/grammar/nodes.ts`  
@@ -43,7 +43,7 @@ This checklist tracks the migration from the old structure to the new PNPM monor
 - [ ] **Step 2.6**: Copy entire `migration-backup-20250620-203644/src/grammar/nodes/` directory  
   → `packages/usfm-parser/src/nodes/` (NOTE: Currently only .gitkeep file exists)
 - [x] **Step 2.7**: Update imports in all node files
-- [x] **Step 2.8**: Test build: `pnpm --filter @usfm-tools/parser build`
+- [x] **Step 2.8**: Test build: `bun run do -- usfm-parser build`
 
 ### Core Parser Handlers Migration
 - [x] **Step 2.9**: Copy core handlers from `migration-backup-20250620-203644/src/grammar/handlers/`:
@@ -54,14 +54,14 @@ This checklist tracks the migration from the old structure to the new PNPM monor
   - [ ] **SKIP**: `USFMFormattingRules.ts` (goes to formatter package)
   - [ ] **SKIP**: `NormalizationRules.ts` (goes to formatter package)
 - [x] **Step 2.10**: Update imports in all handler files
-- [x] **Step 2.11**: Test build: `pnpm --filter @usfm-tools/parser build`
+- [x] **Step 2.11**: Test build: `bun run do -- usfm-parser build`
 
 ### Main Parser Migration
 - [x] **Step 2.12**: Copy `migration-backup-20250620-203644/src/grammar/index.ts`  
   → `packages/usfm-parser/src/parser/index.ts`
 - [x] **Step 2.13**: Update imports in parser file
 - [x] **Step 2.14**: Create `packages/usfm-parser/src/index.ts` (package entry point)
-- [x] **Step 2.15**: Test build: `pnpm --filter @usfm-tools/parser build`
+- [x] **Step 2.15**: Test build: `bun run do -- usfm-parser build`
 
 ### Core Parser Tests Migration
 - [ ] **Step 2.16**: Copy core parser tests from `migration-backup-20250620-203644/src/grammar/__tests__/`:
@@ -83,7 +83,7 @@ This checklist tracks the migration from the old structure to the new PNPM monor
   - ✅ Kept only parser performance tests in @usfm-tools/parser
   - ✅ Created comprehensive visitor performance tests in @usfm-tools/adapters
   - ✅ All three visitors (HTML, USX, USJ) now tested in usfm-adapters package
-- [ ] **Step 2.19**: Test: `pnpm --filter @usfm-tools/parser test`
+- [ ] **Step 2.19**: Test: `bun run do -- usfm-parser test`
 
 ### Documentation
 - [ ] **Step 2.20**: Create `packages/usfm-parser/README.md`
@@ -103,7 +103,7 @@ This checklist tracks the migration from the old structure to the new PNPM monor
 - [x] **Step 3.5**: Copy `migration-backup-20250620-203644/src/grammar/handlers/NormalizationRules.ts`  
   → `packages/usfm-formatter/src/rules/NormalizationRules.ts`
 - [x] **Step 3.6**: Update imports to use monorepo packages
-- [x] **Step 3.7**: Test build: `pnpm --filter @usfm-tools/formatter build`
+- [x] **Step 3.7**: Test build: `bun run do -- usfm-formatter build`
 
 ### ✨ Enhanced Features Implemented
 - [x] **Context-aware rules** with previousMarker, nextMarker, ancestorMarkers, isDocumentStart
@@ -121,7 +121,7 @@ This checklist tracks the migration from the old structure to the new PNPM monor
   - [x] `normalize.examples.test.ts` → `packages/usfm-formatter/tests/`
   - [x] `normalize.integration.test.ts` → `packages/usfm-formatter/tests/`
 - [x] **Step 3.10**: Update test imports
-- [x] **Step 3.11**: Test: `pnpm --filter @usfm-tools/formatter test` ✅ All 61 tests passing
+- [x] **Step 3.11**: Test: `bun run do -- usfm-formatter test` ✅ All 61 tests passing
 
 ### Documentation Updates
 - [x] **Updated README.md** with new API and context features
@@ -140,7 +140,7 @@ This checklist tracks the migration from the old structure to the new PNPM monor
 ### Core Logic Migration
 - [ ] **Step 4.4**: Identify USJ-specific utilities from backup (if any)
 - [ ] **Step 4.5**: Create USJ manipulation utilities
-- [ ] **Step 4.6**: Test build: `pnpm --filter @usj-tools/core build`
+- [ ] **Step 4.6**: Test build: `bun run do -- usj-core build`
 
 ---
 
@@ -159,7 +159,7 @@ This checklist tracks the migration from the old structure to the new PNPM monor
   - [ ] `USXVisitor.test.ts` → `packages/usfm-adapters/tests/`
   - [ ] `parser.visitors.test.ts` → `packages/usfm-adapters/tests/` (relevant parts)
 - [ ] **Step 5.4**: Update imports
-- [ ] **Step 5.5**: Test build: `pnpm --filter @usfm-tools/adapters build`
+- [ ] **Step 5.5**: Test build: `bun run do -- usfm-adapters build`
 
 ### USJ Adapters (`@usj-tools/adapters`)
 - [ ] **Step 5.6**: Package setup
@@ -172,7 +172,7 @@ This checklist tracks the migration from the old structure to the new PNPM monor
   - [ ] `USJVisitor.complex.test.ts` → `packages/usj-adapters/tests/`
   - [ ] `USJVisitor.incremental.test.ts` → `packages/usj-adapters/tests/`
 - [ ] **Step 5.9**: Update imports
-- [ ] **Step 5.10**: Test build: `pnpm --filter @usj-tools/adapters build`
+- [ ] **Step 5.10**: Test build: `bun run do -- usj-adapters build`
 
 ---
 
@@ -181,7 +181,7 @@ This checklist tracks the migration from the old structure to the new PNPM monor
 ### USJ Formatter (`@usj-tools/formatter`)
 - [ ] **Step 6.1**: Package setup
 - [ ] **Step 6.2**: Create USJ formatting logic (if needed)
-- [ ] **Step 6.3**: Test build: `pnpm --filter @usj-tools/formatter build`
+- [ ] **Step 6.3**: Test build: `bun run do -- usj-formatter build`
 
 ---
 
@@ -190,12 +190,12 @@ This checklist tracks the migration from the old structure to the new PNPM monor
 ### USFM Validator (`@usfm-tools/validator`)
 - [ ] **Step 7.1**: Package setup
 - [ ] **Step 7.2**: Create validation logic
-- [ ] **Step 7.3**: Test build: `pnpm --filter @usfm-tools/validator build`
+- [ ] **Step 7.3**: Test build: `bun run do -- usfm-validator build`
 
 ### USJ Validator (`@usj-tools/validator`)
 - [ ] **Step 7.4**: Package setup
 - [ ] **Step 7.5**: Create USJ validation logic
-- [ ] **Step 7.6**: Test build: `pnpm --filter @usj-tools/validator build`
+- [ ] **Step 7.6**: Test build: `bun run do -- usj-validator build`
 
 ---
 
@@ -204,12 +204,12 @@ This checklist tracks the migration from the old structure to the new PNPM monor
 ### USFM CLI (`@usfm-tools/cli`)
 - [ ] **Step 8.1**: Package setup
 - [ ] **Step 8.2**: Create CLI commands
-- [ ] **Step 8.3**: Test build: `pnpm --filter @usfm-tools/cli build`
+- [ ] **Step 8.3**: Test build: `bun run do -- usfm-cli build`
 
 ### USJ CLI (`@usj-tools/cli`)
 - [ ] **Step 8.4**: Package setup
 - [ ] **Step 8.5**: Create CLI commands
-- [ ] **Step 8.6**: Test build: `pnpm --filter @usj-tools/cli build`
+- [ ] **Step 8.6**: Test build: `bun run do -- usj-cli build`
 
 ---
 
@@ -282,18 +282,22 @@ When you encounter issues, mention:
 
 **Common Commands:**
 ```bash
-# Build specific package
-pnpm --filter @usfm-tools/parser build
+# Build one package (see packages/ folder names)
+bun run do -- usfm-parser build
 
-# Test specific package  
-pnpm --filter @usfm-tools/parser test
+# Test one package
+bun run do -- usfm-parser test
 
-# Build all packages
-pnpm run build
+# Build all packages (Turborepo)
+bun run build
 
 # Install dependencies
-pnpm install
+bun install
 ```
+
+To target a package by npm scope instead, you can use Turborepo filters, for example:
+
+`bunx turbo run build --filter=@usfm-tools/parser`
 
 ---
 

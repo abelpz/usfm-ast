@@ -15,6 +15,7 @@ export interface CursorOptions {
   trackPosition?: boolean;
   ignoreWhitespace?: boolean;
   ignoredChars?: string[];
+  debug?: boolean;
 }
 
 export class StringCursor {
@@ -25,15 +26,44 @@ export class StringCursor {
   private options: CursorOptions;
   private ignoredChars: string[];
 
+  // Current character (always updated - lightweight)
+  public currentChar: string | null = null;
+
+  // Debug properties (only updated when debug mode is enabled)
+  public remainingText: string = '';
+  public processedText: string = '';
+
   constructor(input: string, options: CursorOptions = {}) {
     this.input = input;
     this.options = {
       trackPosition: true,
       ignoreWhitespace: false,
       ignoredChars: [],
+      debug: false,
       ...options,
     };
     this.ignoredChars = this.options.ignoredChars || [];
+
+    // Initialize current state
+    this.updateCurrentState();
+  }
+
+  /**
+   * Update current character and debugging text slices (if debug mode is enabled)
+   */
+  private updateCurrentState(): void {
+    // Always update current character (lightweight operation)
+    let pos = this.position;
+    while (pos < this.input.length && this.shouldIgnoreChar(this.input[pos])) {
+      pos++;
+    }
+    this.currentChar = pos >= this.input.length ? null : this.input[pos];
+
+    // Only update text slices in debug mode to avoid performance overhead
+    if (this.options.debug) {
+      this.processedText = this.input.substring(0, this.position);
+      this.remainingText = this.input.substring(this.position);
+    }
   }
 
   /**
@@ -102,6 +132,9 @@ export class StringCursor {
       }
       this.position++;
     }
+
+    // Update debugging properties after advancing
+    this.updateCurrentState();
   }
 
   /**
@@ -124,6 +157,9 @@ export class StringCursor {
     if (this.options.trackPosition) {
       this.recalculatePosition(this.position);
     }
+
+    // Update debugging properties after backing up
+    this.updateCurrentState();
   }
 
   /**
@@ -152,6 +188,8 @@ export class StringCursor {
       throw new Error(`Invalid position: ${index}`);
     }
 
+    const oldPosition = this.position;
+
     // If we're moving backwards significantly, recalculate line/column
     if (index < this.position && this.options.trackPosition) {
       this.recalculatePosition(index);
@@ -160,6 +198,11 @@ export class StringCursor {
       while (this.position < index && !this.isAtEnd()) {
         this.advance();
       }
+    }
+
+    // Ensure state is updated if position didn't actually change
+    if (this.position === oldPosition) {
+      this.updateCurrentState();
     }
   }
 
@@ -180,6 +223,9 @@ export class StringCursor {
       }
       this.position++;
     }
+
+    // Update debugging properties after recalculating position
+    this.updateCurrentState();
   }
 
   /**
@@ -299,7 +345,7 @@ export class StringCursor {
    * Get remaining input from current position
    */
   getRemainingInput(): string {
-    return this.input.substring(this.position);
+    return this.getRemainingText();
   }
 
   /**
@@ -372,6 +418,7 @@ export class StringCursor {
     this.position = 0;
     this.line = 1;
     this.column = 1;
+    this.updateCurrentState(); // Reset debugging properties
   }
 
   /**
@@ -392,6 +439,7 @@ export class StringCursor {
     this.position = snapshot.position;
     this.line = snapshot.line;
     this.column = snapshot.column;
+    this.updateCurrentState(); // Restore debugging properties
   }
 
   /**
@@ -425,6 +473,59 @@ export class StringCursor {
    */
   clearIgnoredChars(): void {
     this.ignoredChars = [];
+  }
+
+  /**
+   * Enable or disable debug mode at runtime
+   */
+  setDebugMode(enabled: boolean): void {
+    this.options.debug = enabled;
+    if (enabled) {
+      // Update debug properties immediately when enabled
+      this.updateCurrentState();
+    } else {
+      // Clear debug properties when disabled to free memory
+      this.remainingText = '';
+      this.processedText = '';
+    }
+  }
+
+  /**
+   * Check if debug mode is enabled
+   */
+  isDebugMode(): boolean {
+    return this.options.debug || false;
+  }
+
+  /**
+   * Get processed text (from start to current position) - computed on demand
+   */
+  getProcessedText(): string {
+    return this.input.substring(0, this.position);
+  }
+
+  /**
+   * Get remaining text (from current position to end) - computed on demand
+   */
+  getRemainingText(): string {
+    return this.input.substring(this.position);
+  }
+
+  /**
+   * Get debug information object - useful for logging/debugging
+   */
+  getDebugInfo(): {
+    currentChar: string | null;
+    processedText: string;
+    remainingText: string;
+    position: CursorPosition;
+  } {
+    return {
+      currentChar: this.currentChar,
+      processedText: this.getProcessedText(),
+      remainingText: this.getRemainingText(),
+      position: this.getPosition(),
+    };
   }
 }
 

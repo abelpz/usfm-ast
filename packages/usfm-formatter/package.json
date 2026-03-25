@@ -17,16 +17,16 @@
     "README.md"
   ],
   "scripts": {
-    "build": "pnpm run clean && tsc --build",
+    "build": "bun run clean && tsc --build",
     "build:watch": "tsc --build --watch",
-    "test": "pnpm run build && jest --testPathIgnorePatterns=performance",
-    "test:performance": "pnpm run build && jest --testPathPattern=performance",
+    "test": "bun run build && jest --testPathIgnorePatterns=performance",
+    "test:performance": "bun run build && jest --testPathPattern=performance",
     "test:watch": "jest --watch",
-    "test:clean": "pnpm run clean && pnpm run test",
+    "test:clean": "bun run clean && bun run test",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
-    "clean": "tsc --build --clean && rimraf dist",
-    "typecheck": "tsc --noEmit"
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@usfm-tools/parser": "workspace:*",
@@ -34,8 +34,8 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
-    "@usfm-tools/adapters": "workspace:*",
     "jest": "^29.5.0",
+    "rimraf": "^5.0.0",
     "ts-jest": "^29.1.0",
     "typescript": "^5.0.0"
   },

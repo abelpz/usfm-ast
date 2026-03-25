@@ -1,0 +1,138 @@
+# Checklist reminders for agent-tracked issues and PRs (parity with sibling repos).
+# Idempotent: one bot comment per issue/PR (HTML marker).
+
+name: Initiative workflow automation
+
+on:
+  issues:
+    types: [opened, labeled]
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  agent-issue-checklist:
+    name: Agent issue — workflow checklist
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues'
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const marker = '<!-- usfm-ast:initiative-bot:issue:v1 -->';
+            const payload = context.payload;
+            const issue = payload.issue;
+            const labels = (issue.labels || []).map((l) => l.name);
+            const title = issue.title || '';
+
+            if (payload.action === 'labeled' && payload.label?.name !== 'agent') {
+              core.info('Not the agent label; skipping.');
+              return;
+            }
+            if (payload.action === 'opened') {
+              const ok = labels.includes('agent') || title.startsWith('[agent]');
+              if (!ok) {
+                core.info('Not an agent-tracked issue; skipping.');
+                return;
+              }
+            }
+
+            const issue_number = issue.number;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              per_page: 100,
+            });
+            if (comments.some((c) => c.body?.includes(marker))) {
+              core.info('Checklist already posted; skipping.');
+              return;
+            }
+
+            const repo = `${context.repo.owner}/${context.repo.repo}`;
+            const body = [
+              marker,
+              '### Agent workflow (automation)',
+              '',
+              'This issue looks **agent-tracked**. See [`docs/08-github-agent-workflow.md`](https://github.com/' +
+                repo +
+                '/blob/main/docs/08-github-agent-workflow.md):',
+              '',
+              '1. **Scope** — Acceptance criteria and `@usfm-tools/*` / `packages/*` paths.',
+              '2. **Branch** — e.g. `agent/' +
+                issue_number +
+                '-short-slug`, implement, `bun run lint` / `check-types` / `test` / `build` as needed.',
+              '3. **PR** — Draft until CI green; body should include **`Closes #' +
+                issue_number +
+                '`** when it completes this issue.',
+              '4. **Human** — Maintainer reviews and merges.',
+              '',
+              '---',
+              '*Posted by [`initiative-automation.yml`](https://github.com/' +
+                repo +
+                '/blob/main/.github/workflows/initiative-automation.yml)*',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              body,
+            });
+
+  pr-issue-link-reminder:
+    name: PR — link to issue reminder
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const marker = '<!-- usfm-ast:initiative-bot:pr:v1 -->';
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+
+            if (/\b(closes|fixes|resolves)\s+#\d+/i.test(body)) {
+              core.info('PR already links an issue; skipping.');
+              return;
+            }
+
+            const issue_number = pr.number;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              per_page: 100,
+            });
+            if (comments.some((c) => c.body?.includes(marker))) {
+              core.info('Reminder already posted; skipping.');
+              return;
+            }
+
+            const repo = `${context.repo.owner}/${context.repo.repo}`;
+            const text = [
+              marker,
+              '### Link to an issue',
+              '',
+              'Add `Closes #NN` or `Fixes #NN` in the PR description when this PR completes tracked work — see [`docs/08-github-agent-workflow.md`](https://github.com/' +
+                repo +
+                '/blob/main/docs/08-github-agent-workflow.md).',
+              '',
+              'If this PR is intentionally standalone, ignore this reminder.',
+              '',
+              '---',
+              '*Posted by [`initiative-automation.yml`](https://github.com/' +
+                repo +
+                '/blob/main/.github/workflows/initiative-automation.yml)*',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              body: text,
+            });

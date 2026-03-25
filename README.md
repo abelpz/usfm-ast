@@ -22,18 +22,20 @@ This monorepo is organized into two main tool ecosystems:
 
 ## 🚀 Quick Start
 
+Uses **[Bun](https://bun.sh)** workspaces and **[Turborepo](https://turbo.build)** (see root `package.json` and `turbo.json`).
+
 ```bash
 # Install dependencies
-npm install
+bun install
 
-# Build all packages
-npm run build
+# Lint, typecheck, test, build (via turbo)
+bun run lint
+bun run check-types
+bun run test
+bun run build
 
-# Run tests
-npm run test
-
-# Development mode (watch)
-npm run dev
+# Development mode (watch) — packages that define a `dev` script
+bun run dev
 ```
 
 ## 📦 Package Installation

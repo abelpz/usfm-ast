@@ -9,10 +9,9 @@ import { UsfmParser } from '../src/parser/UsfmParser';
 describe('UsfmParser', () => {
   test('Temp', () => {
     const input = String.raw`\id MRK
-\ip The two endings to the Gospel, which are enclosed in brackets, are 
-generally regarded as written by someone other than the author of \bk Mark\bk*
+\ip abc \bk d\bk*
 `;
-    const parser = new UsfmParser(input, {});
+    const parser = new UsfmParser(input, { debug: true });
     const response = parser.parse();
     expect(response.success).toBe(true);
     const result = response.result;
@@ -31,7 +30,7 @@ generally regarded as written by someone other than the author of \bk Mark\bk*
           type: 'para',
           marker: 'ip',
           content: [
-            'The two endings to the Gospel, which are enclosed in brackets, are generally regarded as written by someone other than the author of ',
+            'abc',
             {
               type: 'char',
               marker: 'bk',

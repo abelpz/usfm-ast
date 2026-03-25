@@ -1,4 +1,8 @@
 #!/bin/bash
+#
+# LEGACY — kept for historical reference only.
+# This repository uses Bun workspaces + Turborepo (root package.json, turbo.json, bun.lock).
+# Do not run this script unless you are intentionally reproducing an old pnpm layout.
 
 echo "🔧 Converting to PNPM Workspaces configuration..."
 

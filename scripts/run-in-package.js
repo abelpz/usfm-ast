@@ -3,12 +3,12 @@ const { existsSync } = require('fs');
 const path = require('path');
 
 function printUsageAndExit() {
-  console.error('Usage: pnpm run pkg -- <package-dir> <script-name|npm|pnpm> [args...]');
+  console.error('Usage: bun run do -- <package-dir> <script-name|npm|pnpm|bun|yarn> [args...]');
   console.error('\nExamples:');
-  console.error('  # Run the "test" npm script inside packages/usfm-parser');
-  console.error('  pnpm run pkg -- usfm-parser test');
-  console.error('\n  # Run an explicit command (e.g., pnpm build) inside packages/usj-core');
-  console.error('  pnpm run pkg -- usj-core pnpm run build');
+  console.error('  # Run the "test" script inside packages/usfm-parser');
+  console.error('  bun run do -- usfm-parser test');
+  console.error('\n  # Run an explicit command inside packages/usj-core');
+  console.error('  bun run do -- usj-core bun run build');
   process.exit(1);
 }
 
@@ -18,7 +18,6 @@ if (!pkgDir || !cmdOrScript) {
   printUsageAndExit();
 }
 
-// Resolve absolute path to the requested package directory inside "packages"
 const pkgPath = path.join(__dirname, '..', 'packages', pkgDir);
 
 if (!existsSync(pkgPath)) {
@@ -26,19 +25,16 @@ if (!existsSync(pkgPath)) {
   process.exit(1);
 }
 
-// Determine whether the caller provided an explicit binary (npm/pnpm/yarn) or just a script name.
-const knownRunners = new Set(['npm', 'pnpm', 'yarn']);
+const knownRunners = new Set(['npm', 'pnpm', 'yarn', 'bun']);
 
 let command;
 let commandArgs;
 
 if (knownRunners.has(cmdOrScript)) {
-  // The user explicitly passed a runner (e.g. npm test => cmdOrScript === "npm")
   command = cmdOrScript;
   commandArgs = args;
 } else {
-  // Assume the argument is an npm script name. Use npm run <script>
-  command = 'npm';
+  command = 'bun';
   commandArgs = ['run', cmdOrScript, ...args];
 }
 

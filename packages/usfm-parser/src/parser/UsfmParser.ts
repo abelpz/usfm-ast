@@ -31,7 +31,12 @@ export class UsfmParser extends BaseParser {
   private readonly markersRegistry: USFMMarkerRegistry;
 
   constructor(input?: string, options: UsfmParseOptions = {}) {
-    super(input, { ...options, ignoredChars: ['\n', '\r'] });
+    // Merge ignored characters instead of overriding
+    const mergedIgnoredChars = [...(options.ignoredChars || []), '\n', '\r'];
+    super(input, {
+      ...options,
+      ignoredChars: [...new Set(mergedIgnoredChars)], // Remove duplicates
+    });
     this.markersRegistry = USFMMarkerRegistry.getInstance(options?.customMarkers);
   }
 

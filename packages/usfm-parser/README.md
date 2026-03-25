@@ -27,6 +27,10 @@ yarn add @usfm-tools/parser
 ```
 
 ```bash
+bun add @usfm-tools/parser
+```
+
+```bash
 pnpm add @usfm-tools/parser
 ```
 
@@ -410,16 +414,24 @@ git clone https://github.com/yourusername/usfm-ast.git
 cd usfm-ast
 
 # Install dependencies
-pnpm install
+bun install
 
-# Build the parser
-pnpm run build --filter @usfm-tools/parser
+# Build the parser (from repo root)
+bun run do -- usfm-parser build
 
 # Run tests
-pnpm run test --filter @usfm-tools/parser
+bun run do -- usfm-parser test
 
 # Run performance tests
-pnpm run test:performance --filter @usfm-tools/parser
+bun run do -- usfm-parser test:performance
+```
+
+You can also use Turborepo filters from the repository root:
+
+```bash
+bunx turbo run build --filter=@usfm-tools/parser
+bunx turbo run test --filter=@usfm-tools/parser
+bunx turbo run test:performance --filter=@usfm-tools/parser
 ```
 
 ## 📄 License

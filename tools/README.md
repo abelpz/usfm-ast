@@ -7,8 +7,8 @@ A CLI tool to create and manage USFM format examples in the `examples/usfm-marke
 The CLI tool is already set up with the required dependencies. You can run it using:
 
 ```bash
-# Using pnpm (recommended)
-pnpm examples [command]
+# Using Bun (recommended)
+bun run examples [command]
 
 # Or directly with node
 node tools/example-manager.js [command]
@@ -21,13 +21,13 @@ Create a new format example with the specified marker and example name.
 
 ```bash
 # Create a new character marker example
-pnpm examples create char-add add-example-3
+bun run examples create char-add add-example-3
 
 # Create with custom description
-pnpm examples create char-add add-example-3 --description "Advanced add marker usage"
+bun run examples create char-add add-example-3 --description "Advanced add marker usage"
 
 # Create and immediately open in editor
-pnpm examples create char-add add-example-3 --edit
+bun run examples create char-add add-example-3 --edit
 ```
 
 **Options:**
@@ -39,7 +39,7 @@ pnpm examples create char-add add-example-3 --edit
 List all existing examples with their status.
 
 ```bash
-pnpm examples list
+bun run examples list
 ```
 
 **Status indicators:**
@@ -51,7 +51,7 @@ pnpm examples list
 Check for missing USJ files and show coverage statistics.
 
 ```bash
-pnpm examples check
+bun run examples check
 ```
 
 This command uses the `check-missing-usj.sh` script to analyze which examples need USJ files.
@@ -61,10 +61,10 @@ Generate USJ files from existing USFM files using your parser.
 
 ```bash
 # Generate all missing USJ files
-pnpm examples generate
+bun run examples generate
 
 # Generate with detailed error messages
-pnpm examples generate --verbose
+bun run examples generate --verbose
 ```
 
 This command:
@@ -81,7 +81,7 @@ This command:
 Create empty USJ template files for existing USFM files.
 
 ```bash
-pnpm examples create-usj
+bun run examples create-usj
 ```
 
 This command:
@@ -95,7 +95,7 @@ Use this when you want to manually create USJ files or when the parser can't han
 Show available marker templates and their descriptions.
 
 ```bash
-pnpm examples templates
+bun run examples templates
 ```
 
 Displays information about the built-in templates for different marker categories.
@@ -106,41 +106,41 @@ Use these shortcuts from the project root:
 
 ```bash
 # Access the CLI
-pnpm examples
+bun run examples
 
 # Check missing USJ files
-pnpm examples:check
+bun run examples:check
 
 # Generate USJ files from USFM
-pnpm examples:generate
+bun run examples:generate
 
 # Create empty USJ templates
-pnpm examples:create-usj
+bun run examples:create-usj
 ```
 
 ## Workflow for Missing USJ Files
 
 1. **Check what's missing:**
    ```bash
-   pnpm examples:check
+   bun run examples:check
    ```
 
 2. **Choose your approach:**
    
    **Option A: Auto-generate with parser**
    ```bash
-   pnpm examples:generate
+   bun run examples:generate
    ```
    
    **Option B: Create templates for manual editing**
    ```bash
-   pnpm examples:create-usj
+   bun run examples:create-usj
    ```
 
 3. **Verify results:**
    ```bash
-   pnpm examples list
-   pnpm examples:check
+   bun run examples list
+   bun run examples:check
    ```
 
 ## Example Structure
@@ -212,28 +212,28 @@ The CLI automatically generates appropriate USFM templates based on the marker c
 
 ## Workflow
 
-1. **Create Example**: Use `pnpm examples create` to generate the structure
+1. **Create Example**: Use `bun run examples create` to generate the structure
 2. **Edit USFM**: Modify the `example.usfm` file with your actual content
 3. **Generate USJ**: Use your parser to convert USFM to USJ format
-4. **Verify**: Use `pnpm examples check` to ensure USJ was generated correctly
+4. **Verify**: Use `bun run examples check` to ensure USJ was generated correctly
 
 ## Examples
 
 ```bash
 # Create a new example for the \add character marker
-pnpm examples create char-add add-example-3
+bun run examples create char-add add-example-3
 
 # List all examples to see coverage
-pnpm examples list
+bun run examples list
 
 # Check which examples are missing USJ files
-pnpm examples check
+bun run examples check
 
 # See available templates
-pnpm examples templates
+bun run examples templates
 
 # Create example in a different directory
-pnpm examples create char-bold bold-example-1 --dir format-examples-new
+bun run examples create char-bold bold-example-1 --dir format-examples-new
 ```
 
 ## Integration

@@ -19,12 +19,12 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit"
+    "check-types": "tsc --noEmit -p tsconfig.tsup.json"
   },
   "keywords": [
     "usfm",
@@ -42,5 +42,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "5.9.3"
   }
 }

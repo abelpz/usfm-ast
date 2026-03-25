@@ -9,7 +9,6 @@ import { MarkerTypeEnum } from '@usfm-tools/types';
 import { USFMMarkerRegistry, USFMMarkerInfo, UsfmStyleType } from '@usfm-tools/parser';
 
 // Legacy type import for backward-compat constructor (safe because we only typeof-check)
-// eslint-disable-next-line import/no-extraneous-dependencies, @typescript-eslint/consistent-type-imports
 import type { USFMFormattingRule } from '../rules/types';
 
 export interface USFMFormatterOptions {

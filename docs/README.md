@@ -1,0 +1,10 @@
+# usfm-ast — contributor docs
+
+| Doc | Purpose |
+| --- | ------- |
+| [`07-github-mcp.md`](./07-github-mcp.md) | Cursor GitHub MCP — `GITHUB_MCP_PAT`, fine-grained token, **include this repo** |
+| [`08-github-agent-workflow.md`](./08-github-agent-workflow.md) | Issues → branches → PRs → human merge; agent labels |
+| [`09-ci-and-branch-protection.md`](./09-ci-and-branch-protection.md) | CI jobs, Dependabot, CodeQL, branch protection |
+| [`14-github-bootstrap.md`](./14-github-bootstrap.md) | One-time labels + bootstrap commands |
+
+Upstream scripture format references: [unfoldingWord/uW-Tools-Collab](https://github.com/unfoldingWord/uW-Tools-Collab).

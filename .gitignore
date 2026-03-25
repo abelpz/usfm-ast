@@ -49,6 +49,9 @@ test-*.cjs
 *.temp
 .cache/
 
+# Turborepo local cache
+.turbo/
+
 # Logs
 logs/
 *.log
