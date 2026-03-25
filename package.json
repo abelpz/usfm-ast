@@ -3,6 +3,10 @@
   "version": "0.0.1",
   "private": true,
   "description": "Monorepo for USFM and USJ tools and libraries",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abelpz/usfm-ast.git"
+  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -10,6 +14,7 @@
     "lint:fix": "turbo run lint:fix",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
+    "test:usfm-parser-local": "cd packages/usfm-parser && bun run build && bunx jest --testPathIgnorePatterns=performance",
     "test:integration": "bunx jest tests/integration",
     "test:performance": "bunx jest tests/performance",
     "clean": "turbo run clean",

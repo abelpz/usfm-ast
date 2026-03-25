@@ -1,6 +1,7 @@
 /**
- * Minimal checks for CI. The main Jest suites still expect a legacy AST shape;
- * run them locally with CI unset until expectations are updated.
+ * Minimal checks for CI. Older suites under tests/ still expect a previous
+ * node shape (e.g. paragraph vs para); run them locally with CI unset.
+ * See also usfm-parser-contract.test.ts (runs in CI).
  */
 import { USFMParser } from '../src/parser/index';
 
