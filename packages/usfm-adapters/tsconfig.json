@@ -7,7 +7,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "module": "commonjs"
+    "module": "commonjs",
+    "noEmit": false
   },
   "include": ["src/**/*", "types/**/*"],
   "exclude": ["dist", "**/*.test.ts", "**/*.spec.ts"],

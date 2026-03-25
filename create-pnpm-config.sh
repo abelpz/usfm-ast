@@ -216,7 +216,7 @@ for package_info in "${packages[@]}"; do
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/usfm-usj-monorepo.git",
+    "url": "https://github.com/abelpz/usfm-ast.git",
     "directory": "packages/$dir_name"
   },
   "publishConfig": {
