@@ -9,6 +9,7 @@
     },
     "Él es el resplandor glorioso de Dios,",
     {
+      "type": "note",
       "marker": "f",
       "content": [
         {
@@ -40,8 +41,7 @@
           "type": "char"
         }
       ],
-      "caller": "c",
-      "type": "note"
+      "caller": "c"
     },
     "la imagen misma de lo que Dios es y el que sostiene todas las cosas con su palabra poderosa. Después de limpiarnos de nuestros pecados, se ha sentado en el cielo, a la derecha del trono de Dios,"
   ]

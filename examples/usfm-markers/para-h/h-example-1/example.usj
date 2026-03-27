@@ -3,15 +3,17 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MAT",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
       "type": "para",
       "marker": "h",
-      "content": ["Matthew"]
+      "content": [
+        "Matthew"
+      ]
     }
   ]
 }

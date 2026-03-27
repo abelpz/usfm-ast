@@ -4,6 +4,12 @@
 
 import { USFMParser } from '../src/parser';
 
+const genesisIntro = [
+  '\\id GEN Genesis',
+  '\\c 1',
+  '\\p \\v 1 In the beginning God created the heavens and the earth.',
+].join('\n');
+
 describe('Enhanced USJ Node Generation', () => {
   let parser: USFMParser;
 
@@ -12,39 +18,32 @@ describe('Enhanced USJ Node Generation', () => {
   });
 
   test('should parse simple USFM into enhanced USJ nodes', () => {
-    const usfm =
-      '\\id GEN Genesis\\c 1\\p \\v 1 In the beginning God created the heavens and the earth.';
-
-    const result = parser.parse(usfm);
+    const result = parser.parse(genesisIntro);
     const rootNode = result.getRootNode();
 
     expect(rootNode).not.toBeNull();
     expect(rootNode!.type).toBe('root');
-    expect(rootNode!.content).toHaveLength(3); // book, chapter, paragraph
+    expect(rootNode!.content).toHaveLength(3);
 
-    // Check book node
     const bookNode = rootNode!.content[0];
     expect(bookNode.type).toBe('book');
     expect((bookNode as any).code).toBe('GEN');
     expect((bookNode as any).content).toEqual(['Genesis']);
 
-    // Check chapter node
     const chapterNode = rootNode!.content[1];
     expect(chapterNode.type).toBe('chapter');
     expect((chapterNode as any).number).toBe('1');
+    expect((chapterNode as any).sid).toBe('GEN 1');
 
-    // Check paragraph node
     const paragraphNode = rootNode!.content[2];
     expect(paragraphNode.type).toBe('para');
     expect((paragraphNode as any).marker).toBe('p');
-    expect((paragraphNode as any).content).toHaveLength(2); // verse + text
+    expect((paragraphNode as any).content).toHaveLength(2);
+    expect((paragraphNode as any).content[0].sid).toBe('GEN 1:1');
   });
 
   test('should export plain USJ format', () => {
-    const usfm =
-      '\\id GEN Genesis\\c 1\\p \\v 1 In the beginning God created the heavens and the earth.';
-
-    const result = parser.parse(usfm);
+    const result = parser.parse(genesisIntro);
     const plainUSJ = result.toJSON();
 
     expect(plainUSJ).toEqual({
@@ -61,6 +60,7 @@ describe('Enhanced USJ Node Generation', () => {
           type: 'chapter',
           marker: 'c',
           number: '1',
+          sid: 'GEN 1',
         },
         {
           type: 'para',
@@ -70,6 +70,7 @@ describe('Enhanced USJ Node Generation', () => {
               type: 'verse',
               marker: 'v',
               number: '1',
+              sid: 'GEN 1:1',
             },
             'In the beginning God created the heavens and the earth.',
           ],
@@ -128,15 +129,13 @@ describe('Enhanced USJ Node Generation', () => {
     expect(nodes).toHaveLength(1);
     const paragraphNode = nodes[0];
 
-    // Check that enhanced methods are available
     expect(typeof paragraphNode.getChildren).toBe('function');
     expect(typeof paragraphNode.accept).toBe('function');
     expect(typeof paragraphNode.acceptWithContext).toBe('function');
     expect(typeof (paragraphNode as any).toJSON).toBe('function');
 
-    // Test navigation methods
-    expect(paragraphNode.getParent()).toBeUndefined(); // Root level
-    expect(paragraphNode.getChildren()).toHaveLength(1); // One text node
+    expect(paragraphNode.getParent()).toBeUndefined();
+    expect(paragraphNode.getChildren()).toHaveLength(1);
   });
 
   test('should handle empty input', () => {
@@ -151,12 +150,14 @@ describe('Enhanced USJ Node Generation', () => {
   });
 
   test('should handle complex structure with nested markers', () => {
-    const usfm = '\\id GEN\\c 1\\p \\v 1 Text with \\w word\\+nd nested\\+nd*\\w* content.';
+    const usfm = ['\\id GEN', '\\c 1', '\\p \\v 1 Text with \\w word\\+nd nested\\+nd*\\w* content.'].join(
+      '\n'
+    );
 
     const result = parser.parse(usfm);
     const plainUSJ = result.toJSON();
 
-    expect(plainUSJ.content).toHaveLength(3); // book, chapter, paragraph
+    expect(plainUSJ.content).toHaveLength(3);
 
     const paragraphContent = plainUSJ.content[2].content;
     expect(paragraphContent).toEqual([
@@ -164,6 +165,7 @@ describe('Enhanced USJ Node Generation', () => {
         type: 'verse',
         marker: 'v',
         number: '1',
+        sid: 'GEN 1:1',
       },
       'Text with ',
       {

@@ -48,7 +48,6 @@ describe('USJ Visitor Incremental Tests', () => {
         type: 'verse',
         marker: 'v',
         number: '1',
-        sid: ' 1:1',
       });
     });
   });
@@ -68,7 +67,6 @@ describe('USJ Visitor Incremental Tests', () => {
         type: 'chapter',
         marker: 'c',
         number: '1',
-        sid: ' 1',
       });
     });
   });
@@ -83,7 +81,6 @@ describe('USJ Visitor Incremental Tests', () => {
             type: 'verse',
             marker: 'v',
             number: '1',
-            sid: ' 1:1',
           },
           {
             type: 'char',
@@ -115,7 +112,7 @@ describe('USJ Visitor Incremental Tests', () => {
 
   describe('Document structure tests', () => {
     test('book with multiple elements', () => {
-      const usfm = '\\id TIT\\p \\v 1 Hello';
+      const usfm = '\\id TIT\n\\p \\v 1 Hello';
       parser.load(usfm);
       const ast = parser.parse();
       visitor = new USJVisitor();
@@ -140,7 +137,6 @@ describe('USJ Visitor Incremental Tests', () => {
                 type: 'verse',
                 marker: 'v',
                 number: '1',
-                sid: 'TIT 1:1',
               },
               'Hello',
             ],

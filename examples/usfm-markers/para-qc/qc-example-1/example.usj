@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "PSA",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "72",
       "type": "chapter",
       "marker": "c",
-      "number": "72",
       "sid": "PSA 72"
     },
     {
@@ -19,18 +19,18 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "18",
+          "type": "verse",
           "sid": "PSA 72:18"
         },
         "Praise the ",
         {
-          "type": "char",
           "marker": "nd",
           "content": [
             "Lord"
-          ]
+          ],
+          "type": "char"
         },
         ", the God of Israel!"
       ]
@@ -47,9 +47,9 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "19",
+          "type": "verse",
           "sid": "PSA 72:19"
         },
         "Praise his glorious name forever!"
@@ -82,9 +82,9 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "20",
+          "type": "verse",
           "sid": "PSA 72:20"
         },
         "This is the end of the prayers of David son of Jesse."

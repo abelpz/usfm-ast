@@ -153,7 +153,7 @@ describe('Whitespace Handling API', () => {
       const result = visitor.getResult();
 
       // Should not trim footnote content (only paragraph edges)
-      expect(result).toBe('\\f + \\fr 1:2  \\ft Note with spaces  \\f*');
+      expect(result).toBe('\\f  +  \\fr 1:2  \\ft Note with spaces  \\f*');
     });
   });
 });

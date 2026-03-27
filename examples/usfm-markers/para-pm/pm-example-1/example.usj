@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "ACT",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "15",
       "type": "chapter",
       "marker": "c",
-      "number": "15",
       "sid": "ACT 15"
     },
     {
@@ -33,30 +33,30 @@
       "marker": "pm",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "24",
+          "type": "verse",
           "sid": "ACT 15:24"
         },
         "We have heard that some people from here have terribly upset you by what they said. But we did not send them! ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "25",
+          "type": "verse",
           "sid": "ACT 15:25"
         },
         "So we met together and decided to choose some men and to send them to you along with our good friends Barnabas and Paul. ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "26",
+          "type": "verse",
           "sid": "ACT 15:26"
         },
         "These men have risked their lives for our Lord Jesus Christ. ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "27",
+          "type": "verse",
           "sid": "ACT 15:27"
         },
         "We are also sending Judas and Silas, who will tell you in person the same things that we are writing."
@@ -67,9 +67,9 @@
       "marker": "pm",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "28",
+          "type": "verse",
           "sid": "ACT 15:28"
         },
         "The Holy Spirit has shown us that we should not place any extra burden on you..."

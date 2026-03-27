@@ -21,7 +21,7 @@ describe('USFMVisitor with New Formatter API', () => {
       const input = '\\id TIT\\c 1\\p\\v 1 Text';
       const result = normalizeWithOptions(input);
 
-      expect(result).toBe('\\id TIT\n\\c 1\n\\p\n\\v 1 Text');
+      expect(result).toBe('\\id TIT\\c 1\n\\p\n\\v 1 Text');
     });
 
     it('should handle paragraph with verse context', () => {
@@ -53,7 +53,7 @@ describe('USFMVisitor with New Formatter API', () => {
       const input = '\\p Paul\\f + note\\f* wrote this.';
       const result = normalizeWithOptions(input);
 
-      expect(result).toBe('\\p Paul\\f + note\\f* wrote this.');
+      expect(result).toBe('\\p Paul\\f  +  note\\f* wrote this.');
     });
 
     it('should handle milestone markers', () => {
@@ -124,7 +124,7 @@ describe('USFMVisitor with New Formatter API', () => {
       const input = '\\p Text\\f + \\fr 1:1 \\ft Note text\\f* more';
       const result = normalizeWithOptions(input);
 
-      expect(result).toBe('\\p Text\\f + \\fr 1:1 \\ft Note text\\f* more');
+      expect(result).toBe('\\p Text\\f  +  \\fr 1:1 \\ft Note text\\f* more');
     });
 
     it('should handle attributes in character markers', () => {

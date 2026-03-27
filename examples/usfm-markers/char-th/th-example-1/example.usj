@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "NUM",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "7",
       "type": "chapter",
       "marker": "c",
-      "number": "7",
       "sid": "NUM 7"
     },
     {
@@ -19,9 +19,9 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "12-83",
+          "type": "verse",
           "sid": "NUM 7:12-83"
         },
         "They presented their offerings in the following order:"
@@ -168,12 +168,12 @@
               "align": "start",
               "content": [
                 {
-                  "type": "char",
                   "marker": "w",
-                  "lemma": "Rubén",
                   "content": [
                     "Reuben"
-                  ]
+                  ],
+                  "type": "char",
+                  "lemma": "Rubén"
                 },
                 " "
               ]

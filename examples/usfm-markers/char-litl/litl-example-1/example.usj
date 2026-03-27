@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "NEH",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "7",
       "type": "chapter",
       "marker": "c",
-      "number": "7",
       "sid": "NEH 7"
     },
     {
@@ -19,16 +19,16 @@
       "marker": "pm",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "6",
+          "type": "verse",
           "sid": "NEH 7:6"
         },
         "These are the people of the province who came up from the captivity of the exiles whom Nebuchadnezzar king of Babylon had taken captive (they returned to Jerusalem and Judah, each to his own town, ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "7",
+          "type": "verse",
           "sid": "NEH 7:7"
         },
         "in company with Zerubbabel, Jeshua, Nehemiah, Azariah, Raamiah, Nahamani, Mordecai, Bilshan, Mispereth, Bigvai, Nehum and Baanah):"
@@ -41,7 +41,9 @@
     {
       "type": "para",
       "marker": "pm",
-      "content": ["The list of the men of Israel:"]
+      "content": [
+        "The list of the men of Israel:"
+      ]
     },
     {
       "type": "para",
@@ -52,16 +54,18 @@
       "marker": "lim1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "8",
+          "type": "verse",
           "sid": "NEH 7:8"
         },
         "the descendants of Parosh - ",
         {
-          "type": "char",
           "marker": "litl",
-          "content": ["2,172"]
+          "content": [
+            "2,172"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -70,16 +74,18 @@
       "marker": "lim1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "9",
+          "type": "verse",
           "sid": "NEH 7:9"
         },
         "of Shephatiah - ",
         {
-          "type": "char",
           "marker": "litl",
-          "content": ["372"]
+          "content": [
+            "372"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -88,16 +94,18 @@
       "marker": "lim1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "10",
+          "type": "verse",
           "sid": "NEH 7:10"
         },
         "of Arah - ",
         {
-          "type": "char",
           "marker": "litl",
-          "content": ["652"]
+          "content": [
+            "652"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -106,16 +114,18 @@
       "marker": "lim1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "11",
+          "type": "verse",
           "sid": "NEH 7:11"
         },
         "of Pahath-Moab (through the line of Jeshua and Joab) - ",
         {
-          "type": "char",
           "marker": "litl",
-          "content": ["2,818"]
+          "content": [
+            "2,818"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -124,16 +134,18 @@
       "marker": "lim1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "12",
+          "type": "verse",
           "sid": "NEH 7:12"
         },
         "of Elam - ",
         {
-          "type": "char",
           "marker": "litl",
-          "content": ["1,254"]
+          "content": [
+            "1,254"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -142,16 +154,18 @@
       "marker": "lim1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "13",
+          "type": "verse",
           "sid": "NEH 7:13"
         },
         "of Zattu - ",
         {
-          "type": "char",
           "marker": "litl",
-          "content": ["845"]
+          "content": [
+            "845"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -160,16 +174,18 @@
       "marker": "lim1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "14",
+          "type": "verse",
           "sid": "NEH 7:14"
         },
         "of Zaccai - ",
         {
-          "type": "char",
           "marker": "litl",
-          "content": ["760"]
+          "content": [
+            "760"
+          ],
+          "type": "char"
         }
       ]
     }

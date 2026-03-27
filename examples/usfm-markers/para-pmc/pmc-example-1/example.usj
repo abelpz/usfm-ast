@@ -3,37 +3,39 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "ACT",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "15",
       "type": "chapter",
       "marker": "c",
-      "number": "15",
       "sid": "ACT 15"
     },
     {
       "type": "para",
       "marker": "p",
-      "content": ["..."]
+      "content": [
+        "..."
+      ]
     },
     {
       "type": "para",
       "marker": "pm",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "28",
+          "type": "verse",
           "sid": "ACT 15:28"
         },
         "The Holy Spirit has shown us that we should not place any extra burden on you. ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "29",
+          "type": "verse",
           "sid": "ACT 15:29"
         },
         "But you should not eat anything offered to idols. You should not eat any meat that still has the blood in it or any meat of any animal that has been strangled. You must also not commit any terrible sexual sins. If you follow these instructions, you will do well."
@@ -42,7 +44,9 @@
     {
       "type": "para",
       "marker": "pmc",
-      "content": ["We send our best wishes."]
+      "content": [
+        "We send our best wishes."
+      ]
     }
   ]
 }

@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "REV",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "17",
       "type": "chapter",
       "marker": "c",
-      "number": "17",
       "sid": "REV 17"
     },
     {
@@ -20,16 +20,16 @@
       "content": [
         "... ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "4",
+          "type": "verse",
           "sid": "REV 17:4"
         },
         "The woman was dressed in purple and scarlet robes, and she wore jewelry made of gold, precious stones, and pearls. In her hand she held a gold cup filled with the filthy and nasty things she had done. ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "5",
+          "type": "verse",
           "sid": "REV 17:5"
         },
         "On her forehead a mysterious name was written:"
@@ -47,9 +47,9 @@
       "marker": "m",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "6",
+          "type": "verse",
           "sid": "REV 17:6"
         },
         "I could tell that the woman was drunk on the blood of God's people who had given their lives for Jesus. This surprising sight amazed me, ..."

@@ -18,6 +18,7 @@
           "type": "verse"
         },
         {
+          "type": "note",
           "marker": "x",
           "content": [
             {
@@ -91,8 +92,7 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         " You know the commandments: ‘Do not commit murder; do not commit adultery; do not steal; do not accuse anyone falsely; do not cheat; respect your father and your mother.’”"
       ]

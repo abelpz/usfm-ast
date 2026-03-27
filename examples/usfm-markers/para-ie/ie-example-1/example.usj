@@ -3,20 +3,24 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MRK",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
       "type": "para",
       "marker": "io1",
-      "content": ["The resurrection of Jesus (16.1-8)"]
+      "content": [
+        "The resurrection of Jesus (16.1-8)"
+      ]
     },
     {
       "type": "para",
       "marker": "io1",
-      "content": ["The appearances and ascension of the risen Lord (16.9-20)"]
+      "content": [
+        "The appearances and ascension of the risen Lord (16.9-20)"
+      ]
     },
     {
       "type": "para",
@@ -24,29 +28,33 @@
       "content": []
     },
     {
+      "number": "1",
       "type": "chapter",
       "marker": "c",
-      "number": "1",
       "sid": "MRK 1"
     },
     {
       "type": "para",
       "marker": "s",
-      "content": ["The Preaching of John the Baptist"]
+      "content": [
+        "The Preaching of John the Baptist"
+      ]
     },
     {
       "type": "para",
       "marker": "r",
-      "content": ["(Matthew 3.1-12; Luke 3.1-18; John 1.19-28)"]
+      "content": [
+        "(Matthew 3.1-12; Luke 3.1-18; John 1.19-28)"
+      ]
     },
     {
       "type": "para",
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "1",
+          "type": "verse",
           "sid": "MRK 1:1"
         },
         "This is the Good News about Jesus Christ ..."

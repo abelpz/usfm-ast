@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MRK",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "4",
       "type": "chapter",
       "marker": "c",
-      "number": "4",
       "sid": "MRK 4"
     },
     {
@@ -19,35 +19,41 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "39",
+          "type": "verse",
           "sid": "MRK 4:39"
         },
         "Jesus stood up and commanded the wind, ",
         {
-          "type": "char",
           "marker": "wj",
-          "content": ["“Be quiet!”"]
+          "content": [
+            "“Be quiet!”"
+          ],
+          "type": "char"
         },
         " and he said to the waves, ",
         {
-          "type": "char",
           "marker": "wj",
-          "content": ["“Be still!”"]
+          "content": [
+            "“Be still!”"
+          ],
+          "type": "char"
         },
         " The wind died down, and there was a great calm. ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "40",
+          "type": "verse",
           "sid": "MRK 4:40"
         },
         "Then Jesus said to his disciples, ",
         {
-          "type": "char",
           "marker": "wj",
-          "content": ["“Why are you frightened? Do you still have no faith?”"]
+          "content": [
+            "“Why are you frightened? Do you still have no faith?”"
+          ],
+          "type": "char"
         }
       ]
     }

@@ -18,9 +18,9 @@ describe('USFMParser - Basic', () => {
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
       {
-        type: 'paragraph',
+        type: 'para',
         marker: 'p',
-        content: [{ type: 'text', content: 'this is a paragraph.' }],
+        content: ['this is a paragraph.'],
       },
     ]);
     expect(parser.getLogs()).toHaveLength(0);
@@ -31,14 +31,11 @@ describe('USFMParser - Basic', () => {
     const result = parser.load(input).parse().getNodes();
     expect(JSON.parse(JSON.stringify(result))).toEqual([
       {
-        type: 'character',
+        type: 'verse',
         marker: 'v',
-        content: [{ type: 'text', content: '1' }],
+        number: '1',
       },
-      {
-        type: 'text',
-        content: 'this is a verse.',
-      },
+      'this is a verse.',
     ]);
     expect(parser.getLogs()).toHaveLength(1);
     expect(parser.getLogs()[0]).toEqual({
@@ -56,27 +53,16 @@ describe('USFMParser - Basic', () => {
         marker: 'f',
         content: [
           {
-            type: 'character',
+            type: 'char',
             marker: 'ft',
             content: [
+              'this is a note with ',
               {
-                type: 'text',
-                content: 'this is a note with ',
-              },
-              {
-                type: 'character',
+                type: 'char',
                 marker: 'bd',
-                content: [
-                  {
-                    type: 'text',
-                    content: 'bold',
-                  },
-                ],
+                content: ['bold'],
               },
-              {
-                type: 'text',
-                content: ' text.',
-              },
+              ' text.',
             ],
           },
         ],
@@ -94,19 +80,11 @@ describe('USFMParser - Basic', () => {
         marker: 'f',
         content: [
           {
-            type: 'character',
+            type: 'char',
             marker: 'bd',
-            content: [
-              {
-                type: 'text',
-                content: 'bold',
-              },
-            ],
+            content: ['bold'],
           },
-          {
-            type: 'text',
-            content: ' text.',
-          },
+          ' text.',
         ],
         caller: '+',
       },
@@ -118,10 +96,9 @@ describe('USFMParser - Basic', () => {
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
       {
-        type: 'milestone',
+        type: 'ms',
         marker: 'ts-s',
-        milestoneType: 'start',
-        attributes: { sid: 'ts_JUD_5-6' },
+        sid: 'ts_JUD_5-6',
       },
     ]);
   });
@@ -129,7 +106,7 @@ describe('USFMParser - Basic', () => {
   test('handles milestone within root without attributes', () => {
     const input = String.raw`\ts-s\*`;
     const result = cleanForComparison(parser.load(input).parse().getNodes());
-    expect(result).toEqual([{ type: 'milestone', marker: 'ts-s', milestoneType: 'start' }]);
+    expect(result).toEqual([{ type: 'ms', marker: 'ts-s' }]);
   });
 
   test('handles milestone within paragraph', () => {
@@ -137,16 +114,13 @@ describe('USFMParser - Basic', () => {
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
       {
-        type: 'paragraph',
+        type: 'para',
         marker: 'p',
         content: [
           {
-            type: 'milestone',
+            type: 'ms',
             marker: 'ts-s',
-            milestoneType: 'start',
-            attributes: {
-              sid: 'ts_JUD_5-6',
-            },
+            sid: 'ts_JUD_5-6',
           },
         ],
       },
@@ -158,16 +132,13 @@ describe('USFMParser - Basic', () => {
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
       {
-        type: 'character',
+        type: 'char',
         marker: 'bd',
         content: [
           {
-            type: 'milestone',
+            type: 'ms',
             marker: 'ts-s',
-            milestoneType: 'start',
-            attributes: {
-              sid: 'ts_JUD_5-6',
-            },
+            sid: 'ts_JUD_5-6',
           },
         ],
       },
@@ -179,10 +150,9 @@ describe('USFMParser - Basic', () => {
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
       {
-        type: 'milestone',
+        type: 'ms',
         marker: 'ts',
-        milestoneType: 'standalone',
-        attributes: { sid: 'ts_JUD_5-6' },
+        sid: 'ts_JUD_5-6',
       },
     ]);
   });
@@ -190,7 +160,7 @@ describe('USFMParser - Basic', () => {
   test('handles standalone milestone without attributes', () => {
     const input = String.raw`\ts\*`;
     const result = cleanForComparison(parser.load(input).parse().getNodes());
-    expect(result).toEqual([{ type: 'milestone', marker: 'ts', milestoneType: 'standalone' }]);
+    expect(result).toEqual([{ type: 'ms', marker: 'ts' }]);
   });
 
   test('handles milestones surrounded by text', () => {
@@ -198,27 +168,19 @@ describe('USFMParser - Basic', () => {
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
       {
-        type: 'paragraph',
+        type: 'para',
         marker: 'p',
         content: [
+          'this is some text ',
           {
-            type: 'text',
-            content: 'this is some text ',
-          },
-          {
-            type: 'milestone',
+            type: 'ms',
             marker: 'ts-s',
-            milestoneType: 'start',
-            attributes: { sid: 'ts_JUD_5-6' },
+            sid: 'ts_JUD_5-6',
           },
+          'this is some text ',
           {
-            type: 'text',
-            content: ' this is some text ',
-          },
-          {
-            type: 'milestone',
+            type: 'ms',
             marker: 'ts-e',
-            milestoneType: 'end',
           },
         ],
       },
@@ -230,10 +192,9 @@ describe('USFMParser - Basic', () => {
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
       {
-        type: 'milestone',
+        type: 'ms',
         marker: 'zCustomMilestone-s',
-        milestoneType: 'start',
-        attributes: { sid: 'ts_JUD_5-6' },
+        sid: 'ts_JUD_5-6',
       },
     ]);
   });
@@ -243,18 +204,13 @@ describe('USFMParser - Basic', () => {
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
       {
-        type: 'paragraph',
+        type: 'para',
         marker: 'p',
         content: [
           {
-            type: 'character',
+            type: 'char',
             marker: 'zword',
-            content: [
-              {
-                type: 'text',
-                content: 'text within custom character marker',
-              },
-            ],
+            content: ['text within custom character marker'],
           },
         ],
       },
@@ -266,21 +222,14 @@ describe('USFMParser - Basic', () => {
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
       {
-        type: 'paragraph',
+        type: 'para',
         marker: 'p',
         content: [
           {
-            type: 'character',
+            type: 'char',
             marker: 'zword',
-            content: [
-              {
-                type: 'text',
-                content: 'word',
-              },
-            ],
-            attributes: {
-              'x-occurrence': '1',
-            },
+            content: ['word'],
+            'x-occurrence': '1',
           },
         ],
       },
@@ -292,31 +241,21 @@ describe('USFMParser - Basic', () => {
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
       {
-        type: 'paragraph',
+        type: 'para',
         marker: 'p',
-        content: [
-          {
-            type: 'text',
-            content: 'first paragraph',
-          },
-        ],
+        content: ['first paragraph'],
       },
       {
-        type: 'paragraph',
+        type: 'para',
         marker: 'zpara',
-        content: [
-          {
-            type: 'text',
-            content: 'second paragraph',
-          },
-        ],
+        content: ['second paragraph'],
       },
     ]);
   });
 
   test('logs warning for unsupported markers', () => {
     const input = String.raw`\xyz this is an unknown marker.`;
-    const result = parser.load(input).parse().getNodes();
+    parser.load(input).parse().getNodes();
     expect(parser.getLogs()).toContainEqual({
       type: 'warn',
       message: expect.stringContaining("Unsupported marker in USFM: '\\xyz'"),
@@ -325,7 +264,7 @@ describe('USFMParser - Basic', () => {
 
   test('logs warning for text outside paragraphs', () => {
     const input = String.raw`this text is not in a paragraph`;
-    const result = parser.load(input).parse().getNodes();
+    parser.load(input).parse().getNodes();
     expect(parser.getLogs()).toContainEqual({
       type: 'warn',
       message: expect.stringContaining('Unexpected character outside a paragraph'),
@@ -340,55 +279,31 @@ describe('USFMParser - Basic', () => {
 
     expect(result).toEqual([
       {
-        type: 'paragraph',
+        type: 'para',
         marker: 'p',
-        content: [
-          {
-            type: 'text',
-            content: 'this is a paragraph.',
-          },
-        ],
+        content: ['this is a paragraph.'],
       },
       {
-        type: 'paragraph',
+        type: 'para',
         marker: 'p',
         content: [
           {
-            type: 'character',
+            type: 'verse',
             marker: 'v',
-            content: [
-              {
-                type: 'text',
-                content: '1',
-              },
-            ],
+            number: '1',
           },
+          'this is some text ',
           {
-            type: 'text',
-            content: 'this is some text ',
-          },
-          {
-            type: 'character',
+            type: 'char',
             marker: 'bd',
             content: [
+              'that ',
               {
-                type: 'text',
-                content: 'that ',
-              },
-              {
-                type: 'character',
+                type: 'char',
                 marker: 'it',
-                content: [
-                  {
-                    type: 'text',
-                    content: 'I want',
-                  },
-                ],
+                content: ['I want'],
               },
-              {
-                type: 'text',
-                content: ' to make bold',
-              },
+              ' to make bold',
             ],
           },
           {
@@ -396,42 +311,24 @@ describe('USFMParser - Basic', () => {
             marker: 'f',
             content: [
               {
-                type: 'character',
+                type: 'char',
                 marker: 'fr',
-                content: [
-                  {
-                    type: 'text',
-                    content: '1.1: ',
-                  },
-                ],
+                content: ['1.1: '],
               },
               {
-                type: 'character',
+                type: 'char',
                 marker: 'ft',
-                content: [
-                  {
-                    type: 'text',
-                    content: 'Note text: ',
-                  },
-                ],
+                content: ['Note text: '],
               },
               {
-                type: 'character',
+                type: 'char',
                 marker: 'fq',
-                content: [
-                  {
-                    type: 'text',
-                    content: 'quoted text.',
-                  },
-                ],
+                content: ['quoted text.'],
               },
             ],
             caller: '+',
           },
-          {
-            type: 'text',
-            content: ' for testing. ',
-          },
+          ' for testing. ',
         ],
       },
     ]);

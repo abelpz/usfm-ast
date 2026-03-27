@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MRK",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "1",
       "type": "chapter",
       "marker": "c",
-      "number": "1",
       "sid": "MRK 1"
     },
     {
@@ -38,19 +38,18 @@
     {
       "type": "sidebar",
       "marker": "esb",
-      "category": "People",
       "content": [
         {
           "type": "para",
           "marker": "ms",
           "content": [
             {
-              "type": "char",
               "marker": "jmp",
-              "id": "article-john_the_baptist",
               "content": [
                 "John the Baptist"
-              ]
+              ],
+              "type": "char",
+              "id": "article-john_the_baptist"
             }
           ]
         },
@@ -61,7 +60,8 @@
             "John is sometimes called the last “Old Testament prophet” because of the warnings he brought about God's judgment and because he announced the coming of God's “Chosen One” (Messiah)."
           ]
         }
-      ]
+      ],
+      "category": "People"
     }
   ]
 }

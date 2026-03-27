@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "GEN",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "1",
       "type": "chapter",
       "marker": "c",
-      "number": "1",
       "sid": "GEN 1"
     },
     {
@@ -19,160 +19,160 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "1",
+          "type": "verse",
           "sid": "GEN 1:1"
         },
         "まだ",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "なに",
           "content": [
             "何"
-          ]
+          ],
+          "type": "char",
+          "gloss": "なに"
         },
         "もなかった",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "とき",
           "content": [
             "時"
-          ]
+          ],
+          "type": "char",
+          "gloss": "とき"
         },
         "、",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "かみ",
           "content": [
             "神"
-          ]
+          ],
+          "type": "char",
+          "gloss": "かみ"
         },
         "は",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "てん",
           "content": [
             "天"
-          ]
+          ],
+          "type": "char",
+          "gloss": "てん"
         },
         "と ",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "ち",
           "content": [
             "地"
-          ]
+          ],
+          "type": "char",
+          "gloss": "ち"
         },
         "を",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "つく",
           "content": [
             "造"
-          ]
+          ],
+          "type": "char",
+          "gloss": "つく"
         },
         "りました。 ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "2",
+          "type": "verse",
           "sid": "GEN 1:2"
         },
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "ち",
           "content": [
             "地"
-          ]
+          ],
+          "type": "char",
+          "gloss": "ち"
         },
         "は",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "かたち",
           "content": [
             "形"
-          ]
+          ],
+          "type": "char",
+          "gloss": "かたち"
         },
         "も",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "さだ",
           "content": [
             "定"
-          ]
+          ],
+          "type": "char",
+          "gloss": "さだ"
         },
         "まらず、",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "やみ",
           "content": [
             "闇"
-          ]
+          ],
+          "type": "char",
+          "gloss": "やみ"
         },
         "に ",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "つつ",
           "content": [
             "包"
-          ]
+          ],
+          "type": "char",
+          "gloss": "つつ"
         },
         "まれた",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "みず",
           "content": [
             "水"
-          ]
+          ],
+          "type": "char",
+          "gloss": "みず"
         },
         "の",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "うえ",
           "content": [
             "上"
-          ]
+          ],
+          "type": "char",
+          "gloss": "うえ"
         },
         "を、さらに",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "かみ",
           "content": [
             "神"
-          ]
+          ],
+          "type": "char",
+          "gloss": "かみ"
         },
         "の ",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "れい",
           "content": [
             "霊"
-          ]
+          ],
+          "type": "char",
+          "gloss": "れい"
         },
         "が",
         {
-          "type": "char",
           "marker": "rb",
-          "gloss": "おお",
           "content": [
             "覆"
-          ]
+          ],
+          "type": "char",
+          "gloss": "おお"
         },
         "っていました。"
       ]

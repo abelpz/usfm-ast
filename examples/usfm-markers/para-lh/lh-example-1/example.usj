@@ -3,30 +3,32 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "1CH",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "27",
       "type": "chapter",
       "marker": "c",
-      "number": "27",
       "sid": "1CH 27"
     },
     {
       "type": "para",
       "marker": "s1",
-      "content": ["Administration of the Tribes of Israel"]
+      "content": [
+        "Administration of the Tribes of Israel"
+      ]
     },
     {
       "type": "para",
       "marker": "lh",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "16-22",
+          "type": "verse",
           "sid": "1CH 27:16-22"
         },
         "This is the list of the administrators of the tribes of Israel:"
@@ -35,17 +37,23 @@
     {
       "type": "para",
       "marker": "li1",
-      "content": ["Reuben - Eliezer son of Zichri"]
+      "content": [
+        "Reuben - Eliezer son of Zichri"
+      ]
     },
     {
       "type": "para",
       "marker": "li1",
-      "content": ["Simeon - Shephatiah son of Maacah"]
+      "content": [
+        "Simeon - Shephatiah son of Maacah"
+      ]
     },
     {
       "type": "para",
       "marker": "li1",
-      "content": ["Levi - Hashabiah son of Kemuel"]
+      "content": [
+        "Levi - Hashabiah son of Kemuel"
+      ]
     }
   ]
 }

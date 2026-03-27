@@ -13,6 +13,7 @@
         },
         "Adam",
         {
+          "type": "note",
           "marker": "f",
           "content": [
             {
@@ -37,11 +38,11 @@
               "type": "char"
             }
           ],
-          "caller": "+",
-          "type": "note"
+          "caller": "+"
         },
         " named his wife Eve,",
         {
+          "type": "note",
           "marker": "f",
           "content": [
             {
@@ -66,8 +67,7 @@
               "type": "char"
             }
           ],
-          "caller": "+",
-          "type": "note"
+          "caller": "+"
         },
         " because she was the mother of all human beings. ",
         {

@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "PSA",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "3",
       "type": "chapter",
       "marker": "c",
-      "number": "3",
       "sid": "PSA 3"
     },
     {
@@ -33,18 +33,18 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "1",
+          "type": "verse",
           "sid": "PSA 3:1"
         },
         "O ",
         {
-          "type": "char",
           "marker": "nd",
           "content": [
             "Lord"
-          ]
+          ],
+          "type": "char"
         },
         ", how many are my foes!"
       ]
@@ -61,9 +61,9 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "2",
+          "type": "verse",
           "sid": "PSA 3:2"
         },
         "many are saying to me,"
@@ -75,11 +75,11 @@
       "content": [
         "“There is no help for you in God.” ",
         {
-          "type": "char",
           "marker": "qs",
           "content": [
             "Selah"
-          ]
+          ],
+          "type": "char"
         }
       ]
     }

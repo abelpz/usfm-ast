@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "LAM",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "1",
       "type": "chapter",
       "marker": "c",
-      "number": "1",
       "sid": "LAM 1"
     },
     {
@@ -33,18 +33,18 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "1",
+          "type": "verse",
           "sid": "LAM 1:1"
         },
         "¡",
         {
-          "type": "char",
           "marker": "qac",
           "content": [
             "P"
-          ]
+          ],
+          "type": "char"
         },
         "obrecita de ti, Jerusalén!"
       ]
@@ -107,17 +107,17 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "2",
+          "type": "verse",
           "sid": "LAM 1:2"
         },
         {
-          "type": "char",
           "marker": "qac",
           "content": [
             "O"
-          ]
+          ],
+          "type": "char"
         },
         "lvidada y bañada en lágrimas"
       ]

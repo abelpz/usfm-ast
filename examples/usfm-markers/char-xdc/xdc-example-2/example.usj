@@ -12,6 +12,7 @@
           "type": "verse"
         },
         {
+          "type": "note",
           "marker": "x",
           "content": [
             {
@@ -36,8 +37,7 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         " Listen to this secret truth: we shall not all die, but when the last trumpet sounds, we shall all be changed in an instant, as quickly as the blinking of an eye. For when the trumpet sounds, the dead will be raised, never to die again, and we shall all be changed."
       ]

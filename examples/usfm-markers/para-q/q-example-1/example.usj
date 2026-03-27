@@ -3,30 +3,32 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "HAB",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "3",
       "type": "chapter",
       "marker": "c",
-      "number": "3",
       "sid": "HAB 3"
     },
     {
       "type": "para",
       "marker": "s1",
-      "content": ["A Prayer of Habakkuk"]
+      "content": [
+        "A Prayer of Habakkuk"
+      ]
     },
     {
       "type": "para",
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "1",
+          "type": "verse",
           "sid": "HAB 3:1"
         },
         "This is a prayer of the prophet Habakkuk:"
@@ -41,16 +43,18 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "2",
+          "type": "verse",
           "sid": "HAB 3:2"
         },
         "O ",
         {
-          "type": "char",
           "marker": "nd",
-          "content": ["Lord"]
+          "content": [
+            "Lord"
+          ],
+          "type": "char"
         },
         ", I have heard of what you have done,"
       ]
@@ -58,22 +62,30 @@
     {
       "type": "para",
       "marker": "q2",
-      "content": ["and I am filled with awe."]
+      "content": [
+        "and I am filled with awe."
+      ]
     },
     {
       "type": "para",
       "marker": "q1",
-      "content": ["Now do again in our times"]
+      "content": [
+        "Now do again in our times"
+      ]
     },
     {
       "type": "para",
       "marker": "q2",
-      "content": ["the great deeds you used to do."]
+      "content": [
+        "the great deeds you used to do."
+      ]
     },
     {
       "type": "para",
       "marker": "q1",
-      "content": ["Be merciful, even when you are angry."]
+      "content": [
+        "Be merciful, even when you are angry."
+      ]
     }
   ]
 }

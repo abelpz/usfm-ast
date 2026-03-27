@@ -3,40 +3,46 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "PRO",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "22",
       "type": "chapter",
       "marker": "c",
-      "number": "22",
       "sid": "PRO 22"
     },
     {
       "type": "para",
       "marker": "p",
-      "content": ["..."]
+      "content": [
+        "..."
+      ]
     },
     {
       "type": "para",
       "marker": "s1",
-      "content": ["The Thirty Wise Sayings"]
+      "content": [
+        "The Thirty Wise Sayings"
+      ]
     },
     {
       "type": "para",
       "marker": "sr",
-      "content": ["(22.17--24.22)"]
+      "content": [
+        "(22.17--24.22)"
+      ]
     },
     {
       "type": "para",
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "17",
+          "type": "verse",
           "sid": "PRO 22:17"
         },
         "Listen, and I will teach you what the wise have said. Study their teachings, ..."

@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MAT",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "9",
       "type": "chapter",
       "marker": "c",
-      "number": "9",
       "sid": "MAT 9"
     },
     {

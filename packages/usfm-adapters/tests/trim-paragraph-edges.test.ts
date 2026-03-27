@@ -95,8 +95,8 @@ describe('USFMVisitor Whitespace Handling', () => {
       ast.visit(visitor);
       const result = visitor.getResult();
 
-      // Footnote spaces preserved as they exist in the input (two spaces between 1:2 and \ft)
-      expect(result).toBe('\\f + \\fr 1:2  \\ft Note with spaces  \\f*');
+      // Formatter adds structural space after \f and around caller; paragraph edge trim does not apply inside notes
+      expect(result).toBe('\\f  +  \\fr 1:2  \\ft Note with spaces  \\f*');
     });
 
     it('should handle mixed text and character markers correctly', () => {

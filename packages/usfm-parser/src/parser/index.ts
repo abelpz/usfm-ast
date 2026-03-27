@@ -2169,16 +2169,34 @@ export class USFMParser {
       align = 'center';
     }
 
-    // Extract colspan from marker suffix (e.g., tcr1-2 means colspan=2)
+    // Extract colspan from marker suffix (e.g., tcr1-2 means colspan=2).
+    // Parse linearly from the last '-' to avoid /(\d+)-(\d+)$/ ReDoS on long digit runs.
     let colspan: string | undefined;
     let baseMarker = marker;
-    const rangeMatch = marker.match(/(\d+)-(\d+)$/);
-    if (rangeMatch) {
-      const start = parseInt(rangeMatch[1], 10);
-      const end = parseInt(rangeMatch[2], 10);
-      colspan = (end - start + 1).toString();
-      // Remove the range suffix to get the base marker (e.g., tcr1-2 -> tcr1)
-      baseMarker = marker.replace(/-\d+$/, '');
+    const lastDash = marker.lastIndexOf('-');
+    if (lastDash > 0) {
+      const right = marker.slice(lastDash + 1);
+      const left = marker.slice(0, lastDash);
+      let rightAllDigits = right.length > 0;
+      for (let k = 0; rightAllDigits && k < right.length; k++) {
+        const c = right.charCodeAt(k);
+        if (c < 48 || c > 57) rightAllDigits = false;
+      }
+      if (rightAllDigits) {
+        let i = left.length;
+        while (i > 0) {
+          const c = left.charCodeAt(i - 1);
+          if (c < 48 || c > 57) break;
+          i--;
+        }
+        const startStr = left.slice(i);
+        if (startStr.length > 0) {
+          const start = parseInt(startStr, 10);
+          const end = parseInt(right, 10);
+          colspan = (end - start + 1).toString();
+          baseMarker = left;
+        }
+      }
     }
 
     return { align, colspan, baseMarker };

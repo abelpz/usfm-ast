@@ -3,26 +3,28 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "GLO",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "14",
       "type": "chapter",
       "marker": "c",
-      "number": "14",
-      "pubnumber": "N",
-      "sid": "GLO 14"
+      "sid": "GLO 14",
+      "pubnumber": "N"
     },
     {
       "type": "para",
       "marker": "p",
       "content": [
         {
-          "type": "char",
           "marker": "k",
-          "content": ["Nazarene"]
+          "content": [
+            "Nazarene"
+          ],
+          "type": "char"
         },
         " Someone from the town of Nazareth. The name was used as a title for Jesus and also as a name for the early Christians (Acts 24.5)."
       ]
@@ -32,9 +34,11 @@
       "marker": "p",
       "content": [
         {
-          "type": "char",
           "marker": "k",
-          "content": ["Nazirite"]
+          "content": [
+            "Nazirite"
+          ],
+          "type": "char"
         },
         " A person who took a special vow of self-dedication. Such a person was not to drink beer or wine, cut his hair, or touch a dead body (Numbers 6.1-21). The vow could be taken for a certain period of time, but some persons were dedicated to God as Nazirites from their birth."
       ]
@@ -44,9 +48,11 @@
       "marker": "p",
       "content": [
         {
-          "type": "char",
           "marker": "k",
-          "content": ["New Moon Festival"]
+          "content": [
+            "New Moon Festival"
+          ],
+          "type": "char"
         },
         " A religious observance held by the Israelites on the day of each new moon."
       ]

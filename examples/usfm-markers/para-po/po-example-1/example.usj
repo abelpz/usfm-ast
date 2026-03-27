@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "ROM",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "1",
       "type": "chapter",
       "marker": "c",
-      "number": "1",
       "sid": "ROM 1"
     },
     {
@@ -19,9 +19,9 @@
       "marker": "po",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "1",
+          "type": "verse",
           "sid": "ROM 1:1"
         },
         "From Paul, a servant of Christ Jesus and an apostle chosen and called by God to preach his Good News."
@@ -32,16 +32,16 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "2",
+          "type": "verse",
           "sid": "ROM 1:2"
         },
         "The Good News was promised long ago by God through his prophets, as written in the Holy Scriptures. ... ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "6",
+          "type": "verse",
           "sid": "ROM 1:6"
         },
         "This also includes you who are in Rome, whom God has called to belong to Jesus Christ."
@@ -52,9 +52,9 @@
       "marker": "po",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "7",
+          "type": "verse",
           "sid": "ROM 1:7"
         },
         "And so I write to all of you in Rome whom God loves and has called to be his own people:"

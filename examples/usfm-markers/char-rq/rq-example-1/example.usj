@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "HEB",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "1",
       "type": "chapter",
       "marker": "c",
-      "number": "1",
       "sid": "HEB 1"
     },
     {
@@ -20,16 +20,16 @@
       "content": [
         "... ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "4",
+          "type": "verse",
           "sid": "HEB 1:4"
         },
         "The Son was made greater than the angels, just as the name that God gave him is greater than theirs. ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "5",
+          "type": "verse",
           "sid": "HEB 1:5"
         },
         "For God never said to any of his angels,"
@@ -48,11 +48,11 @@
       "content": [
         "today I have become your Father.” ",
         {
-          "type": "char",
           "marker": "rq",
           "content": [
             "Psa 2.7"
-          ]
+          ],
+          "type": "char"
         }
       ]
     },
@@ -80,11 +80,11 @@
       "content": [
         "and he will be my Son.” ",
         {
-          "type": "char",
           "marker": "rq",
           "content": [
             "2Sa 7.14; 1Ch 17.13"
-          ]
+          ],
+          "type": "char"
         }
       ]
     }

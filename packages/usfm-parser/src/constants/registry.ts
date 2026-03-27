@@ -8,19 +8,88 @@ import { MarkerSyntaxDefinition, USFMMarkerInfo, UsfmStyleType } from './types';
 export class USFMMarkerRegistry {
   private static instance: USFMMarkerRegistry;
 
-  /**
-   * Regular expression for validating USFM markers.
-   * Matches patterns like:
-   * - Basic markers: 'p', 'c', 'v'
-   * - Numbered markers: 'mt1', 'imt2'
-   * - Milestone markers: 'qt-s', 'qt-e'
-   * - Table cell range markers: 'tcr1-2', 'th3-5'
-   */
-  private static readonly MARKER_PATTERN = new RegExp(
-    /^([a-zA-Z]+-?[a-zA-Z]*)(\d*)(-[se])?$|^(th|tc|thr|tcr|thc|tcc)(\d+)(-(\d+))?$/
-  );
+  /** USFM marker tokens are short; reject oversize input before any scanning. */
+  private static readonly MAX_MARKER_STRING_LENGTH = 128;
+
+  /** Longest first so `thr` wins over `th`, etc. */
+  private static readonly TABLE_PREFIXES = ['thr', 'tcr', 'thc', 'tcc', 'th', 'tc'] as const;
 
   private static readonly DEFAULT_MARKERS = defaultMarkers;
+
+  private static isAsciiLetter(ch: string): boolean {
+    const c = ch.charCodeAt(0);
+    return (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a);
+  }
+
+  private static isAsciiDigit(ch: string): boolean {
+    const c = ch.charCodeAt(0);
+    return c >= 0x30 && c <= 0x39;
+  }
+
+  /** `(th|tc|thr|tcr|thc|tcc)(\d+)(-(\d+))?$` without backtracking regex. */
+  private static matchTableCellMarker(marker: string): { prefix: string } | null {
+    for (const prefix of USFMMarkerRegistry.TABLE_PREFIXES) {
+      if (!marker.startsWith(prefix)) continue;
+      const rest = marker.slice(prefix.length);
+      if (USFMMarkerRegistry.matchTableCellNumericSuffix(rest)) {
+        return { prefix };
+      }
+    }
+    return null;
+  }
+
+  private static matchTableCellNumericSuffix(s: string): boolean {
+    const n = s.length;
+    let i = 0;
+    if (i >= n || !USFMMarkerRegistry.isAsciiDigit(s[i])) return false;
+    while (i < n && USFMMarkerRegistry.isAsciiDigit(s[i])) i++;
+    if (i === n) return true;
+    if (s[i] !== '-') return false;
+    i++;
+    const start = i;
+    while (i < n && USFMMarkerRegistry.isAsciiDigit(s[i])) i++;
+    return i === n && i > start;
+  }
+
+  /**
+   * `([a-zA-Z]+-?[a-zA-Z]*)(\d*)(-[se])?$` without polynomial-time regex.
+   * Covers basic / numbered / milestone-style marker ids (e.g. p, mt1, qt1-s, qt-s).
+   */
+  private static parseGenericMarkerForm(marker: string): {
+    baseMarker: string;
+    level: string;
+    milestoneSuffix: string | undefined;
+  } | null {
+    const n = marker.length;
+    let i = 0;
+    if (i >= n || !USFMMarkerRegistry.isAsciiLetter(marker[i])) return null;
+    while (i < n && USFMMarkerRegistry.isAsciiLetter(marker[i])) i++;
+    if (i < n && marker[i] === '-') {
+      i++;
+      while (i < n && USFMMarkerRegistry.isAsciiLetter(marker[i])) i++;
+    }
+    const baseMarker = marker.slice(0, i);
+    const digitStart = i;
+    while (i < n && USFMMarkerRegistry.isAsciiDigit(marker[i])) i++;
+    const level = marker.slice(digitStart, i);
+    let milestoneSuffix: string | undefined;
+    if (i < n) {
+      if (marker[i] !== '-') return null;
+      i++;
+      if (i >= n || (marker[i] !== 's' && marker[i] !== 'e')) return null;
+      milestoneSuffix = marker.slice(i - 1, i + 1);
+      i++;
+    }
+    if (i !== n) return null;
+    return { baseMarker, level, milestoneSuffix };
+  }
+
+  private static isWellFormedMarkerSyntax(marker: string): boolean {
+    return (
+      USFMMarkerRegistry.matchTableCellMarker(marker) !== null ||
+      USFMMarkerRegistry.parseGenericMarkerForm(marker) !== null
+    );
+  }
 
   private markerData: typeof defaultMarkers = {};
 
@@ -76,6 +145,10 @@ export class USFMMarkerRegistry {
       this: USFMMarkerRegistry,
       markerToLookup: string
     ): USFMMarkerInfo | undefined {
+      if (markerToLookup.length > USFMMarkerRegistry.MAX_MARKER_STRING_LENGTH) {
+        return undefined;
+      }
+
       const info = this.markerData[markerToLookup];
       if (info) {
         // Merge with fallback properties from syntaxByType
@@ -124,9 +197,9 @@ export class USFMMarkerRegistry {
       }
 
       // Check for table cell pattern first
-      const tableCellMatch = markerToLookup.match(/^(th|tc|thr|tcr|thc|tcc)(\d+)(-(\d+))?$/);
-      if (tableCellMatch) {
-        const [, prefix] = tableCellMatch;
+      const tableCell = USFMMarkerRegistry.matchTableCellMarker(markerToLookup);
+      if (tableCell) {
+        const { prefix } = tableCell;
         // Look up the base pattern (e.g., 'tcr1' for 'tcr1-2')
         const baseKey = prefix + '1';
         const baseInfo = this.markerData[baseKey];
@@ -137,12 +210,12 @@ export class USFMMarkerRegistry {
         }
       }
 
-      const match = markerToLookup.match(USFMMarkerRegistry.MARKER_PATTERN);
-      if (!match) {
+      const parsed = USFMMarkerRegistry.parseGenericMarkerForm(markerToLookup);
+      if (!parsed) {
         return undefined;
       }
 
-      const [, baseMarker, level, milestoneSuffix] = match;
+      const { baseMarker, level, milestoneSuffix } = parsed;
       const lookupKey = level && milestoneSuffix ? baseMarker + level : baseMarker;
 
       const baseInfo = this.markerData[lookupKey];
@@ -170,7 +243,12 @@ export class USFMMarkerRegistry {
    * @throws Error if the marker is invalid or already exists
    */
   public addMarker(marker: string, info: USFMMarkerInfo): void {
-    if (!USFMMarkerRegistry.MARKER_PATTERN.test(marker)) {
+    if (marker.length > USFMMarkerRegistry.MAX_MARKER_STRING_LENGTH) {
+      throw new Error(
+        `Invalid marker format: marker exceeds maximum length (${USFMMarkerRegistry.MAX_MARKER_STRING_LENGTH})`
+      );
+    }
+    if (!USFMMarkerRegistry.isWellFormedMarkerSyntax(marker)) {
       throw new Error(`Invalid marker format: ${marker}`);
     }
 
@@ -187,8 +265,9 @@ export class USFMMarkerRegistry {
    */
   public isValidMarker(marker: string): boolean {
     if (!marker || typeof marker !== 'string') return false;
+    if (marker.length > USFMMarkerRegistry.MAX_MARKER_STRING_LENGTH) return false;
 
-    return !!this.markerData[marker] || USFMMarkerRegistry.MARKER_PATTERN.test(marker);
+    return !!this.markerData[marker] || USFMMarkerRegistry.isWellFormedMarkerSyntax(marker);
   }
 
   /**
