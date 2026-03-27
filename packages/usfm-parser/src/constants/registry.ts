@@ -8,6 +8,9 @@ import { MarkerSyntaxDefinition, USFMMarkerInfo, UsfmStyleType } from './types';
 export class USFMMarkerRegistry {
   private static instance: USFMMarkerRegistry;
 
+  /** USFM marker tokens are short; cap length before regex work to avoid polynomial-time matching. */
+  private static readonly MAX_MARKER_STRING_LENGTH = 128;
+
   /**
    * Regular expression for validating USFM markers.
    * Matches patterns like:
@@ -76,6 +79,10 @@ export class USFMMarkerRegistry {
       this: USFMMarkerRegistry,
       markerToLookup: string
     ): USFMMarkerInfo | undefined {
+      if (markerToLookup.length > USFMMarkerRegistry.MAX_MARKER_STRING_LENGTH) {
+        return undefined;
+      }
+
       const info = this.markerData[markerToLookup];
       if (info) {
         // Merge with fallback properties from syntaxByType
@@ -187,6 +194,7 @@ export class USFMMarkerRegistry {
    */
   public isValidMarker(marker: string): boolean {
     if (!marker || typeof marker !== 'string') return false;
+    if (marker.length > USFMMarkerRegistry.MAX_MARKER_STRING_LENGTH) return false;
 
     return !!this.markerData[marker] || USFMMarkerRegistry.MARKER_PATTERN.test(marker);
   }

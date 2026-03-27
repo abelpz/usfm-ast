@@ -193,9 +193,12 @@ export class USFMFormatter {
     // 1. Newlines are always structural - can be added/normalized freely
     // 2. Spaces can be significant - be careful about adding where none existed
 
-    // Analyze the current output to understand the whitespace situation
-    const trailingWhitespaceMatch = currentOutput.match(/(\s*)$/);
-    const trailingWhitespace = trailingWhitespaceMatch ? trailingWhitespaceMatch[1] : '';
+    // Analyze the current output to understand the whitespace situation (linear scan; avoid /(\s*)$/ ReDoS)
+    let twStart = currentOutput.length;
+    while (twStart > 0 && /\s/.test(currentOutput[twStart - 1])) {
+      twStart--;
+    }
+    const trailingWhitespace = currentOutput.slice(twStart);
     const hasTrailingWhitespace = trailingWhitespace.length > 0;
     const hasTrailingSpace = /[ \t]$/.test(currentOutput);
     const outputWithoutTrailingWhitespace = hasTrailingWhitespace
