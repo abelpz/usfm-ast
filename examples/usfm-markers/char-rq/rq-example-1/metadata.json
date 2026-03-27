@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Hebrews 1.5 (GNT)",
+    "usx": "Poetic format, where all text is a quotation",
+    "usj": "Poetic format, where all text is a quotation"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

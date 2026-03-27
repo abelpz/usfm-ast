@@ -1,0 +1,17 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "rem",
+      "content": ["First draft complete, waiting for checks."]
+    }
+  ]
+}

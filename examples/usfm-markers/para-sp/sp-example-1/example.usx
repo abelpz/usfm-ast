@@ -1,0 +1,14 @@
+<usx version="3.1">
+  <book code="JOB" style="id"/>
+  <chapter number="3" style="c" sid="JOB 3"/>
+  <para style="s1">Job's Complaint to God</para>
+  <para style="p">
+    <verse number="1" style="v" sid="JOB 3:1"/>Finally Job broke the silence and
+    cursed the day on which he had been born.<verse eid="JOB 3:1"/></para>
+  <para style="sp">Job</para>
+  <para style="q1">
+    <verse number="2-3" style="v" sid="JOB 3:2-3"/>O God, put a curse on the day I
+    was born;</para>
+  <para style="q2" vid="JOB 3:2-3">put a curse on the night when I was conceived!
+    <verse eid="JOB 3:2-3"/></para>
+</usx>

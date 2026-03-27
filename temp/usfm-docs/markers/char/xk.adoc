@@ -1,0 +1,56 @@
+= xk
+:description: Cross Reference - Keyword
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/xk.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Cross Reference - Keyword. The target references (xref:notes:crossref/xt[xt]) relate to this specific keyword quoted from the text.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\xk ++``#__content__#
+* *USX:* ``++<char style="xk">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:note:crossref/index.adoc[CrossReference]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Missing
+[source#src-usfm-char-xk_1,usfm,highlight=1]
+----
+Missing
+----
+USX::
++
+.Missing
+[source#src-usx-char-xk_1,xml,highlight=1]
+----
+Missing
+----
+======
+
+image::char/missing.jpg[,300]
+
+== Properties
+
+TextType:: NoteText
+TextProperties:: publishable, vernacular, note
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

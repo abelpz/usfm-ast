@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Reference to this glossary from 1TI (Swedish SB00 Study Bible)",
+    "usx": "Reference to this glossary from 1TI (Swedish SB00 Study Bible)",
+    "usj": "Reference to this glossary from 1TI (Swedish SB00 Study Bible)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

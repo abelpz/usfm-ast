@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Psalm 54 (GNT - _markup adapted_)",
+    "usx": "Psalm 54 (GNT - _markup adapted_)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

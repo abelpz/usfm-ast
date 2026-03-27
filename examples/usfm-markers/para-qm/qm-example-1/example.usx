@@ -1,0 +1,14 @@
+<usx version="3.1">
+  <book code="1CH" style="id"/>
+  <chapter number="12" style="c" sid="1CH 12"/>
+  <para style="p">
+    <verse number="18" style="v" sid="1CH 12:18"/>God's spirit took control of one
+    of them, Amasai, who later became the commander of “The Thirty,” and he called
+    out,</para>
+  <para style="qm1" vid="1CH 12:18">“David son of Jesse, we are yours!</para>
+  <para style="qm1" vid="1CH 12:18">Success to you and those who help you!</para>
+  <para style="qm1" vid="1CH 12:18">God is on your side.”</para>
+  <para style="b" vid="1CH 12:18"/>
+  <para style="m" vid="1CH 12:18">David welcomed them and made them officers in his
+    army.<verse eid="1CH 12:18"/></para>
+</usx>

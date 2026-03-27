@@ -1,0 +1,25 @@
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <chapter number="5" style="c" sid="MAT 5"/>
+  <para style="p">
+    <verse number="1" style="v" sid="GEN 1:1"/>まだ
+    <char style="rb" gloss="なに">何</char>もなかった
+    <char style="rb" gloss="とき">時</char>、
+    <char style="rb" gloss="かみ">神</char>は
+    <char style="rb" gloss="てん">天</char>と
+    <char style="rb" gloss="ち">地</char>を
+    <char style="rb" gloss="つく">造</char>りました。
+    <verse eid="GEN 1:1"/>
+    <verse number="2" style="v" sid="GEN 1:2"/>
+    <char style="rb" gloss="ち">地</char>は
+    <char style="rb" gloss="かたち">形</char>も
+    <char style="rb" gloss="さだ">定</char>まらず、
+    <char style="rb" gloss="やみ">闇</char>に
+    <char style="rb" gloss="つつ">包</char>まれた
+    <char style="rb" gloss="みず">水</char>の
+    <char style="rb" gloss="うえ">上</char>を、さらに
+    <char style="rb" gloss="かみ">神</char>の
+    <char style="rb" gloss="れい">霊</char>が
+    <char style="rb" gloss="おお">覆</char>っていました。
+    <verse eid="GEN 1:2"/></para>
+</usx>

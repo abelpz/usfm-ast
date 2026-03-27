@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Proverbs 22.17 (GNT - markup adapted)",
+    "usx": "Proverbs 22.17 (GNT - markup adapted)",
+    "usj": "Proverbs 22.17 (GNT - markup adapted)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

@@ -1,0 +1,142 @@
+= sp
+:description: Speaker identification
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/sp.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Speaker identification.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\sp ++``#__content__#
+* *USX:* ``++<para style="sp">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]` > `[Section]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Job 3.1 (GNT)
+[source#src-usfm-para-sp_1,usfm,highlight=6]
+----
+\id JOB
+\c 3
+\s1 Job's Complaint to God
+\p
+\v 1 Finally Job broke the silence and cursed the day on which he had been born.
+\sp Job
+\q1
+\v 2-3 O God, put a curse on the day I was born;
+\q2 put a curse on the night when I was conceived!
+----
+USX::
++
+.Job 3.1 (GNT)
+[source#src-usx-para-sp_1,xml,highlight=8]
+----
+<usx version="3.1">
+  <book code="JOB" style="id"/>
+  <chapter number="3" style="c" sid="JOB 3"/>
+  <para style="s1">Job's Complaint to God</para>
+  <para style="p">
+    <verse number="1" style="v" sid="JOB 3:1"/>Finally Job broke the silence and
+    cursed the day on which he had been born.<verse eid="JOB 3:1"/></para>
+  <para style="sp">Job</para>
+  <para style="q1">
+    <verse number="2-3" style="v" sid="JOB 3:2-3"/>O God, put a curse on the day I
+    was born;</para>
+  <para style="q2" vid="JOB 3:2-3">put a curse on the night when I was conceived!
+    <verse eid="JOB 3:2-3"/></para>
+</usx>
+----
+USJ::
++
+.Job 3.1 (GNT)
+[source#src-usj-para-sp_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "JOB",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "3",
+      "sid": "JOB 3"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": ["Job's Complaint to God"]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "JOB 3:1"
+        },
+        "Finally Job broke the silence and cursed the day on which he had been born."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "sp",
+      "content": ["Job"]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2-3",
+          "sid": "JOB 3:2-3"
+        },
+        "O God, put a curse on the day I was born;"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["put a curse on the night when I was conceived!"]
+    }
+  ]
+}
+----
+======
+
+image::para/sp_1.jpg[Job 3.1 (GNT),300]
+
+== Properties
+
+TextType:: Section
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

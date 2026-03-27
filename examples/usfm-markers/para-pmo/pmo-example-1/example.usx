@@ -1,0 +1,19 @@
+<usx version="3.1">
+  <book code="MRK" style="id"/>
+  <chapter number="15" style="c" sid="MRK 15"/>
+  <para style="p">...</para>
+  <para style="p">
+    <verse number="22" style="v" sid="ACT 15:22"/>The apostles, the leaders, and 
+    all the church members decided to send some men to Antioch along with Paul 
+    and Barnabas. They chose Silas and Judas Barsabbas, who were two leaders of 
+    the Lord's followers. <verse eid="ACT 15:22"/>
+    <verse number="23" style="v" sid="ACT 15:23"/>They wrote a letter that said:
+    </para>
+  <para style="pmo" vid="ACT 15:23">We apostles and leaders send friendly greetings
+    to all of you Gentiles who are followers of the Lord in Antioch, Syria, and
+    Cilicia.<verse eid="ACT 15:23"/></para>
+  <para style="pm">
+    <verse number="24" style="v" sid="ACT 15:24"/>We have heard that some people
+    from here have terribly upset you by what they said. But we did not send them!
+    <verse eid="ACT 15:24"/></para>
+</usx>

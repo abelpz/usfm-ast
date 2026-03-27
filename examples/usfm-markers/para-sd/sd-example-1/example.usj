@@ -1,0 +1,82 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "13",
+      "sid": "MAT 13"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "..."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "m",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "51",
+          "sid": "MAT 13:51"
+        },
+        "“Have you understood all these things?” Jesus asked."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "“Yes,” they replied."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "52",
+          "sid": "MAT 13:52"
+        },
+        "He said to them, “Therefore every teacher of the law who has been instructed about the kingdom of heaven is like the owner of a house who brings out of his storeroom new treasures as well as old.”"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "sd2"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "53",
+          "sid": "MAT 13:53"
+        },
+        "When Jesus had finished these parables, he moved on from there. ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "54",
+          "sid": "MAT 13:54"
+        },
+        "Coming to his hometown, he began teaching the people in their synagogue, and they were amazed. “Where did this man get this wisdom and these miraculous powers?” they asked."
+      ]
+    }
+  ]
+}

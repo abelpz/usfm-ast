@@ -1,0 +1,158 @@
+= li#
+:description: List entry
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/li.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: List entry. May be used to mark the individual entries of a list, such as the days within the creation account, the 10 commandments, or a list of offerings etc..
+* The variable `#` (1-4) represents the level of indent.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\li# ++``#__content__#
+* *USX:* ``++<para style="li#">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Numbers 7.84-88 (GNT)
+[source#src-usfm-para-li_1,usfm,highlight=6..12]
+----
+\id NUM
+\c 7
+\p
+\v 84-88 The totals of the offerings brought by the twelve leaders for the 
+dedication of the altar were as follows:
+\li1 –twelve silver bowls and twelve silver basins weighing a total of 60 pounds
+\li1 –twelve gold dishes weighing a total of 48 ounces, filled with incense
+\li1 –twelve bulls, twelve rams, and twelve one-year-old lambs, plus the grain 
+offerings that go with them, for the burnt offerings
+\li1 –twelve goats for the sin offerings
+\li1 –twenty-four bulls, sixty rams, sixty goats, sixty one-year-old lambs, for 
+the fellowship offerings
+----
+USX::
++
+.Numbers 7.84-88 (GNT)
+[source#src-usx-para-li_1,xml,highlight=8..18]
+----
+<usx version="3.1">
+  <book code="NUM" style="id"/>
+  <chapter number="7" style="c" sid="NUM 7"/>
+  <para style="p">
+    <verse number="84-88" style="v" sid="NUM 7:84-88"/>The totals of the offerings
+    brought by the twelve leaders for the dedication of the altar were as follows:
+    </para>
+  <para style="li1" vid="NUM 7:84-88">–twelve silver bowls and twelve silver basins
+    weighing a total of 60 pounds</para>
+  <para style="li1" vid="NUM 7:84-88">–twelve gold dishes weighing a total of 48
+    ounces, filled with incense</para>
+  <para style="li1" vid="NUM 7:84-88">–twelve bulls, twelve rams, and twelve
+    one-year-old lambs, plus the grain offerings that go with them, for the burnt
+    offerings</para>
+  <para style="li1" vid="NUM 7:84-88">–twelve goats for the sin offerings</para>
+  <para style="li1" vid="NUM 7:84-88">–twenty-four bulls, sixty rams, sixty goats,
+    sixty one-year-old lambs, for the fellowship offerings<verse eid="NUM 7:84-88"/>
+    </para>
+</usx>
+----
+USJ::
++
+.Numbers 7.84-88 (GNT)
+[source#src-usj-para-li_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "NUM",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "7",
+      "sid": "NUM 7"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "84-88",
+          "sid": "NUM 7:84-88"
+        },
+        "The totals of the offerings brought by the twelve leaders for the dedication of the altar were as follows:"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": [
+        "–twelve silver bowls and twelve silver basins weighing a total of 60 pounds"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": [
+        "–twelve gold dishes weighing a total of 48 ounces, filled with incense"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": [
+        "–twelve bulls, twelve rams, and twelve one-year-old lambs, plus the grain offerings that go with them, for the burnt offerings"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": ["–twelve goats for the sin offerings"]
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": [
+        "–twenty-four bulls, sixty rams, sixty goats, sixty one-year-old lambs, for the fellowship offerings"
+      ]
+    }
+  ]
+}
+----
+======
+
+image::para/li_1.jpg[Numbers 7.84-88 (GNT),300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+- Commonly formatted using a hanging indent (out-dented).
+
+// end::public[]
+
+== Discussion

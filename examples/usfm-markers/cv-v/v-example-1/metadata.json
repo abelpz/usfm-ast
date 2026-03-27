@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Matthew 1.18,19 (GNT)",
+    "usx": "Matthew 1.18,19 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

@@ -1,0 +1,155 @@
+= ts-s / ts-e
+:description: Translator's section start and end milestones
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/ms/ts.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Translator's section start and end milestones. For identifying a section (chunk) of text suitable for translating at one time.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\ts-s |++``#__@sid__#``++\*++`` / ``++\ts-e |++``#__@eid__#``++\*++``
+* *USX:* ``++<ms style="ts-s" ++``#__@sid__#``++/>++`` / ``++<ms style="ts-e" ++``#__@eid__#``++/>++``
+#sid#::: A unique identifier which can be used to unambiguously identify the starting milestone, and to clearly associate the starting milestone with the ending milestone (`eid`). The `sid` can be composed of any mixture of numbers, letters, and underscores.
+#eid#::: A unique identifier which can be used to unambiguously identify the ending milestone, and to clearly associate the ending milestone with the starting milestone (`sid`). If an `sid` attribute is used for the starting milestone in a milestone pair, the ending milestone must include `eid`.
+Style Type:: xref:ms:index.adoc[Milestone]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]`
+// tag::spec[]
+Added:: 3.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Jude 5-8 (ULB) - standalone milestones
+[source#src-usfm-ms-ts_1,usfm,highlight=1;9;17]
+----
+\ts\*
+\p
+\v 5 Now I wish to remind you, although you know everything, that the Lord 
+once saved a people out of the land of Egypt, but that afterward he destroyed 
+those who did not believe.
+\v 6 And angels who did not keep to their own principality, but left their 
+proper dwelling place—God has kept them in everlasting chains in darkness for 
+the judgment of the great day.
+\ts\*
+\v 7 It is just like Sodom and Gomorrah and the cities around them, which in 
+a similar way gave themselves over to fornication and pursued unnatural 
+desires. They were given as examples of those who suffer the punishment of 
+eternal fire.
+\p
+\v 8 Yet in the same way these also pollute their bodies in their dreams, and 
+they reject authority, and they say evil things about the glorious ones.
+\ts\*
+...
+----
+USX::
++
+.Jude 5-8 (ULB) - standalone milestones
+[source#src-usx-ts-qt_1,xml,highlight=1;11;22]
+----
+<ms style="ts"/>
+<para style="p">
+  <verse number="5" style="v" sid="JUD 1:5"/>Now I wish to remind you, 
+  although you know everything, that the Lord once saved a people out of 
+  the land of Egypt, but that afterward he destroyed those who did not 
+  believe.<verse eid="JUD 1:5"/>
+  <verse number="6" style="v" sid="JUD 1:6"/>And angels who did not keep 
+  to their own principality, but left their proper dwelling place—God has 
+  kept them in everlasting chains in darkness for the judgment of the 
+  great day.<verse eid="JUD 1:6"/>
+  <ms style="ts"/>
+  <verse number="7" style="v" sid="JUD 1:7"/>It is just like Sodom and 
+  Gomorrah and the cities around them, which in a similar way gave 
+  themselves over to fornication and pursued unnatural desires. They were 
+  given as examples of those who suffer the punishment of eternal fire.
+  <verse eid="JUD 1:7"/>
+</para>
+<para style="p">
+  <verse number="8" style="v" sid="JUD 1:8"/>Yet in 
+  the same way these also pollute their bodies in their dreams, and they 
+  reject authority, and they say evil things about the glorious ones.
+  <ms style="ts"/>
+  ...
+----
+======
+
+[tabs]
+======
+USFM::
++
+.Jude 5-8 (ULB) - milestone pairs
+[source#src-usfm-ms-ts_2,usfm,highlight=1;9;10;18]
+----
+\ts |sid="ts.JUD.5-6"\*
+\p
+\v 5 Now I wish to remind you, although you know everything, that the Lord 
+once saved a people out of the land of Egypt, but that afterward he destroyed 
+those who did not believe.
+\v 6 And angels who did not keep to their own principality, but left their 
+proper dwelling place—God has kept them in everlasting chains in darkness for 
+the judgment of the great day.
+\ts-e |eid="ts.JUD.5-6"\*
+\ts-s |sid="ts.JUD.7-8"\*
+\v 7 It is just like Sodom and Gomorrah and the cities around them, which in 
+a similar way gave themselves over to fornication and pursued unnatural 
+desires. They were given as examples of those who suffer the punishment of 
+eternal fire.
+\p
+\v 8 Yet in the same way these also pollute their bodies in their dreams, and 
+they reject authority, and they say evil things about the glorious ones.
+\ts-e |eid="ts.JUD.7-8"\*
+...
+----
+USX::
++
+.Jude 5-8 (ULB) - milestone pairs
+[source#src-usx-ts-qt_2,xml,highlight=1;11;12;23]
+----
+<ms style="ts-s" sid="ts.JUD.5-6"/>
+<para style="p">
+  <verse number="5" style="v" sid="JUD 1:5"/>Now I wish to remind you, 
+  although you know everything, that the Lord once saved a people out of 
+  the land of Egypt, but that afterward he destroyed those who did not 
+  believe.<verse eid="JUD 1:5"/>
+  <verse number="6" style="v" sid="JUD 1:6"/>And angels who did not keep 
+  to their own principality, but left their proper dwelling place—God has 
+  kept them in everlasting chains in darkness for the judgment of the 
+  great day.<verse eid="JUD 1:6"/>
+  <ms style="ts-e" eid="ts.JUD.5-6"/>
+  <ms style="ts-s" sid="ts.JUD.7-8"/>
+  <verse number="7" style="v" sid="JUD 1:7"/>It is just like Sodom and 
+  Gomorrah and the cities around them, which in a similar way gave 
+  themselves over to fornication and pursued unnatural desires. They were 
+  given as examples of those who suffer the punishment of eternal fire.
+  <verse eid="JUD 1:7"/>
+</para>
+<para style="p">
+  <verse number="8" style="v" sid="JUD 1:8"/>Yet in 
+  the same way these also pollute their bodies in their dreams, and they 
+  reject authority, and they say evil things about the glorious ones.
+  <ms style="ts-e" eid="ts.JUD.7-8"/>
+----
+======
+
+== Properties
+
+StyleType:: xref:ms:index.adoc[Milestone]
+OccursUnder:: `[ChapterContent]`
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion
+
+Links to open repository Issues

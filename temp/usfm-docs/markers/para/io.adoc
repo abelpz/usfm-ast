@@ -1,0 +1,183 @@
+= io#
+:description: Introduction outline entry
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/io.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Introduction outline entry. Outline entries usually end with a range of references, sometimes in parentheses. These references can be marked with the character type xref:char:introductions/ior.adoc[ior].
+* The variable `#` (1-4) represents the outline level.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\io# ++``#__content__#
+* *USX:* ``++<para style="io#">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Introduction to Mark (GNT)
+[source#src-usfm-para-io_1,usfm,highlight=5..10]
+----
+\id MRK
+\ip The two endings to the Gospel, which are enclosed in brackets, are 
+generally regarded as written by someone other than the author of \bk Mark\bk*
+\iot Outline of Contents
+\io1 The beginning of the gospel (1.1-13)
+\io1 Jesus' public ministry in Galilee (1.14–9.50)
+\io1 From Galilee to Jerusalem (10.1-52)
+\io1 The last week in and near Jerusalem (11.1–15.47)
+\io1 The resurrection of Jesus (16.1-8)
+\io1 The appearances and ascension of the risen Lord (16.9-20)
+\c 1
+\s The Preaching of John the Baptist
+\r (Matthew 3.1-12; Luke 3.1-18; John 1.19-28)
+\p
+\v 1 This is the Good News about Jesus Christ
+----
+USX::
++
+.Introduction to Mark (GNT)
+[source#src-usx-para-io_1,xml,highlight=7..12]
+----
+<usx version="3.1">
+  <book code="MRK" style="id"/>
+  <para style="ip">The two endings to the Gospel, which are enclosed in brackets,
+    are generally regarded as written by someone other than the author of <char
+      style="bk">Mark</char></para>
+  <para style="iot">Outline of Contents</para>
+  <para style="io1">The beginning of the gospel (1.1-13)</para>
+  <para style="io1">Jesus' public ministry in Galilee (1.14–9.50)</para>
+  <para style="io1">From Galilee to Jerusalem (10.1-52)</para>
+  <para style="io1">The last week in and near Jerusalem (11.1–15.47)</para>
+  <para style="io1">The resurrection of Jesus (16.1-8)</para>
+  <para style="io1">The appearances and ascension of the risen Lord (16.9-20)</para>
+  <chapter number="1" style="c" sid="MRK 1"/>
+  <para style="s">The Preaching of John the Baptist</para>
+  <para style="r">(Matthew 3.1-12; Luke 3.1-18; John 1.19-28)</para>
+  <para style="p">
+    <verse number="1" style="v" sid="MRK 1:1"/>This is the Good News about Jesus
+    Christ<verse eid="MRK 1:1"/></para>
+</usx>
+----
+USJ::
++
+.Introduction to Mark (GNT)
+[source#src-usj-para-io_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "ip",
+      "content": [
+        "The two endings to the Gospel, which are enclosed in brackets, are generally regarded as written by someone other than the author of",
+        {
+          "type": "char",
+          "marker": "bk",
+          "content": ["Mark"]
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "iot",
+      "content": ["Outline of Contents"]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": ["The beginning of the gospel (1.1-13)"]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": ["Jesus' public ministry in Galilee (1.14–9.50)"]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": ["From Galilee to Jerusalem (10.1-52)"]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": ["The last week in and near Jerusalem (11.1–15.47)"]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": ["The resurrection of Jesus (16.1-8)"]
+    },
+    {
+      "type": "para",
+      "marker": "io1",
+      "content": ["The appearances and ascension of the risen Lord (16.9-20)"]
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "MRK 1"
+    },
+    {
+      "type": "para",
+      "marker": "s",
+      "content": ["The Preaching of John the Baptist"]
+    },
+    {
+      "type": "para",
+      "marker": "r",
+      "content": ["(Matthew 3.1-12; Luke 3.1-18; John 1.19-28)"]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "MRK 1:1"
+        },
+        "This is the Good News about Jesus Christ"
+      ]
+    }
+  ]
+}
+----
+======
+
+image::para/io_1.jpg[Introduction to Mark (GNT),400]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Introduction to Mark (Good News Study Bible)",
+    "usx": "Introduction to Mark (Good News Study Bible)",
+    "usj": "Introduction to Mark (Good News Study Bible)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

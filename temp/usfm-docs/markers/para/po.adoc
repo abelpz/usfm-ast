@@ -1,0 +1,168 @@
+= po
+:description: Letter opening
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/po.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Letter opening.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\po ++``#__content__#
+* *USX:* ``++<para style="po">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]`
+// tag::spec[]
+Added:: 3.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Romans 1.1,7 (GNT)
+[source#src-usfm-para-po_1,usfm,highlight=3;12;15]
+----
+\id ROM
+\c 1
+\po
+\v 1 From Paul, a servant of Christ Jesus and an apostle chosen and called by 
+God to preach his Good News.
+\p
+\v 2 The Good News was promised long ago by God through his prophets, as 
+written in the Holy Scriptures.
+...
+\v 6 This also includes you who are in Rome, whom God has called to belong to 
+Jesus Christ.
+\po
+\v 7 And so I write to all of you in Rome whom God loves and has called to be 
+his own people:
+\po May God our Father and the Lord Jesus Christ give you grace and peace.
+----
+USX::
++
+.Romans 1.1,7 (GNT)
+[source#src-usx-para-po_1,xml,highlight=4;16;19]
+----
+<usx version="3.1">
+  <book code="ROM" style="id"/>
+  <chapter number="1" style="c" sid="ROM 1"/>
+  <para style="po">
+    <verse number="1" style="v" sid="ROM 1:1" />From Paul, a servant of Christ 
+    Jesus and an apostle chosen and called by God to preach his Good News.
+    <verse eid="ROM 1:1" /></para>
+  <para style="p">
+    <verse number="2" style="v" sid="ROM 1:2" />The Good News was promised long 
+    ago by God through his prophets, as written in the Holy Scriptures. 
+    <verse eid="ROM 1:2" />
+    ...
+    <verse number="6" style="v" sid="ROM 1:6" />This also includes you who are 
+    in Rome, whom God has called to belong to Jesus Christ.<verse eid="ROM 1:6" />
+    </para>
+  <para style="po">
+    <verse number="7" style="v" sid="ROM 1:7" />And so I write to all of you in 
+    Rome whom God loves and has called to be his own people:</para>
+  <para style="po" vid="ROM 1:7">May God our Father and the Lord Jesus Christ 
+    give you grace and peace.<verse eid="ROM 1:7" /></para>
+</usx>
+----
+USJ::
++
+.Romans 1.1,7 (GNT)
+[source#src-usj-para-po_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "ROM",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "ROM 1"
+    },
+    {
+      "type": "para",
+      "marker": "po",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "ROM 1:1"
+        },
+        "From Paul, a servant of Christ Jesus and an apostle chosen and called by God to preach his Good News. "
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "ROM 1:2"
+        },
+        "The Good News was promised long ago by God through his prophets, as written in the Holy Scriptures. ",
+        " ... ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "6",
+          "sid": "ROM 1:6"
+        },
+        "This also includes you who are in Rome, whom God has called to belong to Jesus Christ."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "po",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "7",
+          "sid": "ROM 1:7"
+        },
+        "And so I write to all of you in Rome whom God loves and has called to be his own people:"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "po",
+      "content": [
+        "May God our Father and the Lord Jesus Christ give you grace and peace."
+      ]
+    }
+  ]
+}
+----
+======
+
+image::para/po_1.jpg[Romans 1.1 and 7 (GNT),600]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

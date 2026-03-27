@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Optbreak in paragraph text - Matthew 9.1 (GNT)",
+    "usx": "Optbreak in paragraph text - Matthew 9.1 (GNT)",
+    "usj": "Optbreak in paragraph text - Matthew 9.1 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PSA",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "115",
+      "sid": "PSA 115"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "3",
+          "sid": "PSA 115:3"
+        },
+        "Our God is in heaven;"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["he does whatever he wishes."]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "4",
+          "sid": "PSA 115:4"
+        },
+        {
+          "type": "note",
+          "marker": "x",
+          "caller": "-",
+          "content": [
+            {
+              "type": "char",
+              "marker": "xo",
+              "content": ["115.4-8: "]
+            },
+            {
+              "type": "char",
+              "marker": "xt",
+              "content": [
+                "Ps 135.15-18; ",
+                {
+                  "type": "char",
+                  "marker": "dc",
+                  "content": ["Ltj Jr 4-73; "]
+                }
+              ]
+            },
+            {
+              "type": "char",
+              "marker": "xt",
+              "content": ["Rev 9.20."]
+            }
+          ]
+        },
+        " Their gods are made of silver and gold,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["formed by human hands."]
+    }
+  ]
+}

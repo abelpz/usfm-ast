@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<usx version="3.0">
+  <book code="REV" style="id" />
+  <chapter number="1" style="c" sid="REV 1" />
+  <para style="p">
+    <verse number="1" style="v" sid="REV 1:1" />
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit,
+    <verse eid="REV 1:1" />
+    <verse number="2" style="v" sid="REV 1:2" />
+    ac gravida risus.
+  </para>
+  <para style="p" vid="REV 1:2">
+    Cras scelerisque porta nulla,
+    <verse eid="REV 1:2" />
+    <verse number="3" style="v" sid="REV 1:3" />
+    vitae posuere ligula elementum sit amet.
+    <verse eid="REV 1:3" />
+  </para>
+  <chapter eid="REV 1" />
+</usx>

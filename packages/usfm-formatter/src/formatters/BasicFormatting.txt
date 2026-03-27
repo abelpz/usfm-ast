@@ -1,0 +1,15 @@
+# Formatter logic:
+
+## Predefined markers with special content:
+
+v, c, f, etc.
+## Formatting Usage:
+
+```ts
+.addMarker("", "id") //produces: "\\id "
+.addContent("\\id", "PSA") //produces: "\\id PSA " (peeks and find there is a id marker, and then it adds a space after the id content because id is defined as having special content)
+.addMarker("\\id PSA ", "p") //produces: "\\id PSA\n\\p " (since the paragraph marker is on new line, it adds a newline and deletes the space because the paragraph marker on new line rule)
+.addMarker("\\id PSA\n\\p ", "v") //produces: "\\id PSA\n\\p\n\\v " (it adds a newline and deletes the space because the verse marker on new line rule)
+.addContent("\\id PSA\n\\p\n\\v ", "1") //produces: "\\id PSA\n\\p\n\\v 1 " (peeks the end and finds there is a verse marker, and then it adds a space after the verse number because verse is defined as having special content)
+.addContent("\\id PSA\n\\p\n\\v 1 ", "Text") //produces: "\\id PSA\n\\p\n\\v 1 Text" (doesn't find a maker so it adds the content)
+```

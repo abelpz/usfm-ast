@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Esther-Greek 3.14-15 ('Addition B') (CEV - _adapted_)",
+    "usx": "Esther-Greek 3.14-15 ('Addition B') (CEV - _adapted_)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

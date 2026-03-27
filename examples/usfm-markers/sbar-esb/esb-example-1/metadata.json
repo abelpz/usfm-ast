@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Mark 1 (CEV Learning Bible)",
+    "usx": "Mark 1 (CEV Learning Bible)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

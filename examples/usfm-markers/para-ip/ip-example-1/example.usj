@@ -1,0 +1,44 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "h",
+      "content": ["Mark"]
+    },
+    {
+      "type": "para",
+      "marker": "mt2",
+      "content": ["The Gospel according to"]
+    },
+    {
+      "type": "para",
+      "marker": "mt1",
+      "content": ["MARK"]
+    },
+    {
+      "type": "para",
+      "marker": "is",
+      "content": ["Introduction"]
+    },
+    {
+      "type": "para",
+      "marker": "ip",
+      "content": [
+        {
+          "type": "char",
+          "marker": "bk",
+          "content": ["The Gospel according to Mark"]
+        },
+        " begins with the statement that it is “the Good News about Jesus Christ, the Son of God.” Jesus is pictured as a man of action and authority. His authority is seen in his teaching, in his power over demons, and in forgiving people's sins. Jesus speaks of himself as the Son of Man, who came to give his life to set people free from sin."
+      ]
+    }
+  ]
+}

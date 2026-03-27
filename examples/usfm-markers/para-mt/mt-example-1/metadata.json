@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Introduction to Acts (GNT)",
+    "usx": "Introduction to Acts (GNT)",
+    "usj": "Introduction to Acts (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

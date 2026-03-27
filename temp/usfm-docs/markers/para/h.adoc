@@ -1,0 +1,85 @@
+= h
+:description: Running header text
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/h.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Running header text.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\h ++``#__content__#
+* *USX:* ``++<para style="h">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-headers[BookHeaders]]`
+// tag::spec[]
+Added:: 1.0
+Updated:: 3.0
+* _Deprecated_ `h#` syntax. It is no longer recommended to use the numbered variable syntax `h#`, where the variable `#` represented components or 'levels' of text for the running header (e.g. inside, outside, or sub-division/section etc.).
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Matthew (GNT)
+[source#src-usfm-para-h_1,usfm,highlight=2]
+----
+\id MAT
+\h Matthew
+----
+USX::
++
+.Matthew (GNT)
+[source#src-usx-para-h_1,xml,highlight=3]
+----
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <para style="h">Matthew</para>
+</usx>
+----
+USJ::
++
+.Matthew (GNT)
+[source#src-usj-para-h_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "h",
+      "content": ["Matthew"]
+    }
+  ]
+}
+----
+======
+
+image::para/h_1.jpg[Matthew (GNT),300]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

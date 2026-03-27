@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Daniel 1.1 (GNT)",
+    "usx": "Daniel 1.1 (GNT)",
+    "usj": "Daniel 1.1 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

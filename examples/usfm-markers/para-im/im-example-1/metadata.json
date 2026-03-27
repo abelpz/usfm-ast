@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Introduction to the GCEV",
+    "usx": "Introduction to the GCEV",
+    "usj": "Introduction to the GCEV"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

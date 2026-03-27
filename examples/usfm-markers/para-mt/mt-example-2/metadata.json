@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Introduction to John (GNT)",
+    "usx": "Introduction to John (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

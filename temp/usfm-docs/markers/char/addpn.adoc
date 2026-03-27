@@ -1,0 +1,65 @@
+= addpn
+:description: Translator's addition
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/addpn.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Proper name within translator's addition.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\addpn ++``#__content__#``++\addpn*++``
+* *USX:* ``++<char style="addpn">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:doc:index.adoc#doc-book-titles[BookTitles]]`, `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`, `[xref:doc:index.adoc#doc-book-intro-end-titles[BookIntroductionEndTitles]]`, `[xref:para:titles-sections/index.adoc[Section]]`, `[Para]` (xref:para:paragraphs/index.adoc[Body Paragraphs], xref:para:poetry/index.adoc[Poetry]), `[xref:para:lists/index.adoc[List]]`, `[xref:para:tables/index.adoc[Table]]`
+// tag::spec[]
+Added:: 1.0
+Deprecated:: 3.0
+// end::spec[]
+* _Recommended alternate:_ Nested xref:char:features/pn.adoc[pn - Proper name] within xref:char:features/add.adoc[add - Translator addition]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Missing
+[source#src-usfm-char-addpn_1,usfm,highlight=1]
+----
+Missing
+----
+USX::
++
+.Missing
+[source#src-usx-char-addpn_1,xml,highlight=1]
+----
+Missing
+----
+USJ::
++
+.Missing
+[source#src-usj-char-addpn_1,json]
+----
+Missing
+----
+======
+
+// image::char/missing.jpg[,300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

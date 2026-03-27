@@ -1,0 +1,80 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PSA",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "119",
+      "sid": "PSA 119"
+    },
+    {
+      "type": "para",
+      "marker": "qa",
+      "content": [
+        "Aleph"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "PSA 119:1"
+        },
+        "Blessed are they whose ways are blameless,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "who walk according to the law of the ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": [
+            "Lord"
+          ]
+        },
+        ". ..."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "qa",
+      "content": [
+        "Beth"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "9",
+          "sid": "PSA 119:9"
+        },
+        "How can a young man keep his way pure?"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "By living according to your word."
+      ]
+    }
+  ]
+}

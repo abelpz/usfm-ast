@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Glossary entry keywords with key attribute (Swedish SB00 Study Bible; rädda, räddare, räddning are forms of \"save\" or \"rescue\")",
+    "usx": "Glossary entry keywords with key attribute (Swedish SB00 Study Bible; rädda, räddare, räddning are forms of \"save\" or \"rescue\")",
+    "usj": "Glossary entry keywords with key attribute (Swedish SB00 Study Bible; rädda, räddare, räddning are forms of \"save\" or \"rescue\")"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

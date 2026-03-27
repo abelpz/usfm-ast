@@ -1,0 +1,19 @@
+<usx version="3.1">
+  <book code="MRK" style="id"/>
+  <chapter number="12" style="c" sid="MRK 12"/>
+  <para style="p">...</para>
+  <para style="p">
+    <verse number="35" style="v" sid="MRK 12:35" />As Jesus was teaching in the 
+    Temple, he asked the question, “How can the teachers of the Law say that the 
+    Messiah will be the descendant of David? <verse eid="MRK 12:35" />
+    <verse number="36" style="v" sid="MRK 12:36" />The Holy Spirit inspired David 
+    to say:</para>
+  <para style="q1" vid="MRK 12:36">‘The Lord said to my Lord:</para>
+  <para style="q2" vid="MRK 12:36">Sit here at my right side</para>
+  <para style="q2" vid="MRK 12:36">until I put your enemies under your feet.’
+    <verse eid="MRK 12:36" /></para>
+  <para style="b" />
+  <para style="m">
+    <verse number="37" style="v" sid="MRK 12:37" />David himself called him ‘Lord’; 
+    so how can the Messiah be David's descendant?”<verse eid="MRK 12:37" />...</para>
+</usx>

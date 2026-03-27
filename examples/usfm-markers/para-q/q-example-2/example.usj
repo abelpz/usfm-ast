@@ -1,0 +1,57 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "HAB",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "3",
+      "sid": "HAB 3"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "HAB 3:2"
+        },
+        "O ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": ["Lord"]
+        },
+        ", I have heard of what you have done,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["and I am filled with awe."]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": ["Now do again in our times"]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["the great deeds you used to do."]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": ["Be merciful, even when you are angry."]
+    }
+  ]
+}

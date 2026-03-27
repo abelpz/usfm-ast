@@ -1,0 +1,63 @@
+= iqt
+:description: Introduction quoted text
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/iqt.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Introduction quoted text. Inline scripture quotations, or other quoted text, appearing within the introduction.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\iqt ++``#__content__#``++\iqt*++``
+* *USX:* ``++<char style="iqt">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Missing
+[source#src-usfm-char-iqt_1,usfm,highlight=1]
+----
+Missing
+----
+USX::
++
+.Missing
+[source#src-usx-char-iqt_1,xml,highlight=1]
+----
+Missing
+----
+USJ::
++
+.Missing
+[source#src-usj-char-iqt_1,json,highlight=1]
+----
+Missing
+----
+======
+
+image::char/missing.jpg[,300]
+
+== Properties
+
+TextType:: Other
+TextProperties:: publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

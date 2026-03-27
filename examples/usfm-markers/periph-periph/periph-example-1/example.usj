@@ -1,0 +1,187 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "code": "FRT",
+      "content": [],
+      "type": "book",
+      "marker": "id"
+    },
+    "... ",
+    {
+      "type": "para",
+      "marker": "periph",
+      "content": [
+        "Title Page|id=\"title\""
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt1",
+      "content": [
+        "Holy Bible"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt3",
+      "content": [
+        "with"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt2",
+      "content": [
+        "Deuterocanonicals/Apocrypha ..."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "periph",
+      "content": [
+        "Foreword|id=\"foreword\""
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "h",
+      "content": [
+        "Foreword"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt1",
+      "content": [
+        "Foreword"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "The ",
+        {
+          "marker": "bk",
+          "content": [
+            "Good News Translation"
+          ],
+          "type": "char"
+        },
+        " of the Bible is a translation which seeks to state clearly and accurately the meaning of the original texts in words and forms that are widely accepted by people who use English as a means of communication. ..."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "periph",
+      "content": [
+        "Table of Contents|id=\"contents\""
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "h",
+      "content": [
+        "Table of Contents"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt",
+      "content": [
+        "Contents"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "s",
+      "content": [
+        "Old Testament"
+      ]
+    },
+    {
+      "type": "table",
+      "content": [
+        {
+          "type": "table:row",
+          "marker": "tr",
+          "content": [
+            {
+              "type": "table:cell",
+              "marker": "th1",
+              "align": "start",
+              "content": [
+                "Name  "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "thr2",
+              "align": "end",
+              "content": [
+                "Page "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "th3",
+              "align": "start",
+              "content": [
+                "Name "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "thr4",
+              "align": "end",
+              "content": [
+                "Page"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "table:row",
+          "marker": "tr",
+          "content": [
+            {
+              "type": "table:cell",
+              "marker": "tc1",
+              "align": "start",
+              "content": [
+                "Genesis "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "tcr2",
+              "align": "end",
+              "content": [
+                "# "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "tc3",
+              "align": "start",
+              "content": [
+                "Ecclesiastes "
+              ]
+            },
+            {
+              "type": "table:cell",
+              "marker": "tcr4",
+              "align": "end",
+              "content": [
+                "#"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "..."
+  ]
+}

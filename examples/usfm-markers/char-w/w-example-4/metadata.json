@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Glossay word with \"lemma\" and \"strong\" - Nehemiah 9.31 (GNT)",
+    "usx": "Glossay word with \"lemma\" and \"strong\" - Nehemiah 9.31 (GNT)",
+    "usj": "Glossay word with \"lemma\" and \"strong\" - Nehemiah 9.31 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

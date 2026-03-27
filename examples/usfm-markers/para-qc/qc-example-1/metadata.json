@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Psalm 72.19 (GNT)",
+    "usx": "Psalm 72.19 (GNT)",
+    "usj": "Psalm 72.19 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

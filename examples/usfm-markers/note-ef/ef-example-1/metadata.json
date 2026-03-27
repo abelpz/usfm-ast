@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Mark 1.1-5 (GNSB)",
+    "usx": "Mark 1.1-5 (GNSB)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

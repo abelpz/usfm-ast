@@ -1,0 +1,79 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "marker": "v",
+      "number": "18",
+      "type": "verse"
+    },
+    "At once they left their nets and went with him. ",
+    {
+      "type": "sidebar",
+      "marker": "esb",
+      "content": [
+        {
+          "type": "para",
+          "marker": "ms",
+          "content": [
+            "Fish and Fishing"
+          ]
+        },
+        {
+          "type": "para",
+          "marker": "p",
+          "content": [
+            "In Jesus' time, fishing took place mostly on lake Galilee, because Jewish people could not use many of the harbors along the coast of the Mediterranean Sea, since these harbors were often controlled by unfriendly neighbors. The most common fish in the Lake of Galilee were carp and catfish. The Law of Moses allowed people to eat any fish with fins and scales, but since catfish lack scales (as do eels and sharks) they were not to be eaten (",
+            {
+              "marker": "xt",
+              "content": [
+                "Lev 11.9-12"
+              ],
+              "type": "char"
+            },
+            "). Fish were also probably brought from Tyre and Sidon, where they were dried and salted. ..."
+          ]
+        },
+        {
+          "type": "para",
+          "marker": "p",
+          "content": [
+            "Among early Christians, the fish was a favorite image for Jesus, because the Greek word for fish (",
+            {
+              "marker": "tl",
+              "content": [
+                "ichthus"
+              ],
+              "type": "char"
+            },
+            ") consists of the first letters of the Greek words that tell who Jesus is: ",
+            {
+              "marker": "fig",
+              "content": [
+                "Ihsous Christos Theou uios Swthr"
+              ],
+              "type": "char",
+              "alt": "Christian fish image",
+              "src": "christfish.tif",
+              "size": "col",
+              "ref": "1.18"
+            }
+          ]
+        }
+      ],
+      "category": "History"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "19",
+          "type": "verse"
+        },
+        "He went a little farther on and saw two other brothers, James and John, the sons of Zebedee."
+      ]
+    }
+  ]
+}

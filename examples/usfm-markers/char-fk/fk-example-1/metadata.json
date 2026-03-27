@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Genesis 3.20 (GNT)",
+    "usx": "Genesis 3.20 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

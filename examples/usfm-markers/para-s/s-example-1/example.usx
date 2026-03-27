@@ -1,0 +1,23 @@
+<usx version="3.1">
+  <book code="PRO" style="id"/>
+  <chapter number="22" style="c" sid="PRO 22"/>
+  <para style="p">...</para>
+  <para style="s1">The Thirty Wise Sayings</para>
+  <para style="p">
+    <verse number="17" style="v" sid="PRO 22:17"/>Listen, and I will teach you what
+    the wise have said. Study their teachings, <verse eid="PRO 22:17"/>
+    <verse number="18" style="v" sid="PRO 22:18"/>and you will be glad if you 
+    remember them and can quote them. <verse eid="PRO 22:18"/>
+    <verse number="19" style="v" sid="PRO 22:19"/>I want you to put your trust in 
+    the <char style="nd">Lord</char>; that is why I am going to tell them to you 
+    now. <verse eid="PRO 22:19"/><verse number="20" style="v" sid="PRO 22:20"/>
+    I have written down thirty sayings for you. They contain knowledge and good 
+    advice, <verse eid="PRO 22:20"/><verse number="21" style="v" sid="PRO 22:21"/>
+    and will teach you what the truth really is. Then when you are sent to find it 
+    out, you will bring back the right answer.<verse eid="PRO 22:21"/></para>
+  <para style="s2">-1-</para>
+  <para style="p">
+    <verse number="22" style="v" sid="PRO 22:22"/>Don't take advantage of the poor
+    just because you can; don't take advantage of those who stand helpless in 
+    court.<verse eid="PRO 22:22"/></para>
+</usx>

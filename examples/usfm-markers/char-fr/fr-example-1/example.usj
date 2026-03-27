@@ -1,0 +1,95 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "1",
+          "type": "verse"
+        },
+        "This is the Good News about Jesus Christ, the Son of God. ",
+        {
+          "marker": "f",
+          "content": [
+            {
+              "marker": "fr",
+              "content": [
+                "1.1: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "ft",
+              "content": [
+                "Some manuscripts do not have "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "fq",
+              "content": [
+                "the Son of God."
+              ],
+              "type": "char"
+            }
+          ],
+          "caller": "+",
+          "type": "note"
+        },
+        "..."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "4",
+          "type": "verse"
+        },
+        "So John appeared in the desert, baptizing and preaching.",
+        {
+          "marker": "f",
+          "content": [
+            {
+              "marker": "fr",
+              "content": [
+                "1.4: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "fq",
+              "content": [
+                "John appeared in the desert, baptizing and preaching; "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "ft",
+              "content": [
+                "some manuscripts have "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "fqa",
+              "content": [
+                "John the Baptist appeared in the desert, preaching."
+              ],
+              "type": "char"
+            }
+          ],
+          "caller": "+",
+          "type": "note"
+        },
+        " “Turn away from your sins and be baptized,” he told the people, “and God will forgive your sins.”"
+      ]
+    }
+  ]
+}

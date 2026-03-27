@@ -1,3 +1,14 @@
 {
-    "jest.runMode": "on-demand"
+  "jest.runMode": "on-demand",
+  "json.schemas": [
+    {
+      "fileMatch": ["**/markers.json"],
+      "url": "/src/grammar/constants/markers.schema.json"
+    }
+  ],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
 } 

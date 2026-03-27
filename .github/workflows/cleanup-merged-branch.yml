@@ -1,0 +1,30 @@
+# Delete the PR head branch after merge (same as GitHub "Delete branch" on the PR).
+# Ref: https://docs.github.com/en/rest/git/refs#delete-a-reference
+
+name: Cleanup merged branch
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  delete-head:
+    name: Delete merged head branch
+    runs-on: ubuntu-latest
+    if: |
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref != github.event.repository.default_branch
+    steps:
+      - name: Delete refs/heads/${{ github.head_ref }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          BRANCH="${{ github.head_ref }}"
+          echo "Deleting merged head branch: ${BRANCH}"
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/git/refs/heads/${BRANCH}"

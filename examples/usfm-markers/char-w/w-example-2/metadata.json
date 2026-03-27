@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Glossay word with (unnamed) default \"lemma\" attribute - Nehemiah 9.31 (GNT)",
+    "usx": "Glossay word with \"lemma\" attribute - Nehemiah 9.31 (GNT)",
+    "usj": "Glossay word with \"lemma\" attribute - Nehemiah 9.31 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

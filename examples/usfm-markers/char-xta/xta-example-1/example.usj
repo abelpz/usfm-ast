@@ -1,0 +1,79 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "number": "3",
+      "type": "chapter",
+      "marker": "c"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "The Preaching of John the Baptist",
+        {
+          "marker": "x",
+          "content": [
+            {
+              "marker": "xo",
+              "content": [
+                "3.0 "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xta",
+              "content": [
+                "Compare with "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xt",
+              "content": [
+                "Mk 1.1-8; Lk 3.1-18; "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xta",
+              "content": [
+                "and "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xt",
+              "content": [
+                "Jn 1.19-28 "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xta",
+              "content": [
+                "parallel passages."
+              ],
+              "type": "char"
+            }
+          ],
+          "caller": "-",
+          "type": "note"
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "1",
+          "type": "verse"
+        },
+        "At that time John the Baptist came to the desert of Judea and started preaching."
+      ]
+    }
+  ]
+}

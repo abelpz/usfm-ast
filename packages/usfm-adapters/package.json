@@ -1,0 +1,67 @@
+{
+  "name": "@usfm-tools/adapters",
+  "version": "0.1.0",
+  "description": "Convert USFM to other formats",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun run clean && tsc --build",
+    "build:watch": "tsc --build --watch",
+    "test": "bun run build && jest --testPathIgnorePatterns=performance",
+    "test:only": "jest",
+    "test:performance": "bun run build && jest --testPathPattern=performance",
+    "test:watch": "jest --watch",
+    "test:clean": "bun run clean && bun run test",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@usfm-tools/parser": "workspace:*",
+    "@usfm-tools/types": "workspace:*",
+    "@usfm-tools/formatter": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/xml2js": "^0.4.11",
+    "@types/xmldom": "^0.1.31",
+    "jest": "^29.5.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0",
+    "xml-beautify": "^1.2.0",
+    "xml2js": "^0.6.2",
+    "xmldom": "^0.6.0"
+  },
+  "keywords": [
+    "usfm",
+    "usj",
+    "scripture",
+    "bible",
+    "parser"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abelpz/usfm-ast.git",
+    "directory": "packages/usfm-adapters"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Genesis 1.1-2 (Japanese Contemporary Bible - Biblica)",
+    "usx": "Genesis 1.1-2 (Japanese Contemporary Bible - Biblica)",
+    "usj": "Genesis 1.1-2 (Japanese Contemporary Bible - Biblica)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

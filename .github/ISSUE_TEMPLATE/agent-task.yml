@@ -1,0 +1,53 @@
+name: Agent task
+description: Clear scope for an AI coding agent (see docs/08-github-agent-workflow.md)
+title: "[agent] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when work should be picked up by a **Cursor agent** with a **PR** and human review.
+        Ensure labels like `agent` / `needs-triage` exist — see `docs/14-github-bootstrap.md`.
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: One or two sentences — what problem are we solving?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Bullet list of what “done” means (testable / reviewable).
+      placeholder: "- [ ] First criterion\n- [ ] Second criterion"
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What the agent must not change or do in this task.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context & links
+      description: Paths, packages (`@usfm-tools/*`, `@usj-tools/*`), or upstream USFM/USJ links.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: ready
+    attributes:
+      label: Ready for agent?
+      description: If “Needs human triage”, a human should refine the issue before an agent starts.
+      options:
+        - Ready for agent
+        - Needs human triage
+    validations:
+      required: true

@@ -1,0 +1,84 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "JHN",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "7",
+      "sid": "JHN 7"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "..."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "52",
+          "sid": "JHN 7:52"
+        },
+        "Then they said, “Nicodemus, you must be from Galilee! Read the Scriptures, and you will find that no prophet is to come from Galilee.”"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "A Woman Caught in Sin"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "53",
+          "sid": "JHN 7:53"
+        },
+        "Everyone else went home,"
+      ]
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "8",
+      "sid": "JHN 8"
+    },
+    {
+      "type": "para",
+      "marker": "nb",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "JHN 8:1"
+        },
+        "but Jesus walked out to the Mount of Olives. ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "JHN 8:2"
+        },
+        "Then early the next morning he went to the temple. The people came to him, and he sat down and started teaching them."
+      ]
+    }
+  ]
+}

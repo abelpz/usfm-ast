@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Job 3.1 (GNT)",
+    "usx": "Job 3.1 (GNT)",
+    "usj": "Job 3.1 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Genesis 5.29 (Russian Synodal)",
+    "usx": "Genesis 5.29 (Russian Synodal)",
+    "usj": "Genesis 5.29 (Russian Synodal)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

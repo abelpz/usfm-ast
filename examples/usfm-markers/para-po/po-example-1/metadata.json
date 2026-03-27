@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Romans 1.1,7 (GNT)",
+    "usx": "Romans 1.1,7 (GNT)",
+    "usj": "Romans 1.1,7 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

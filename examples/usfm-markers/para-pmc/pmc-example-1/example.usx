@@ -1,0 +1,14 @@
+<usx version="3.1">
+  <book code="ACT" style="id"/>
+  <chapter number="15" style="c" sid="ACT 15"/>
+  <para style="p">...</para>
+  <para style="pm">
+    <verse number="28" style="v" sid="ACT 15:28"/>The Holy Spirit has shown us that
+    we should not place any extra burden on you. <verse eid="ACT 15:28"/>
+    <verse number="29" style="v" sid="ACT 15:29"/>But you should not eat anything 
+    offered to idols. You should not eat any meat that still has the blood in it 
+    or any meat of any animal that has been strangled. You must also not commit any 
+    terrible sexual sins. If you follow these instructions, you will do well.</para>
+  <para style="pmc" vid="ACT 15:29">We send our best wishes.<verse eid="ACT 15:29"/>
+    </para>
+</usx>

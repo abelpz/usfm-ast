@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Matthew 3.1 (GNT)",
+    "usx": "Matthew 3.1 (GNT)",
+    "usj": "Matthew 3.1 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

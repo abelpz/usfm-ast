@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Esther-Greek 1 ('A') (GNT)",
+    "usx": "Esther-Greek 1 ('A') (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

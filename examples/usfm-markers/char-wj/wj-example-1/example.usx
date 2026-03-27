@@ -1,0 +1,11 @@
+<usx version="3.0">
+  <book code="MRK" style="id"/>
+  <chapter number="4" style="c" sid="MRK 4"/>
+  <para style="p">
+    <verse number="39" style="v" sid="MRK 4:39"/>Jesus stood up and commanded
+    the wind, <char style="wj">“Be quiet!”</char> and he said to the waves, 
+    <char style="wj">“Be still!”</char> The wind died down, and there was a great
+    calm. <verse eid="MRK 4:39"/><verse number="40" style="v" sid="MRK 4:40"/>Then
+    Jesus said to his disciples, <char style="wj">“Why are you frightened? Do
+    you still have no faith?”</char><verse eid="MRK 4:40"/></para>
+</usx>

@@ -1,0 +1,20 @@
+<usx version="3.1">
+  <book code="DEU" style="id"/>
+  <chapter number="27" style="c" sid="DEU 27"/>
+  <para style="p">
+    <verse number="15" style="v" sid="DEU 27:15"/>“ ‘God's curse on anyone who makes
+    an idol of stone, wood, or metal and secretly worships it; the <char style="nd">
+    Lord</char> hates idolatry.’</para>
+  <para style="pr" vid="DEU 27:15">“And all the people will answer, ‘Amen!’
+    <verse eid="DEU 27:15"/></para>
+  <para style="p">
+    <verse number="16" style="v" sid="DEU 27:16"/>“ ‘God's curse on anyone who
+    dishonors his father or mother.’</para>
+  <para style="pr" vid="DEU 27:16">“And all the people will answer, ‘Amen!’
+    <verse eid="DEU 27:16"/></para>
+  <para style="p">
+    <verse number="17" style="v" sid="DEU 27:17"/>“ ‘God's curse on anyone who moves
+    a neighbor's property line.’</para>
+  <para style="pr" vid="DEU 27:17">“And all the people will answer, ‘Amen!’
+    <verse eid="DEU 27:17"/></para>
+</usx>

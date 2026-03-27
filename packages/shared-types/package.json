@@ -1,0 +1,47 @@
+{
+  "name": "@usfm-tools/types",
+  "version": "0.1.0",
+  "description": "Shared TypeScript types",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "build:watch": "tsc --build --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "clean": "tsc --build --clean",
+    "check-types": "tsc --noEmit"
+  },
+  "keywords": [
+    "usfm",
+    "usj",
+    "scripture",
+    "bible",
+    "parser"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abelpz/usfm-ast.git",
+    "directory": "packages/shared-types"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

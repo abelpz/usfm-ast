@@ -1,0 +1,101 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PRO",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "22",
+      "sid": "PRO 22"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "..."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "The Thirty Wise Sayings"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "17",
+          "sid": "PRO 22:17"
+        },
+        "Listen, and I will teach you what the wise have said. Study their teachings, ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "18",
+          "sid": "PRO 22:18"
+        },
+        "and you will be glad if you remember them and can quote them. ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "19",
+          "sid": "PRO 22:19"
+        },
+        "I want you to put your trust in the ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": [
+            "Lord"
+          ]
+        },
+        "; that is why I am going to tell them to you now. ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "20",
+          "sid": "PRO 22:20"
+        },
+        "I have written down thirty sayings for you. They contain knowledge and good advice, ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "21",
+          "sid": "PRO 22:21"
+        },
+        "and will teach you what the truth really is. Then when you are sent to find it out, you will bring back the right answer."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "s2",
+      "content": [
+        "-1-"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "22",
+          "sid": "PRO 22:22"
+        },
+        "Don't take advantage of the poor just because you can; don't take advantage of those who stand helpless in court."
+      ]
+    }
+  ]
+}

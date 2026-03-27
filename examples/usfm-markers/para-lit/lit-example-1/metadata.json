@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Psalm 3 (Russian Synodal, Orthodox Version)",
+    "usx": "Psalm 3 (Russian Synodal, Orthodox Version)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

@@ -1,0 +1,426 @@
+= rb
+:description: Ruby gloss
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/rb.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Ruby gloss. Used to annotate the base text with ruby characters.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\rb ++``#__content__#``++|++``#__@gloss__#``++\rb*++``
+* *USX:* ``++<char style="rb" ++``#__@gloss__#``++>++``#__content__#``++</char>++``
+#gloss#::: Ruby gloss characters _(default attribute)_
+** If the base text being glossed (`B`) is a _phrase_ of multiple Han characters, then the ruby gloss text (`gg`) may contain multiple elements, one for glossing each of the base text characters making up the phrase. Use a colon `:` to separate multiple glossing characters. Parts of a phrase gloss may be left empty. Example: `+\rb BB|"gg:gg"\rb*+` or `+\rb BBBB|gg1::gg3:\rb*+`.
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:doc:index.adoc#doc-book-titles[BookTitles]]`, `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`, `[xref:doc:index.adoc#doc-book-intro-end-titles[BookIntroductionEndTitles]]`, `[xref:para:titles-sections/index.adoc[Section]]`, `[Para]` (xref:para:paragraphs/index.adoc[Body Paragraphs], xref:para:poetry/index.adoc[Poetry]), `[xref:para:lists/index.adoc[List]]`, `[xref:para:tables/index.adoc[Table]]`
+// tag::spec[]
+Added:: 3.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.One Han character with a single ruby gloss
+[source#src-usfm-char-rb_1,usfm]
+----
+\p \rb 哀|あい\rb*
+----
+USX::
++
+.One Han character with a single ruby gloss
+[source#src-usx-char-rb_1,xml]
+----
+<para style="p><char style="rb" gloss="あい">哀</char></para>
+----
+USJ::
++
+.One Han character with a single ruby gloss
+[source#src-usj-char-rb_1,json]
+----
+{
+  "type": "para",
+  "marker": "p",
+  "content": [
+    {
+      "type": "char",
+      "marker": "rb",
+      "gloss": "あい",
+      "content": [
+        "哀"
+      ]
+    }
+  ]
+}
+----
+======
+
+[tabs]
+======
+USFM::
++
+.Two Han characters with a single ruby phrase gloss
+[source#src-usfm-char-rb_2,usfm]
+----
+\p \rb 話賄|はなはなし\rb*
+----
+USX::
++
+.Two Han characters with a single ruby phrase gloss
+[source#src-usx-char-rb_2,xml]
+----
+<para style="p"><char style="rb" gloss="はなはなし">話賄</char></para>
+----
+USJ::
++
+.Two Han characters with a single ruby phrase gloss
+[source#src-usj-char-rb_2,json]
+----
+{
+  "type": "para",
+  "marker": "p",
+  "content": [
+    {
+      "type": "char",
+      "marker": "rb",
+      "gloss": "はなはなし",
+      "content": ["話賄"]
+    }
+  ]
+}
+----
+======
+
+[tabs]
+======
+USFM::
++
+.Phrase gloss with portions of ruby characters separated by a colon
+[source#src-usfm-char-rb_3,usfm]
+----
+\p \rb 話賄|はな:はなし\rb*
+----
+USX::
++
+.Phrase gloss with portions of ruby characters separated by a colon
+[source#src-usx-char-rb_3,xml]
+----
+<para style="p"><char style="rb" gloss="はな:はなし">話賄</char></para>
+----
+USJ::
++
+.Phrase gloss with portions of ruby characters separated by a colon
+[source#src-usj-char-rb_3,json]
+----
+{
+  "type": "para",
+  "marker": "p",
+  "content": [
+    {
+      "type": "char",
+      "marker": "rb",
+      "gloss": "はな:はなし",
+      "content": ["話賄"]
+    }
+  ]
+}
+----
+======
+
+[tabs]
+======
+USFM::
++
+.Character sequence which includes a non-Han character which is NOT glossed
+[source#src-usfm-char-rb_4,usfm]
+----
+\p \rb 定ま|さだ:\rb*
+----
+USX::
++
+.Character sequence which includes a non-Han character which is NOT glossed
+[source#src-usx-char-rb_4,xml]
+----
+<para style="p"><char style="rb" gloss="さだ:">定ま</char></para>
+----
+USJ::
++
+.Character sequence which includes a non-Han character which is NOT glossed
+[source#src-usj-char-rb_4,json]
+----
+{
+  "type": "para",
+  "marker": "p",
+  "content": [
+    {
+      "type": "char",
+      "marker": "rb",
+      "gloss": "さだ:",
+      "content": ["定ま"]
+    }
+  ]
+}
+----
+======
+
+[tabs]
+======
+USFM::
++
+.Un-glossed character occurring between glossed characters in a phrase
+[source#src-usfm-char-rb_5,usfm]
+----
+\p \rb 神の子|かみ::こ\rb*
+----
+USX::
++
+.Un-glossed character occurring between glossed characters in a phrase
+[source#src-usx-char-rb_5,xml]
+----
+<para style="p"><char style="rb" gloss="かみ::こ">神の子</char></para>
+----
+USJ::
++
+.Un-glossed character occurring between glossed characters in a phrase
+[source#src-usj-char-rb_5,json]
+----
+{
+  "type": "para",
+  "marker": "p",
+  "content": [
+    {
+      "type": "char",
+      "marker": "rb",
+      "gloss": "かみ::こ",
+      "content": ["神の子"]
+    }
+  ]
+}
+----
+======
+
+[tabs]
+======
+USFM::
++
+.Genesis 1.1-2 (Japanese Contemporary Bible - Biblica)
+[source#src-usfm-char-rb_6,usfm]
+----
+\id GEN
+\c 1
+\p
+\v 1 まだ\rb 何|なに\rb*もなかった\rb 時|とき\rb*、\rb 神|かみ\rb*は\rb 天|てん\rb*と
+\rb 地|ち\rb*を\rb 造|つく\rb*りました。
+\v 2 \rb 地|ち\rb*は\rb 形|かたち\rb*も\rb 定|さだ\rb*まらず、\rb 闇|やみ\rb*に
+\rb 包|つつ\rb*まれた\rb 水|みず\rb*の\rb 上|うえ\rb*を、さらに\rb 神|かみ\rb*の
+\rb 霊|れい\rb*が\rb 覆|おお\rb*っていました。
+----
+USX::
++
+.Genesis 1.1-2 (Japanese Contemporary Bible - Biblica)
+[source#src-usx-char-rb_6,xml]
+----
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <chapter number="5" style="c" sid="MAT 5"/>
+  <para style="p">
+    <verse number="1" style="v" sid="GEN 1:1"/>まだ
+    <char style="rb" gloss="なに">何</char>もなかった
+    <char style="rb" gloss="とき">時</char>、
+    <char style="rb" gloss="かみ">神</char>は
+    <char style="rb" gloss="てん">天</char>と
+    <char style="rb" gloss="ち">地</char>を
+    <char style="rb" gloss="つく">造</char>りました。
+    <verse eid="GEN 1:1"/>
+    <verse number="2" style="v" sid="GEN 1:2"/>
+    <char style="rb" gloss="ち">地</char>は
+    <char style="rb" gloss="かたち">形</char>も
+    <char style="rb" gloss="さだ">定</char>まらず、
+    <char style="rb" gloss="やみ">闇</char>に
+    <char style="rb" gloss="つつ">包</char>まれた
+    <char style="rb" gloss="みず">水</char>の
+    <char style="rb" gloss="うえ">上</char>を、さらに
+    <char style="rb" gloss="かみ">神</char>の
+    <char style="rb" gloss="れい">霊</char>が
+    <char style="rb" gloss="おお">覆</char>っていました。
+    <verse eid="GEN 1:2"/></para>
+</usx>
+----
+USJ::
++
+.Genesis 1.1-2 (Japanese Contemporary Bible - Biblica)
+[source#src-usj-char-rb_6,json]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "5",
+      "sid": "MAT 5"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "GEN 1:1"
+        },
+        "まだ ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "なに",
+          "content": ["何"]
+        },
+        " もなかった ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "とき",
+          "content": ["時"]
+        },
+        "、 ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "かみ",
+          "content": [" 神"]
+        },
+        "は ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "てん",
+          "content": ["天"]
+        },
+        "と ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "ち",
+          "content": ["地"]
+        },
+        " を ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "つく",
+          "content": ["造"]
+        },
+        "りました。 ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "GEN 1:2"
+        },
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "ち",
+          "content": ["地"]
+        },
+        "は ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "かたち",
+          "content": ["形"]
+        },
+        "も ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "さだ",
+          "content": ["定"]
+        },
+        "まらず、 ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "やみ",
+          "content": ["闇"]
+        },
+        "に ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "つつ",
+          "content": ["包"]
+        },
+        "まれた ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "みず",
+          "content": ["水"]
+        },
+        "の ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "うえ",
+          "content": ["上"]
+        },
+        "を、さらに ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "かみ",
+          "content": ["神"]
+        },
+        "の ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "れい",
+          "content": ["霊"]
+        },
+        "が ",
+        {
+          "type": "char",
+          "marker": "rb",
+          "gloss": "おお",
+          "content": ["覆"]
+        },
+        "っていました。 "
+      ]
+    }
+  ]
+}
+----
+======
+
+image::char/rb_1.jpg[Genesis 1.1-2 (Japanese Contemporary Bible - Biblica),300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

@@ -1,0 +1,11 @@
+<usx version="3.1">
+  <book code="GEN" style="id"/>
+  <para style="p">
+    <verse number="1" style="v" sid="GEN 1:1"/>
+    <note caller="-" style="ef">
+      <char style="fr">1.1: </char><char style="ft">The traditional translation 
+      of verse 1, as given in <char style="jmp" href="x-prj:RSV52 GEN 1:1"
+      title="Revised Standard Version">RSV</char>, may be appropriate.</char>
+    </note>
+  </para>
+</usx>

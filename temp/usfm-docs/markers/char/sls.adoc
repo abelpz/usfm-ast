@@ -1,0 +1,158 @@
+= sls
+:description: Secondary language source
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/sls.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Secondary language source. Passage of text based on a secondary language or alternate text source. For example: The French NBS02 has large sections of text in EZR and DAN in italics, to represent where the original text is in Aramaic, not Hebrew.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\sls ++``#__content__#``++\sls*++``
+* *USX:* ``++<char style="sls">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:doc:index.adoc#doc-book-titles[BookTitles]]`, `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`, `[xref:doc:index.adoc#doc-book-intro-end-titles[BookIntroductionEndTitles]]`, `[xref:para:titles-sections/index.adoc[Section]]`, `[Para]` (xref:para:paragraphs/index.adoc[Body Paragraphs], xref:para:poetry/index.adoc[Poetry]), `[xref:para:lists/index.adoc[List]]`, `[xref:para:tables/index.adoc[Table]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Ezra 4.8—6.18 (French - NBS - Nouvelle Bible Segond)
+[source#src-usfm-char-sls_1,usfm,highlight=8..12]
+----
+\id EZR
+\c 4
+\p ...
+\v 7 Et aux jours d'Artaxerxès, Bishlam, Mitredath, Tabéel et le reste de leurs
+collègues écrivirent à Artaxerxès, roi de Perse. Le texte de la lettre fut 
+écrit en araméen, traduit en araméen.
+\p
+\v 8 \sls Rehoum, chancelier, et Shimshaï, secrétaire, écrivirent au roi 
+Artaxerxès la lettre suivante concernant Jérusalem, savoir:\sls*
+\v 9 \sls «Rehoum, chancelier, Shimshaï, secrétaire, et le reste de leurs 
+collègues, ceux de Dîn, d'Apharsatak, de Tarpel, d'Apharas, d'Erek, de 
+Babylone, de Suse, de Déha, d'Elam,\sls*
+...
+----
+USX::
++
+.Ezra 4.8—6.18 (French - NBS - Nouvelle Bible Segond)
+[source#src-usx-char-sls_1,xml,highlight=10..11;14..16]
+----
+<usx version="3.1">
+  <book code="EZR" style="id"/>
+  <chapter number="4" style="c" sid="EZR 4"/>
+  <para style="p">... <verse number="7" style="v" sid="EZR 4:7"/>Et aux jours
+    d'Artaxerxès, Bishlam, Mitredath, Tabéel et le reste de leurs collègues
+    écrivirent à Artaxerxès, roi de Perse. Le texte de la lettre fut écrit en
+    araméen, traduit en araméen. <verse eid="EZR 4:7"/></para>
+  <para style="p">
+    <verse number="8" style="v" sid="EZR 4:8"/>
+    <char style="sls">Rehoum, chancelier, et Shimshaï, secrétaire, écrivirent au
+      roi Artaxerxès la lettre suivante concernant Jérusalem, savoir:</char>
+    <verse eid="EZR 4:8"/>
+    <verse number="9" style="v" sid="EZR 4:9"/>
+    <char style="sls">«Rehoum, chancelier, Shimshaï, secrétaire, et le reste de
+      leurs collègues, ceux de Dîn, d'Apharsatak, de Tarpel, d'Apharas, d'Erek,
+      de Babylone, de Suse, de Déha, d'Elam,</char>
+    <verse eid="EZR 4:9"/>
+  </para>
+</usx>
+----
+USJ::
++
+.Ezra 4.8—6.18 (French - NBS - Nouvelle Bible Segond)
+[source#src-usj-char-sls_1,json]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "EZR",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "4",
+      "sid": "EZR 4"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "... ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "7",
+          "sid": "EZR 4:7"
+        },
+        "Et aux jours d'Artaxerxès, Bishlam, Mitredath, Tabéel et le reste de leurs collègues écrivirent à Artaxerxès, roi de Perse. Le texte de la lettre fut écrit en araméen, traduit en araméen. "
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "8",
+          "sid": "EZR 4:8"
+        },
+        {
+          "type": "char",
+          "marker": "sls",
+          "content": [
+            "Rehoum, chancelier, et Shimshaï, secrétaire, écrivirent au roi Artaxerxès la lettre suivante concernant Jérusalem, savoir:"
+          ]
+        },
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "9",
+          "sid": "EZR 4:9"
+        },
+        {
+          "type": "char",
+          "marker": "sls",
+          "content": [
+            "«Rehoum, chancelier, Shimshaï, secrétaire, et le reste de leurs collègues, ceux de Dîn, d'Apharsatak, de Tarpel, d'Apharas, d'Erek, de Babylone, de Suse, de Déha, d'Elam,"
+          ]
+        }
+      ]
+    }
+  ]
+}
+----
+======
+
+image::char/sls_1.jpg[Ezra 4.8 to 6.18 (French - NBS - Nouvelle Bible Segond),300]
+
+== Properties
+
+StyleType:: xref:char:index.adoc[Character]
+OccursUnder:: `[BookIntroductionContent], [ChapterContent], [SidebarContent], [FootnoteContent], [PeripheralContent]`
+TextType:: VerseText
+TextProperties:: publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

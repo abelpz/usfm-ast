@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Numbers 2.10-16 (GNT)",
+    "usx": "Numbers 2.10-16 (GNT)",
+    "usj": "Numbers 2.10-16 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

@@ -1,0 +1,74 @@
+= ord
+:description: Ordinal number ending
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/ord.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Ordinal number ending.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\ord ++``#__content__#``++\ord*++``
+* *USX:* ``++<char style="ord">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:doc:index.adoc#doc-book-titles[BookTitles]]`, `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`, `[xref:doc:index.adoc#doc-book-intro-end-titles[BookIntroductionEndTitles]]`, `[xref:para:titles-sections/index.adoc[Section]]`, `[Para]` (xref:para:paragraphs/index.adoc[Body Paragraphs], xref:para:poetry/index.adoc[Poetry]), `[xref:para:lists/index.adoc[List]]`, `[xref:para:tables/index.adoc[Table]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.1st
+[source#src-usfm-char-ord_1,usfm,highlight=1]
+----
+\p 1\ord st\ord
+----
+USX::
++
+.1st
+[source#src-usx-char-ord_1,xml,highlight=1]
+----
+<para style="p>1<char style="ord">st</char></para>
+----
+USJ::
++
+.1st
+[source#src-usj-char-ord_1,json,highlight=]
+----
+{
+  "type": "para",
+  "marker": "p",
+  "content": [
+    "1",
+    {
+      "type": "char",
+      "marker": "ord",
+      "content": ["st"]
+    }
+  ]
+}
+----
+======
+
+image::char/missing.jpg[,300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

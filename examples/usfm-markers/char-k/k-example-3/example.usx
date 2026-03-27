@@ -1,0 +1,14 @@
+<usx version="3.1">
+  <book code="1TI" style="id"/>
+  <chapter number="2" style="c" sid="1TI 2"/>
+  <para style="p">
+    <verse number="15" style="v" sid="1TI 2:15"/>
+    <note caller="-" style="f">
+      <char style="fr" closed="false">2:15 </char>
+      <char style="fq" closed="false">genom sitt moderskap </char>
+      <char style="ft" closed="false">Troligen en anspelning på 1 Mos 3:16: det 
+      bidrar till kvinnans </char><char style="w" lemma="radda">räddning</char> 
+      om hon bär barnafödandets börda.</note>
+    <verse eid="1TI 2:15"/>
+  </para>
+</usx>

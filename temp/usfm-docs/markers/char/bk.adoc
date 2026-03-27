@@ -1,0 +1,127 @@
+= bk
+:description: Quoted book title
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/bk.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Quoted book title.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\bk ++``#__content__#``++\bk*++``
+* *USX:* ``++<char style="bk">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:doc:index.adoc#doc-book-titles[BookTitles]]`, `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`, `[xref:doc:index.adoc#doc-book-intro-end-titles[BookIntroductionEndTitles]]`, `[xref:para:titles-sections/index.adoc[Section]]`, `[Para]` (xref:para:paragraphs/index.adoc[Body Paragraphs], xref:para:poetry/index.adoc[Poetry]), `[xref:para:lists/index.adoc[List]]`, `[xref:para:tables/index.adoc[Table]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Introduction to Mark (GNT)
+[source#src-usfm-char-bk_1,usfm,highlight=5..6]
+----
+\id MRK
+\mt1 The Acts
+\mt2 of the Apostles
+\is Introduction
+\ip \bk The Acts of the Apostles\bk* is a continuation of \bk The Gospel 
+according to Luke\bk* Its chief purpose is to tell how Jesus' early followers, 
+led by the Holy Spirit, spread the Good News about him “in Jerusalem, in all 
+of Judea and Samaria, and to the ends of the earth” (1.8).
+----
+USX::
++
+.Introduction to Mark (GNT)
+[source#src-usx-char-bk_1,xml,highlight=7..8]
+----
+<usx version="3.1">
+  <book code="MRK" style="id"/>
+  <para style="mt1">The Acts</para>
+  <para style="mt2">of the Apostles</para>
+  <para style="is">Introduction</para>
+  <para style="ip">
+    <char style="bk">The Acts of the Apostles</char> is a continuation of 
+    <char style="bk">The Gospel according to Luke</char> Its chief purpose is to tell
+    how Jesus' early followers, led by the Holy Spirit, spread the Good News about
+    him “in Jerusalem, in all of Judea and Samaria, and to the ends of the earth”
+    (1.8).</para>
+</usx>
+----
+USJ::
++
+.Introduction to Mark (GNT)
+[source#src-usj-char-bk_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MRK",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "mt1",
+      "content": ["The Acts"]
+    },
+    {
+      "type": "para",
+      "marker": "mt2",
+      "content": ["of the Apostles"]
+    },
+    {
+      "type": "para",
+      "marker": "is",
+      "content": ["Introduction"]
+    },
+    {
+      "type": "para",
+      "marker": "ip",
+      "content": [
+        {
+          "type": "char",
+          "marker": "bk",
+          "content": ["The Acts of the Apostles"]
+        },
+        " is a continuation of ",
+        {
+          "type": "char",
+          "marker": "bk",
+          "content": ["The Gospel according to Luke"]
+        },
+        " Its chief purpose is to tell how Jesus' early followers, led by the Holy Spirit, spread the Good News about him “in Jerusalem, in all of Judea and Samaria, and to the ends of the earth” (1.8)."
+      ]
+    }
+  ]
+}
+----
+======
+
+image::char/bk_1.jpg[Introduction to Mark (GNT),300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion
+
+Links to open repository Issues

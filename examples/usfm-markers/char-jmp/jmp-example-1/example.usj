@@ -1,0 +1,57 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "GEN",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "GEN 1"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "GEN 1:1"
+        },
+        {
+          "type": "note",
+          "marker": "ef",
+          "caller": "-",
+          "content": [
+            {
+              "type": "char",
+              "marker": "fr",
+              "content": ["1.1: "]
+            },
+            {
+              "type": "char",
+              "marker": "ft",
+              "content": [
+                "The traditional translation of verse 1, as given in ",
+                {
+                  "type": "char",
+                  "marker": "jmp",
+                  "href": "x-prj:RSV52 GEN 1:1",
+                  "title": "Revised Standard Version",
+                  "content": ["RSV"]
+                },
+                ", may be appropriate."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "1CH",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "27",
+      "sid": "1CH 27"
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": ["..."]
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": ["East Manasseh - Iddo son of Zechariah"]
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": ["Benjamin - Jaasiel son of Abner"]
+    },
+    {
+      "type": "para",
+      "marker": "li1",
+      "content": ["Dan - Azarel son of Jeroham"]
+    },
+    {
+      "type": "para",
+      "marker": "lf",
+      "content": [
+        "This was the list of the administrators of the tribes of Israel."
+      ]
+    }
+  ]
+}

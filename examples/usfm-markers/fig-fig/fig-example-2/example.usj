@@ -1,0 +1,40 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "marker": "v",
+      "number": "30",
+      "type": "verse"
+    },
+    "Simon's mother-in-law was sick in bed with a fever, and as soon as Jesus arrived, he was told about her. ",
+    {
+      "marker": "v",
+      "number": "31",
+      "type": "verse"
+    },
+    "He went to her, took her by the hand, and helped her up. The fever left her, and she began to wait on them. ",
+    {
+      "marker": "fig",
+      "content": [
+        "Took her by the hand, and...the fever left her."
+      ],
+      "type": "char",
+      "src": "avnt017.tif",
+      "size": "col",
+      "ref": "1.31"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "32",
+          "type": "verse"
+        },
+        "After the sun had set and evening had come ..."
+      ]
+    }
+  ]
+}

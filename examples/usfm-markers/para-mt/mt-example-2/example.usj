@@ -1,0 +1,55 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "h",
+      "content": [
+        "John"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "toc1",
+      "content": [
+        "The Gospel according to John"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "toc2",
+      "content": [
+        "John"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt2",
+      "content": [
+        "The Gospel"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt3",
+      "content": [
+        "according to"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt1",
+      "content": [
+        "JOHN"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "is",
+      "content": [
+        "Introduction"
+      ]
+    }
+  ]
+}

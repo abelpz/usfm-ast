@@ -1,0 +1,75 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "5",
+      "sid": "MAT 5"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "13",
+          "sid": "MAT 5:13"
+        },
+        {
+          "type": "note",
+          "marker": "x",
+          "caller": "-",
+          "content": [
+            {
+              "type": "char",
+              "marker": "xo",
+              "content": [
+                "5.13: "
+              ]
+            },
+            {
+              "type": "char",
+              "marker": "xt",
+              "content": [
+                {
+                  "type": "ref",
+                  "loc": "MRK 9:50",
+                  "content": [
+                    "Mk 9.50"
+                  ]
+                },
+                "; ",
+                {
+                  "type": "ref",
+                  "loc": "LUK 14:34",
+                  "content": [
+                    "Lk 14.34"
+                  ]
+                },
+                ",",
+                {
+                  "type": "ref",
+                  "loc": "LUK 14:35",
+                  "content": [
+                    "35"
+                  ]
+                },
+                "."
+              ]
+            }
+          ]
+        },
+        "\"You are like salt for the whole human race. But if salt loses its saltiness, there is no way to make it salty again. It has become worthless, so it is thrown out and people trample on it."
+      ]
+    }
+  ]
+}

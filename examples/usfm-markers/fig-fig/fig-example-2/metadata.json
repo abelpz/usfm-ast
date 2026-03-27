@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Current Column - Mark 1.31 (GNT)",
+    "usx": "Current Column - Mark 1.31 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

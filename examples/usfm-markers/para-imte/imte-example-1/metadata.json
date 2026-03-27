@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Introduction to Mark",
+    "usx": "Introduction to Mark",
+    "usj": "Introduction to Mark"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "The Birth of Jesus Christ"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "r",
+      "content": [
+        "(Luke 2.1-7)"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "18",
+          "type": "verse"
+        },
+        "This was how the birth of Jesus Christ took place. His mother Mary was engaged to Joseph, but before they were married, she found out that she was going to have a baby by the Holy Spirit. ",
+        {
+          "marker": "v",
+          "number": "19",
+          "type": "verse"
+        },
+        "Joseph was a man who always did what was right, but he did not want to disgrace Mary publicly; so he made plans to break the engagement privately."
+      ]
+    }
+  ]
+}

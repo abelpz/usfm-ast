@@ -1,0 +1,88 @@
+= cp
+:description: Published chapter number
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/cv/cp.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Published chapter number. The character(s) (number, letter, or both) which should be displayed in a published text, where it is different than the sequential xref:cv:c.adoc[chapter number] used within the translation editing environment.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\c ++``#__number__# _(see: xref:cv:c.adoc[])_ ``++ \ca ++``#__altnumber__#``++\ca*++`` _(see: xref:cv:ca.adoc[])_
+** ``++\cp ++``#__pubnumber__#
+* *USX:* ``++<chapter style="c" ++``#__@number @altnumber @pubnumber @sid @eid__#``++/>++``
+#number# *::: Chapter number
+#altnumber#::: Chapter number for an alternate versification scheme.
+#pubnumber#::: Published chapter character. The character(s) (number, letter, or both) which should be displayed in a published text, where it is different than the sequential chapter number used within the translation editing environment.
+#sid# *::: Chapter start identifier. A standard book + chapter scripture reference. Book names must be a standard 3-character xref:doc:books.adoc[book identifier]. _Required at chapter start milestone._
+** Pattern: `+[A-Z1-4]{3} ?[0-9]++`
+#eid# *::: Chapter end identifier. A standard book + chapter scripture reference. Book names must be a standard 3-character xref:doc:books.adoc[book identifier]. _Required at chapter end milestone._
+** Pattern: `+[A-Z1-4]{3} ?[0-9]++`
+Valid In:: `[xref:cv:c.adoc[Chapter]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Diagrams
+
+[tabs]
+======
+USFM::
++
+image::schema/chapter_rail.svg[]
+USX::
++
+image:schema/chapter_usx.svg[]
+======
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Esther-Greek 1 ('A') (GNT)
+[source#src-usfm-cv-cp_1,usfm,highlight=2]
+----
+\c 1
+\cp A
+\s1 Mordecai's Strange Dream
+\p
+\v 1-3 \va 2-4\va* Mordecai, a Jew who belonged to the tribe of Benjamin, was 
+taken into exile, along with King Jehoiachin of Judah, when King Nebuchadnezzar 
+of Babylonia captured Jerusalem.
+...
+----
+USX::
++
+.Esther-Greek 1 ('A') (GNT)
+[source#src-usx-cv-cp_1,xml,highlight=3;11]
+----
+<chapter number="1" style="c" pubnumber="A" sid="ESG 1"/>
+<para style="s1">Mordecai's Strange Dream</para>
+<para style="p">
+  <verse number="1-3" style="v" altnumber="2-4" sid="ESG 1:1-3"/> Mordecai, a Jew
+  who belonged to the tribe of Benjamin, was taken into exile, along with King
+  Jehoiachin of Judah, when King Nebuchadnezzar of Babylonia captured Jerusalem.
+  ...<verse eid="ESG 1:1-3"/></para>
+----
+======
+
+image::cv/cp_1.jpg[.Esther-Greek 1 ('A') (GNT),300]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

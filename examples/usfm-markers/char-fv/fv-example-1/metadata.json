@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "John 7.38 (GNT)",
+    "usx": "John 7.38 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

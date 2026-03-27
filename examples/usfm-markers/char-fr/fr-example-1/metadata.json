@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Mark 1.4 (GNT)",
+    "usx": "Mark 1.4 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

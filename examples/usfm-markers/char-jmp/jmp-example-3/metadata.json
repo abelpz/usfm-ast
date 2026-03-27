@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Assigning an identifier (anchor)",
+    "usx": "Assigning an identifier (anchor)",
+    "usj": "Assigning an identifier (anchor)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

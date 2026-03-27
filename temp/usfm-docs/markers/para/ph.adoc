@@ -1,0 +1,66 @@
+= ph
+:description: Indented paragraph with hanging indent
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/ph.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Indented paragraph with hanging indent.
+* The variable `#` (1-3) represents the level of overall paragraph indent.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\ph# ++``#__content__#
+* *USX:* ``++<para style="ph#">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]`
+// tag::spec[]
+Added:: 1.0
+Deprecated:: 3.0
+// end::spec[]
+* _Recommended alternate:_ xref:para:lists/li.adoc[li# - List entry]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Missing
+[source#src-usfm-para-ph_1,usfm,highlight=1]
+----
+Missing
+----
+USX::
++
+.Missing
+[source#src-usx-para-ph_1,usx,highlight=1]
+----
+Missing
+----
+USJ::
++
+.Missing
+[source#src-usj-para-ph_1,json,highlight=]
+----
+Missing
+----
+======
+
+image::para/missing.jpg[,300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

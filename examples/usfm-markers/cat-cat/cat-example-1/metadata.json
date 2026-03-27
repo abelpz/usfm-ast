@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Category in extended footnotes - Matthew 1.2-11 (GNTUK Study Bible)",
+    "usx": "Category in sidebars - Matthew 1.2-11 (GNTUK Study Bible)",
+    "usj": "Category in sidebars - Matthew 1.2-11 (GNTUK Study Bible)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

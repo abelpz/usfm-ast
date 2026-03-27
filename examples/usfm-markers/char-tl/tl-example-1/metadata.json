@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Matthew 27.46 (GNT)",
+    "usx": "Matthew 27.46 (GNT)",
+    "usj": "Matthew 27.46 (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

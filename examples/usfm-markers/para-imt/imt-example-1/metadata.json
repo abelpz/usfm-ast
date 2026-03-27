@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Introduction to Mark (RVE)",
+    "usx": "Introduction to Mark (RVE)",
+    "usj": "Introduction to Mark (RVE)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

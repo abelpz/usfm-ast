@@ -1,0 +1,55 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "1",
+          "type": "verse"
+        },
+        "Early in the morning the chief priests met hurriedly with the elders, the teachers of the Law, and the whole Council, and made their plans. They put Jesus in chains, led him away, and handed him over to Pilate. ",
+        {
+          "marker": "v",
+          "number": "2",
+          "type": "verse"
+        },
+        "Pilate questioned him, ",
+        {
+          "marker": "qt-s",
+          "type": "ms",
+          "sid": "qt.MRK.15:2.1",
+          "who": "Pilate"
+        },
+        "“Are you the king of the Jews?”",
+        {
+          "marker": "qt-e",
+          "type": "ms",
+          "eid": "qt.MRK.15:2.1"
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "Jesus answered, ",
+        {
+          "marker": "qt-s",
+          "type": "ms",
+          "sid": "qt.MRK.15:2.2",
+          "who": "Jesus"
+        },
+        "“So you say.” ",
+        {
+          "marker": "qt-e",
+          "type": "ms",
+          "eid": "qt.MRK.15:2.2"
+        }
+      ]
+    }
+  ]
+}

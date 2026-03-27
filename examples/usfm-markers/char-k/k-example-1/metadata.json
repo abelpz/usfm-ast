@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Glossary entry keywords (GNT)",
+    "usx": "Glossary entry keywords (GNT)",
+    "usj": "Glossary entry keywords (GNT)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

@@ -1,0 +1,401 @@
+= b
+:description: Blank line
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/b.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Blank line. Use for stanza breaks in poetry, or between poetry and prose. Does not include any #__content__# (is always empty).
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\b++``
+* *USX:* ``++<para style="b"/>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Psalm 3 (GNT)
+[source#src-usfm-para-b_1,usfm,highlight=10;18]
+----
+\id PSA
+\c 3
+\s1 Morning Prayer for Help
+\q1
+\v 1 I have so many enemies, \nd Lord\nd*,
+\q2 so many who turn against me!
+\q1
+\v 2 They talk about me and say,
+\q2 “God will not help him.”
+\b
+\q1
+\v 3 But you, O \nd Lord\nd*, are always my shield from danger;
+\q2 you give me victory
+\q2 and restore my courage.
+\q1
+\v 4 I call to the \nd Lord\nd* for help,
+\q2 and from his sacred hill he answers me.
+\b
+\q1
+\v 5 I lie down and sleep,
+\q2 and all night long the \nd Lord\nd* protects me.
+\q1
+\v 6 I am not afraid of the thousands of enemies
+\q2 who surround me on every side.
+----
+USX::
++
+.Psalm 3 (GNT)
+[source#src-usx-para-b_1,xml,highlight=14;26]
+----
+<usx version="3.1">
+  <book code="PSA" style="id"/>
+  <chapter number="3" style="c" sid="PSA 3"/>
+  <para style="s1">Morning Prayer for Help</para>
+  <para style="q1">
+    <verse number="1" style="v" sid="PSA 3:1"/>I have so many enemies, 
+    <char style="nd">Lord</char>,</para>
+  <para style="q2" vid="PSA 3:1">so many who turn against me!<verse eid="PSA 3:1"/>
+    </para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PSA 3:2"/>They talk about me and say,</para>
+  <para style="q2" vid="PSA 3:2">“God will not help him.”<verse eid="PSA 3:2"/>
+    </para>
+  <para style="b"/>
+  <para style="q1">
+    <verse number="3" style="v" sid="PSA 3:3"/>But you, O 
+    <char style="nd">Lord</char>, are always my shield from danger;</para>
+  <para style="q2" vid="PSA 3:3">you give me victory</para>
+  <para style="q2" vid="PSA 3:3">and restore my courage.<verse eid="PSA 3:3"/>
+    </para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PSA 3:4"/>I call to the 
+    <char style="nd">Lord</char>for help,</para>
+  <para style="q2" vid="PSA 3:4">and from his sacred hill he answers me.
+    <verse eid="PSA 3:4"/></para>
+  <para style="b"/>
+  <para style="q1">
+    <verse number="5" style="v" sid="PSA 3:5"/>I lie down and sleep,</para>
+  <para style="q2" vid="PSA 3:5">and all night long the 
+    <char style="nd">Lord</char>protects me.<verse eid="PSA 3:5"/></para>
+  <para style="q1">
+    <verse number="6" style="v" sid="PSA 3:6"/>I am not afraid of the thousands of
+    enemies</para>
+  <para style="q2" vid="PSA 3:6">who surround me on every side.
+    <verse eid="PSA 3:6"/></para>
+</usx>
+----
+USJ::
++
+.Psalm 3 (GNT)
+[source#src-usj-para-b_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "0.2.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PSA",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "3",
+      "sid": "PSA 3"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": ["Morning Prayer for Help"]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "PSA 3:1"
+        },
+        "I have so many enemies, ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": ["Lord"]
+        },
+        ","
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["so many who turn against me!"]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "PSA 3:2"
+        },
+        "They talk about me and say,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["“God will not help him.”"]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "3",
+          "sid": "PSA 3:3"
+        },
+        "But you, O ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": ["Lord"]
+        },
+        ", are always my shield from danger;"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["you give me victory"]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["and restore my courage."]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "4",
+          "sid": "PSA 3:4"
+        },
+        "I call to the ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": ["Lord"]
+        },
+        "for help,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["and from his sacred hill he answers me."]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "5",
+          "sid": "PSA 3:5"
+        },
+        "I lie down and sleep,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "and all night long the",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": ["Lord"]
+        },
+        "protects me."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "6",
+          "sid": "PSA 3:6"
+        },
+        "I am not afraid of the thousands of enemies"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["who surround me on every side."]
+    }
+  ]
+}
+----
+======
+
+image::para/b_1.jpg[Psalm 3 (GNT),300]
+
+[tabs]
+======
+USFM::
++
+.Habakkuk 3.1 (GNT)
+[source#src-usfm-para-b_2,usfm,highlight=6]
+----
+\id HAB
+\c 3
+\s1 A Prayer of Habakkuk
+\p
+\v 1 This is a prayer of the prophet Habakkuk:
+\b
+\q1
+\v 2 O \nd Lord\nd*, I have heard of what you have done,
+\q2 and I am filled with awe.
+----
+USX::
++
+.Habakkuk 3.1 (GNT)
+[source#src-usx-para-b_2,xml,highlight=7]
+----
+<usx version="3.1">
+  <book code="HAB" style="id"/>
+  <chapter number="3" style="c" sid="HAB 3"/>
+  <para style="s1">A Prayer of Habakkuk</para>
+  <para style="p">
+    <verse number="1" style="v" sid="HAB 3:1"/>This is a prayer of the prophet
+    Habakkuk:<verse eid="HAB 3:1"/></para>
+  <para style="b"/>
+  <para style="q1">
+    <verse number="2" style="v" sid="HAB 3:2"/>O <char style="nd">Lord</char>, 
+    I have heard of what you have done,</para>
+  <para style="q2" vid="HAB 3:2">and I am filled with awe.<verse eid="HAB 3:2"/>
+    </para>
+</usx>
+----
+USX::
++
+.Habakkuk 3.1 (GNT)
+[source#src-usj-para-b_2,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "0.2.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "HAB",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "3",
+      "sid": "HAB 3"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": ["A Prayer of Habakkuk"]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "HAB 3:1"
+        },
+        "This is a prayer of the prophet Habakkuk:"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "b"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "HAB 3:2"
+        },
+        "O ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": ["Lord"]
+        },
+        ", I have heard of what you have done,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["and I am filled with awe."]
+    }
+  ]
+}
+----
+======
+
+image::para/b_2.jpg[Habakkuk 3.1 (GNT),300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

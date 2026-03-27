@@ -1,0 +1,36 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "9",
+      "sid": "MAT 9"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "Jesus Heals a Man ",
+        {
+          "type": "optbreak"
+        },
+        " Who Could Not Walk"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "r",
+      "content": [
+        "(Mark 2.1-12; Luke 5.17-26)"
+      ]
+    }
+  ]
+}

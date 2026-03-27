@@ -1,0 +1,162 @@
+= d
+:description: Descriptive title ("Hebrew subtitle")
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/d.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Descriptive title ("Hebrew subtitle"). Sometimes found in Psalms under a section heading (xref:para:titles-sections/s.adoc[s]) (e.g. “For the director of Music”).
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\d ++``#__content__#
+* *USX:* ``++<para style="d">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Psalm 3.1 (NRSV)
+[source#src-usfm-para-d_1,usfm,highlight=4]
+----
+\id PSA
+\c 3
+\s1 Trust in God under Adversity
+\d A Psalm of David, when he fled from his son Absalom.
+\q1
+\v 1 O \nd Lord\nd*, how many are my foes!
+\q2 Many are rising against me;
+\q1
+\v 2 many are saying to me,
+\q2 “There is no help for you in God.” \qs Selah\qs*
+----
+USX::
++
+.Psalm 3.1 (NRSV)
+[source#src-usx-para-d_1,xml,highlight=5]
+----
+<usx version="3.1">
+  <book code="PSA" style="id"/>
+  <chapter number="3" style="c" sid="PSA 3"/>
+  <para style="s1">Trust in God under Adversity</para>
+  <para style="d">A Psalm of David, when he fled from his son Absalom.</para>
+  <para style="q1">
+    <verse number="1" style="v" sid="PSA 3:1"/>O <char style="nd">Lord</char>, how
+    many are my foes!</para>
+  <para style="q2" vid="PSA 3:1">Many are rising against me;<verse eid="PSA 3:1"/>
+    </para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PSA 3:2"/>many are saying to me,</para>
+  <para style="q2" vid="PSA 3:2">“There is no help for you in God.” 
+    <char style="qs">Selah</char><verse eid="PSA 3:2"/></para>
+</usx>
+----
+USJ::
++
+.Psalm 3.1 (NRSV)
+[source#src-usj-para-d_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PSA",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "3",
+      "sid": "PSA 3"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": ["Trust in God under Adversity"]
+    },
+    {
+      "type": "para",
+      "marker": "d",
+      "content": ["A Psalm of David, when he fled from his son Absalom."]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "PSA 3:1"
+        },
+        "O ",
+        {
+          "type": "char",
+          "marker": "nd",
+          "content": ["Lord"]
+        },
+        ", how many are my foes!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["Many are rising against me;"]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2",
+          "sid": "PSA 3:2"
+        },
+        "many are saying to me,"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "“There is no help for you in God.”",
+        {
+          "type": "char",
+          "marker": "qs",
+          "content": ["Selah"]
+        }
+      ]
+    }
+  ]
+}
+----
+======
+
+image::para/d_1.jpg[Psalm 3.1 (NRSV),300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

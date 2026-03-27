@@ -1,0 +1,59 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "PSA",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "PSA 1"
+    },
+    {
+      "type": "para",
+      "marker": "ms1",
+      "content": [
+        "Book One"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mr",
+      "content": [
+        "(Psalms 1–41)"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "s",
+      "content": [
+        "True Happiness"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "PSA 1:1"
+        },
+        "Happy are those"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": [
+        "who reject the advice of evil people,"
+      ]
+    }
+  ]
+}

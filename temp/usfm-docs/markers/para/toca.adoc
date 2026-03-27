@@ -1,0 +1,67 @@
+= toca#
+:description: Alternate language book name texts
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/toca.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Alternate language book name texts. Used to specify an alternate set of books name texts in a language of wider communication.
+* The variable `#` (1-3) represents the book name form.
+** `toca1` - Long book name.
+** `toca2` - Short book name.
+** `toca3` - Book abbreviation.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\toca# ++``#__content__#
+* *USX:* ``++<para style="toca#">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-headers[BookHeaders]]`
+// tag::spec[]
+Added:: 3.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Missing
+[source#src-usfm-para-toca_1,usfm]
+----
+Missing
+----
+USX::
++
+.Missing
+[source#src-usx-para-toca_1,xml]
+----
+Missing
+----
+USJ::
++
+.Missing
+[source#src-usj-para-toca_1,json]
+----
+Missing
+----
+======
+
+image::para/missing.jpg[,300]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph, publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

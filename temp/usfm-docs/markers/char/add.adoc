@@ -1,0 +1,110 @@
+= add
+:description: Translator's addition
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/add.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Translator's addition. Words supplied by the translator in order to make the meaning of the original language clear.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\add ++``#__content__#``++\add*++``
+* *USX:* ``++<char style="add">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:doc:index.adoc#doc-book-titles[BookTitles]]`, `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`, `[xref:doc:index.adoc#doc-book-intro-end-titles[BookIntroductionEndTitles]]`, `[xref:para:titles-sections/index.adoc[Section]]`, `[Para]` (xref:para:paragraphs/index.adoc[Body Paragraphs], xref:para:poetry/index.adoc[Poetry]), `[xref:para:lists/index.adoc[List]]`, `[xref:para:tables/index.adoc[Table]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Genesis 5.29 (Russian Synodal)
+[source#src-usfm-char-add_1,usfm,highlight=6]
+----
+\id GEN
+\c 5
+\p ...
+\p
+\v 29 И нарек ему имя: Ной, сказав: он утешит нас в работе нашей и в трудах рук
+наших при \add возделывании\add* земли, которую проклял Господь.
+----
+USX::
++
+.Genesis 5.29 (Russian Synodal)
+[source#src-usx-char-add_1,xml,highlight=6..7]
+----
+<usx version="3.1">
+  <book code="GEN" style="id"/>
+  <para style="p">...</para>
+  <para style="p">
+    <verse number="29" style="v" sid="GEN 5:29"/>И нарек ему имя: Ной, сказав: он
+    утешит нас в работе нашей и в трудах рук наших при <char style="add">
+    возделывании</char> земли, которую проклял Господь.<verse eid="GEN 5:29"/></para>
+</usx>
+----
+USJ::
++
+.Genesis 5.29 (Russian Synodal)
+[source#src-usj-char-add_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "GEN",
+      "content": []
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": ["..."]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "29",
+          "sid": "GEN 5:29"
+        },
+        "И нарек ему имя: Ной, сказав: он утешит нас в работе нашей и в трудах рук наших при ",
+        {
+          "type": "char",
+          "marker": "add",
+          "content": ["возделывании"]
+        },
+        " земли, которую проклял Господь."
+      ]
+    }
+  ]
+}
+----
+======
+
+image::char/add_1.jpg[Genesis 5.29 (Russian Synodal),300]
+
+== Properties
+
+TextType:: VerseText
+TextProperties:: publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

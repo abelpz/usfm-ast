@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Psalm 136.1-3 (CEV - markup adapted)",
+    "usx": "Psalm 136.1-3 (CEV - markup adapted)",
+    "usj": "Psalm 136.1-3 (CEV - markup adapted)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

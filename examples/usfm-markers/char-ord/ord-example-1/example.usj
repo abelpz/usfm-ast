@@ -1,0 +1,20 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "1",
+        {
+          "type": "char",
+          "marker": "ord",
+          "content": [
+            "st"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "22",
+          "type": "verse"
+        },
+        "But when Joseph heard that Archelaus had succeeded his father Herod as king of Judea, he was afraid to go there. He was given more instructions in a dream, so he went to the province of Galilee ",
+        {
+          "marker": "v",
+          "number": "23",
+          "type": "verse"
+        },
+        {
+          "marker": "x",
+          "content": [
+            {
+              "marker": "xo",
+              "content": [
+                "2.23: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "xt",
+              "content": [
+                "Mrk 1.24; Luk 2.39; Jhn 1.45."
+              ],
+              "type": "char"
+            }
+          ],
+          "caller": "-",
+          "type": "note"
+        },
+        " and made his home in a town named Nazareth. And so what the prophets had said came true: “He will be called a Nazarene.”"
+      ]
+    }
+  ]
+}

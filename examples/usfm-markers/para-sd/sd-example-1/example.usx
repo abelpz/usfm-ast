@@ -1,0 +1,23 @@
+<usx version="3.1">
+  <book code="MAT" style="id"/>
+  <chapter number="13" style="c" sid="MAT 13"/>
+  <para style="p">...</para>
+  <para style="m">
+    <verse number="51" style="v" sid="MAT 13:51"/>“Have you understood all these
+    things?” Jesus asked.</para>
+  <para style="p" vid="MAT 13:51">“Yes,” they replied.<verse eid="MAT 13:51"/>
+    </para>
+  <para style="p">
+    <verse number="52" style="v" sid="MAT 13:52"/>He said to them, “Therefore every
+    teacher of the law who has been instructed about the kingdom of heaven is like
+    the owner of a house who brings out of his storeroom new treasures as well as
+    old.”<verse eid="MAT 13:52"/></para>
+  <para style="sd2"/>
+  <para style="p">
+    <verse number="53" style="v" sid="MAT 13:53"/>When Jesus had finished these
+    parables, he moved on from there. <verse eid="MAT 13:53"/>
+    <verse number="54" style="v" sid="MAT 13:54"/>Coming to his hometown, he began 
+    teaching the people in their synagogue, and they were amazed. “Where did this 
+    man get this wisdom and these miraculous powers?” they asked.
+    <verse eid="MAT 13:54"/></para>
+</usx>

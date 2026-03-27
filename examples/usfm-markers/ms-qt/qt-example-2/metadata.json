@@ -1,0 +1,11 @@
+{
+  "descriptions": {
+    "usfm": "Acts 17.22-31 (GNT) - 2 levels",
+    "usx": "Acts 17.22-31 (GNT) - 2 levels"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": false
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "descriptions": {
+    "usfm": "Ezra 4.8—6.18 (French - NBS - Nouvelle Bible Segond)",
+    "usx": "Ezra 4.8—6.18 (French - NBS - Nouvelle Bible Segond)",
+    "usj": "Ezra 4.8—6.18 (French - NBS - Nouvelle Bible Segond)"
+  },
+  "formats": {
+    "usfm": true,
+    "usx": true,
+    "usj": true
+  }
+}

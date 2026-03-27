@@ -1,0 +1,19 @@
+<usx version="3.1">
+  <book code="EZR" style="id"/>
+  <chapter number="4" style="c" sid="EZR 4"/>
+  <para style="p">... <verse number="7" style="v" sid="EZR 4:7"/>Et aux jours
+    d'Artaxerxès, Bishlam, Mitredath, Tabéel et le reste de leurs collègues
+    écrivirent à Artaxerxès, roi de Perse. Le texte de la lettre fut écrit en
+    araméen, traduit en araméen. <verse eid="EZR 4:7"/></para>
+  <para style="p">
+    <verse number="8" style="v" sid="EZR 4:8"/>
+    <char style="sls">Rehoum, chancelier, et Shimshaï, secrétaire, écrivirent au
+      roi Artaxerxès la lettre suivante concernant Jérusalem, savoir:</char>
+    <verse eid="EZR 4:8"/>
+    <verse number="9" style="v" sid="EZR 4:9"/>
+    <char style="sls">«Rehoum, chancelier, Shimshaï, secrétaire, et le reste de
+      leurs collègues, ceux de Dîn, d'Apharsatak, de Tarpel, d'Apharas, d'Erek,
+      de Babylone, de Suse, de Déha, d'Elam,</char>
+    <verse eid="EZR 4:9"/>
+  </para>
+</usx>

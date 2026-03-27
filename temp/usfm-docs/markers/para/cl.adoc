@@ -1,0 +1,195 @@
+= cl
+:description: Chapter label text
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/cl.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Chapter label text.
+[NOTE]
+.Usage note
+====
+If `cl` is added to a text once _before_ xref:cv:c.adoc[chapter] `1` it represents the label text for “Chapter” to be used throughout the current book. If `cl` is used _after each_ individual xref:cv:c.adoc[chapter], it represents the specific label text to be used for the display of the current chapter (e.g. if numbers are being presented as words, not numerals).
+====
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\cl ++``#__content__#
+* *USX:* ``++<para style="cl">++``#__content__#``++</para>++``
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-chapter-content[ChapterContent]]` > `[Section]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Psalm 1 (GNT - markup adapted - general chapter label)
+[source#src-usfm-para-cl_1,usfm,highlight=2]
+----
+\id PSA
+\cl Psalm
+\c 1
+\q1
+\v 1 Happy are those
+\q2 who reject the advice of evil people,
+----
+USX::
++
+.Psalm 1 (GNT - markup adapted - general chapter label)
+[source#src-usx-para-cl_1,xml,highlight=2]
+----
+<usx version="3.1">
+  <para style="cl">Psalm</para>
+  <chapter number="1" style="c" sid="PSA 1"/>
+  <para style="q1">
+    <verse number="1" style="v" sid="PSA 1:1"/>Happy are those</para>
+  <para style="q2" vid="PSA 1:1">who reject the advice of evil people,
+    ...
+    <verse eid="PSA 1:1"/></para>
+</usx>
+----
+USJ::
++
+.Psalm 1 (GNT - markup adapted - general chapter label)
+[source#src-usj-para-cl_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "cl",
+      "content": ["Psalm"]
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "PSA 1"
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "PSA 1:1"
+        },
+        "Happy are those"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["who reject the advice of evil people, ..."]
+    }
+  ]
+}
+----
+======
+
+image::para/cl_1.jpg[Psalm 1 (GNT - markup adapted - general chapter label),300]
+
+[tabs]
+======
+USFM::
++
+.Psalm 1 (GNT - markup adapted - specific chapter label)
+[source#src-usfm-para-cl_2,usfm,highlight=3]
+----
+\id PSA
+\c 1
+\cl Psalm One
+\q1
+\v 1 Happy are those
+\q2 who reject the advice of evil people,
+----
+USX::
++
+.Psalm 1 (GNT - markup adapted - specific chapter label)
+[source#src-usx-para-cl_2,xml,highlight=3]
+----
+<usx version="3.1">
+  <chapter number="1" style="c" sid="PSA 1"/>
+  <para style="cl">Psalm One</para>
+  <para style="s">True Happiness</para>
+  <para style="q1">
+    <verse number="1" style="v" sid="PSA 1:1" />Happy are those</para>
+  <para style="q2" vid="PSA 1:1">who reject the advice of evil people,
+    ...
+    <verse eid="PSA 1:1"/></para>
+</usx>
+----
+USJ::
++
+.Psalm 1 (GNT - markup adapted - specific chapter label)
+[source#src-usj-para-cl_2,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1",
+      "sid": "PSA 1"
+    },
+    {
+      "type": "para",
+      "marker": "cl",
+      "content": ["Psalm One"]
+    },
+    {
+      "type": "para",
+      "marker": "s",
+      "content": ["True Happiness"]
+    },
+    {
+      "type": "para",
+      "marker": "q1",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1",
+          "sid": "PSA 1:1"
+        },
+        "Happy are those"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "q2",
+      "content": ["who reject the advice of evil people, ..."]
+    }
+  ]
+}
+----
+======
+
+image::para/cl_2.jpg[Psalm 1 (GNT - markup adapted - specific chapter label),300]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

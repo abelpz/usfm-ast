@@ -1,0 +1,79 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "13",
+      "sid": "MAT 13"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "..."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "Jesus Explains the Story about the Weeds"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "36",
+          "sid": "MAT 13:36"
+        },
+        "After Jesus left the crowd and went inside, his disciples came to him and said, “Explain to us the story about the weeds in the wheat field.”"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "37",
+          "sid": "MAT 13:37"
+        },
+        "Jesus answered:"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "pi",
+      "content": [
+        "The one who scattered the good seed is the Son of Man. ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "38",
+          "sid": "MAT 13:38"
+        },
+        "The field is the world, and the good seeds are the people who belong to the kingdom. The weed seeds are those who belong to the evil one, ",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "39",
+          "sid": "MAT 13:39"
+        },
+        "and the one who scattered them is the devil. The harvest is the end of time, and angels are the ones who bring in the harvest."
+      ]
+    }
+  ]
+}

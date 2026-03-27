@@ -1,0 +1,121 @@
+= sig
+:description: Author's signature
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/char/sig.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Autrhor's signature. Signature of the author of a letter or epistle.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\sig ++``#__content__#``++\sig*++``
+* *USX:* ``++<char style="sig">++``#__content__#``++</char>++``
+Style Type:: xref:char:index.adoc[Character]
+Valid In:: `[xref:doc:index.adoc#doc-book-titles[BookTitles]]`, `[xref:doc:index.adoc#doc-book-intro[BookIntroduction]]`, `[xref:doc:index.adoc#doc-book-intro-end-titles[BookIntroductionEndTitles]]`, `[xref:para:titles-sections/index.adoc[Section]]`, `[Para]` (xref:para:paragraphs/index.adoc[Body Paragraphs], xref:para:poetry/index.adoc[Poetry]), `[xref:para:lists/index.adoc[List]]`, `[xref:para:tables/index.adoc[Table]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Colossians 4.18 (GNT)
+[source#src-usfm-char-sig_1,usfm,highlight=4]
+----
+\id COL
+\c 4
+\p
+\v 18 With my own hand I write this: \sig Greetings from Paul\sig*. 
+Do not forget my chains!
+\cls May God's grace be with you.
+----
+USX::
++
+.Colossians 4.18 (GNT)
+[source#src-usx-char-sig_1,xml,highlight=6]
+----
+<usx version="3.1">
+  <book code="COL" style="id"/>
+  <chapter number="4" style="c" sid="COL 4"/>
+  <para style="p">
+    <verse number="18" style="v" sid="COL 4:18"/>With my own hand I write this: 
+    <char style="sig">Greetings from Paul</char>. Do not forget my chains!</para>
+  <para style="cls" vid="COL 4:18">May God's grace be with you.
+    <verse eid="COL 4:18"/></para>
+</usx>
+----
+USJ::
++
+.Colossians 4.18 (GNT)
+[source#src-usj-char-sig_1,json]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "COL",
+      "content": []
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "4",
+      "sid": "COL 4"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "18",
+          "sid": "COL 4:18"
+        },
+        "With my own hand I write this: ",
+        {
+          "type": "char",
+          "marker": "sig",
+          "content": ["Greetings from Paul"]
+        },
+        ". Do not forget my chains!"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "cls",
+      "content": ["May God's grace be with you. "]
+    }
+  ]
+}
+----
+======
+
+image::char/sig_1.jpg[Colossians 4.18 (GNT),300]
+
+== Properties
+
+StyleType:: xref:char:index.adoc[Character]
+OccursUnder:: `[BookIntroductionContent], [ChapterContent], [SidebarContent], [PeripheralContent]`
+TextType:: VerseText
+TextProperties:: publishable, vernacular
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion
+
+Links to open repository Issues

@@ -1,0 +1,78 @@
+= id
+:description: Blank line
+:url-repo: https://github.com/usfm-bible/tcdocs/blob/main/markers/para/id.adoc
+:noindex:
+ifndef::localdir[]
+:source-highlighter: rouge
+:localdir: ../
+endif::[]
+:imagesdir: {localdir}/images
+
+// tag::public[]
+
+== Summary
+
+Description:: Scripture book identification.
+xref:ROOT:syntax-docs.adoc#_syntax[Syntax image:ROOT:help.svg[]]::
+* *USFM:* ``++\id ++``#__code__#``++ ++``#__content__#
+* *USX:* ``++<book style="id" ++``@code``++>++``#__content__#``++</book>++``
+#code# *::: A standard 3-character scripture xref:doc:books.adoc[book identifier].
+#content#::: Additional description _(optional)_
+Style Type:: xref:para:index.adoc[Paragraph]
+Valid In:: `[xref:doc:index.adoc#doc-book-headers[BookHeaders]]`
+// tag::spec[]
+Added:: 1.0
+// end::spec[]
+
+== Examples
+
+[tabs]
+======
+USFM::
++
+.Matthew (GNT)
+[source#src-usfm-para-id_1,usfm,highlight=1]
+----
+\id MAT 41MATGNT92.SFM, Good News Translation, June 2003
+----
+USX::
++
+.Matthew (GNT)
+[source#src-usx-para-id_1,xml,highlight=2]
+----
+<usx>
+  <book code="MAT" style="id">41MATGNT92.SFM, Good News Translation, June 2003</book>
+</usx>
+----
+USJ::
++
+.Matthew (GNT)
+[source#src-usj-para-id_1,json,highlight=]
+----
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "MAT",
+      "content": ["41MATGNT92.SFM, Good News Translation, June 2003"]
+    }
+  ]
+}
+----
+======
+
+image::doc/missing.jpg[,300]
+
+== Properties
+
+TextType:: Other
+TextProperties:: paragraph, nonpublishable, nonvernacular, book
+
+== Publication Issues
+
+// end::public[]
+
+== Discussion

@@ -1,0 +1,32 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "number": "1",
+      "type": "chapter",
+      "marker": "c",
+      "pubnumber": "A"
+    },
+    {
+      "type": "para",
+      "marker": "s1",
+      "content": [
+        "Mordecai's Strange Dream"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "1-3",
+          "type": "verse",
+          "altnumber": "2-4"
+        },
+        "Mordecai, a Jew who belonged to the tribe of Benjamin, was taken into exile, along with King Jehoiachin of Judah, when King Nebuchadnezzar of Babylonia captured Jerusalem. ..."
+      ]
+    }
+  ]
+}

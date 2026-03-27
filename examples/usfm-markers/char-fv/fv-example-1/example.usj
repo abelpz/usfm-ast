@@ -1,0 +1,60 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "marker": "v",
+          "number": "37",
+          "type": "verse"
+        },
+        "On the last and most important day of the festival Jesus stood up and said in a loud voice, “Whoever is thirsty should come to me, and ",
+        {
+          "marker": "v",
+          "number": "38",
+          "type": "verse"
+        },
+        "whoever believes in me should drink. As the scripture says, ‘Streams of life-giving water will pour out from his side.’” ",
+        {
+          "marker": "f",
+          "content": [
+            {
+              "marker": "fr",
+              "content": [
+                "7.38: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "ft",
+              "content": [
+                "Jesus' words in verses 37-38 may be translated: "
+              ],
+              "type": "char"
+            },
+            {
+              "marker": "fqa",
+              "content": [
+                "“Whoever is thirsty should come to me and drink. ",
+                {
+                  "marker": "fv",
+                  "content": [
+                    "38"
+                  ],
+                  "type": "char"
+                },
+                " As the scripture says, ‘Streams of life-giving water will pour out from within anyone who believes in me.’”"
+              ],
+              "type": "char"
+            }
+          ],
+          "caller": "+",
+          "type": "note"
+        }
+      ]
+    }
+  ]
+}

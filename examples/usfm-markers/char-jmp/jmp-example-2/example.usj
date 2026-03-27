@@ -1,0 +1,23 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        "Storehouses, as used here, refers to large buildings with walls and roof, where grain was kept until needed. (See illustration: ",
+        {
+          "marker": "jmp",
+          "content": [
+            "Storehouse"
+          ],
+          "type": "char",
+          "href": "figures/storehouse.png",
+          "title": "Ancient storehouse"
+        },
+        ")"
+      ]
+    }
+  ]
+}
