@@ -11,7 +11,7 @@ On **push** to `main` and **pull requests** targeting `main`:
 3. `bun install --frozen-lockfile`
 4. `bun run lint` → `bun run check-types` → `bun run test` → `bun run build` (orchestrated by **Turborepo** — [`turbo.json`](../turbo.json))
 
-GitHub Actions sets **`CI=true`**. For **`@usfm-tools/parser`** and **`@usfm-tools/adapters`**, Jest runs only [`tests/ci-smoke.test.ts`](../packages/usfm-parser/tests/ci-smoke.test.ts) plus [`tests/usfm-parser-contract.test.ts`](../packages/usfm-parser/tests/usfm-parser-contract.test.ts) (and the adapters smoke test) so CI stays green. Many other files under `tests/` still expect an older internal node shape or golden USJ examples that have drifted; run them locally with **`CI` unset** (`bun run test` from the package or repo root without exporting `CI=true`).
+GitHub Actions sets **`CI=true`**. **`@usfm-tools/parser`** and **`@usfm-tools/adapters`** run their full Jest suites except **`performance`** tests (`testPathIgnorePatterns` in each package’s `jest.config.js`). Golden `example.usj` files under `examples/usfm-markers/` are regenerated from **`USFMParser`** when parser output changes intentionally (`bun run regenerate:example-usj` after building the parser).
 
 ## Dependabot
 
@@ -31,6 +31,10 @@ After the first **green** CI run on `main` or a PR:
 3. Require status check **`checks`** (job id from `ci.yml`)
 
 Exact check name in the UI may appear as **`CI / checks`**.
+
+## Housekeeping
+
+- **Turborepo cache:** `.turbo/` is gitignored. If it was ever committed by mistake, remove it from the index with `git rm -r --cached .turbo` (then commit). Do not commit cache artifacts.
 
 ## Related
 

@@ -49,6 +49,10 @@ test-*.cjs
 *.temp
 .cache/
 
+# Local oracle comparison output (scripts/oracles/compare.mjs)
+oracle-out/
+oracle-out-test/
+
 # Turborepo local cache
 .turbo/
 

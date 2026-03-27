@@ -2,11 +2,7 @@
   "root": true,
   "parser": "@typescript-eslint/parser",
   "plugins": ["@typescript-eslint"],
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "prettier"
-  ],
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier"],
   "parserOptions": {
     "ecmaVersion": 2020,
     "sourceType": "module"
@@ -19,5 +15,18 @@
     "no-case-declarations": "off",
     "prefer-const": "warn"
   },
+  "overrides": [
+    {
+      "files": [
+        "packages/shared-types/**/*.ts",
+        "packages/usfm-parser/**/*.ts",
+        "packages/usfm-formatter/**/*.ts",
+        "packages/usfm-adapters/**/*.ts"
+      ],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off"
+      }
+    }
+  ],
   "ignorePatterns": ["dist/", "node_modules/", "*.js"]
 }

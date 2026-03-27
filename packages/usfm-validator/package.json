@@ -2,6 +2,9 @@
   "name": "@usfm-tools/validator",
   "version": "0.1.0",
   "description": "USFM validation and linting",
+  "bin": {
+    "usfm-validate": "./dist/cli.js"
+  },
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -42,6 +45,10 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@usfm-tools/parser": "workspace:*",
+    "commander": "14.0.0"
   },
   "devDependencies": {
     "tsup": "^8.3.5",

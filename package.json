@@ -29,7 +29,9 @@
     "examples": "bun tools/example-manager.js",
     "examples:check": "bun tools/example-manager.js check",
     "examples:generate": "bun tools/example-manager.js generate",
-    "examples:create-usj": "bun tools/example-manager.js create-usj"
+    "examples:create-usj": "bun tools/example-manager.js create-usj",
+    "regenerate:example-usj": "bunx turbo run build --filter=@usfm-tools/parser && bun tools/regenerate-example-usj.ts",
+    "oracles:compare": "node scripts/oracles/compare.mjs"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
@@ -42,7 +44,8 @@
     "prettier": "^3.0.0",
     "ts-jest": "^29.1.0",
     "turbo": "^2.8.20",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "usfm3": "0.1.8"
   },
   "engines": {
     "node": ">=18.0.0"

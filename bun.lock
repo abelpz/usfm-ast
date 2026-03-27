@@ -19,6 +19,7 @@
         "ts-jest": "^29.1.0",
         "turbo": "^2.8.20",
         "typescript": "5.9.3",
+        "usfm3": "0.1.8",
       },
     },
     "packages/shared-types": {
@@ -49,6 +50,13 @@
     "packages/usfm-cli": {
       "name": "@usfm-tools/cli",
       "version": "0.1.0",
+      "bin": {
+        "usfm": "./dist/cli.js",
+      },
+      "dependencies": {
+        "@usfm-tools/parser": "workspace:*",
+        "commander": "14.0.0",
+      },
       "devDependencies": {
         "tsup": "^8.3.5",
         "typescript": "5.9.3",
@@ -86,6 +94,13 @@
     "packages/usfm-validator": {
       "name": "@usfm-tools/validator",
       "version": "0.1.0",
+      "bin": {
+        "usfm-validate": "./dist/cli.js",
+      },
+      "dependencies": {
+        "@usfm-tools/parser": "workspace:*",
+        "commander": "14.0.0",
+      },
       "devDependencies": {
         "tsup": "^8.3.5",
         "typescript": "5.9.3",
@@ -102,6 +117,12 @@
     "packages/usj-cli": {
       "name": "@usj-tools/cli",
       "version": "0.1.0",
+      "bin": {
+        "usj": "./dist/cli.js",
+      },
+      "dependencies": {
+        "commander": "14.0.0",
+      },
       "devDependencies": {
         "tsup": "^8.3.5",
         "typescript": "5.9.3",
@@ -1024,6 +1045,8 @@
     "update-browserslist-db": ["update-browserslist-db@1.2.3", "", { "dependencies": { "escalade": "^3.2.0", "picocolors": "^1.1.1" }, "peerDependencies": { "browserslist": ">= 4.21.0" }, "bin": { "update-browserslist-db": "cli.js" } }, "sha512-Js0m9cx+qOgDxo0eMiFGEueWztz+d4+M3rGlmKPT+T4IS/jP4ylw3Nwpu6cpTTP8R1MAC1kF4VbdLt3ARf209w=="],
 
     "uri-js": ["uri-js@4.4.1", "", { "dependencies": { "punycode": "^2.1.0" } }, "sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg=="],
+
+    "usfm3": ["usfm3@0.1.8", "", {}, "sha512-BPafur2mygW85oRbqtA6PDFBUyCY9B0RAzIoOp7Mi2k8F6GrJdJz8/G8SZOuiDxKgo1Hj7zFB9RFu4UqpYFHSQ=="],
 
     "v8-to-istanbul": ["v8-to-istanbul@9.3.0", "", { "dependencies": { "@jridgewell/trace-mapping": "^0.3.12", "@types/istanbul-lib-coverage": "^2.0.1", "convert-source-map": "^2.0.0" } }, "sha512-kiGUalWN+rgBJ/1OHZsBtU4rXZOfj/7rKQxULKlIzwzQSvMJUUNgPwJEEh7gU6xEVxC0ahoOBvN2YI8GH6FNgA=="],
 
