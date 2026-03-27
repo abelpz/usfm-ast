@@ -372,7 +372,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
 
       case 'normalize-and-trim':
         // Multiple spaces → single + trim edges
-        let normalized = content.replace(/\s+/g, ' ');
+        const normalized = content.replace(/\s+/g, ' ');
         return this.shouldTrimEdges() ? normalized.trim() : normalized;
 
       default:

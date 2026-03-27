@@ -420,7 +420,7 @@ export class USFMParser {
 
   private normalizeWhitespace(input: string): string {
     // First, normalize all line endings to LF
-    let normalized = input.replace(/\r\n|\r|\n\n/g, `\n`).replace(/\s+/g, ' ');
+    const normalized = input.replace(/\r\n|\r|\n\n/g, `\n`).replace(/\s+/g, ' ');
 
     let result = '';
     let i = 0;

@@ -520,7 +520,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
   }
 
   visitMilestone(node: MilestoneUSFMNode): string {
-    let elementName = 'ms';
+    const elementName = 'ms';
 
     const attrs = this.buildAttributes({
       style: node.marker,

@@ -524,7 +524,7 @@ export class UsfmParser extends BaseParser {
   ): (char?: string) => boolean {
     return (char?: string) => {
       if (char === '\\') return true;
-      let _char = char || this.cursor.peek();
+      const _char = char || this.cursor.peek();
 
       if (!remainingPattern) return true;
 

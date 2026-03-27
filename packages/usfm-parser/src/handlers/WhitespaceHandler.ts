@@ -25,7 +25,7 @@ export class WhitespaceHandler {
 
   normalizeWhitespace(input: string, markerHandler: MarkerHandler): string {
     // First, normalize all line endings to LF
-    let normalized = input.replace(/\r\n|\r/g, '\n');
+    const normalized = input.replace(/\r\n|\r/g, '\n');
 
     let result = '';
     let i = 0;

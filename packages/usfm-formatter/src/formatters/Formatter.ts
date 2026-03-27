@@ -299,7 +299,7 @@ export class USFMFormatter {
           if (nextChar === '\\') {
             // Found backslash → we have "\marker content " pattern
             // Extract the marker name
-            let markerStart = i + 1;
+            const markerStart = i + 1;
             let markerEnd = markerStart;
             while (markerEnd < usfmString.length && /[a-zA-Z0-9]/.test(usfmString[markerEnd])) {
               markerEnd++;
@@ -1097,7 +1097,7 @@ export class USFMFormatter {
     attributes?: Record<string, string>
   ): FormatResult {
     // First, ensure the marker is registered as a milestone type
-    let markerType = this.markerRegistry.getMarkerInfo(marker, 'type');
+    const markerType = this.markerRegistry.getMarkerInfo(marker, 'type');
     if (!markerType) {
       // Unknown marker - register it as a milestone since we're in addMilestone context
       const markerInfo = { type: 'milestone' as const };
