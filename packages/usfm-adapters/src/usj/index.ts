@@ -20,6 +20,50 @@ export class USJVisitor implements BaseUSFMVisitor<USJNode> {
   private pendingTableRows: USJNode[] = [];
   private inTable: boolean = false;
 
+  visitBook(node: ParagraphUSFMNode): USJNode {
+    const raw = node as any;
+    const bookNode: USJNode = {
+      type: 'book',
+      marker: 'id',
+      code: typeof raw.code === 'string' ? raw.code : '',
+      content: Array.isArray(raw.content) ? [...raw.content] : [],
+    };
+    this.result.push(bookNode);
+    return bookNode;
+  }
+
+  visitChapter(node: ParagraphUSFMNode): USJNode {
+    const raw = node as any;
+    const chapterNode: USJNode = {
+      type: 'chapter',
+      marker: 'c',
+      number: typeof raw.number === 'string' ? raw.number : '',
+    };
+    if (raw.sid) chapterNode.sid = raw.sid;
+    if (raw.altnumber) chapterNode.altnumber = raw.altnumber;
+    if (raw.pubnumber) chapterNode.pubnumber = raw.pubnumber;
+    this.result.push(chapterNode);
+    return chapterNode;
+  }
+
+  visitVerse(node: CharacterUSFMNode): USJNode {
+    const raw = node as any;
+    const verseNode: USJNode = {
+      type: 'verse',
+      marker: 'v',
+      number: typeof raw.number === 'string' ? raw.number : '',
+    };
+    if (raw.sid) verseNode.sid = raw.sid;
+    if (raw.altnumber) verseNode.altnumber = raw.altnumber;
+    if (raw.pubnumber) verseNode.pubnumber = raw.pubnumber;
+    if (this.currentNode && Array.isArray(this.currentNode.content)) {
+      this.currentNode.content.push(verseNode);
+    } else {
+      this.result.push(verseNode);
+    }
+    return verseNode;
+  }
+
   visitParagraph(node: ParagraphUSFMNode): USJNode {
     // Handle table rows
     if (node.marker === 'tr') {
@@ -132,20 +176,7 @@ export class USJVisitor implements BaseUSFMVisitor<USJNode> {
       content: [],
     };
 
-    // Handle attributes
-    if (node.attributes) {
-      Object.entries(node.attributes).forEach(([key, value]) => {
-        // Convert attributes to the expected format
-        if (
-          key.startsWith('x-') ||
-          ['lemma', 'strong', 'occurrence', 'occurrences'].includes(key)
-        ) {
-          charNode[this.normalizeAttributeName(key)] = value;
-        } else {
-          charNode[key] = value;
-        }
-      });
-    }
+    this.copyCharacterAttributes(node, charNode);
 
     const prevNode = this.currentNode;
     this.currentNode = charNode;
@@ -220,11 +251,21 @@ export class USJVisitor implements BaseUSFMVisitor<USJNode> {
       marker: node.marker,
     };
 
-    // Handle attributes
+    const raw = node as any;
     if (node.attributes) {
       Object.entries(node.attributes).forEach(([key, value]) => {
-        msNode[this.normalizeAttributeName(key)] = value;
+        if (value !== undefined && value !== null) {
+          msNode[this.normalizeAttributeName(key)] = String(value);
+        }
       });
+    }
+    for (const key of Object.keys(raw)) {
+      if (this.isInternalNodeKey(key)) continue;
+      const val = raw[key];
+      if (typeof val !== 'string') continue;
+      if (key.startsWith('x-') || ['sid', 'eid', 'who'].includes(key)) {
+        msNode[this.normalizeAttributeName(key)] = val;
+      }
     }
 
     if (this.currentNode && Array.isArray(this.currentNode.content)) {
@@ -252,6 +293,54 @@ export class USJVisitor implements BaseUSFMVisitor<USJNode> {
   private normalizeAttributeName(key: string): string {
     // Keep attribute names in their original kebab-case format
     return key;
+  }
+
+  private isInternalNodeKey(key: string): boolean {
+    return new Set([
+      'type',
+      'marker',
+      'content',
+      'index',
+      'attributes',
+      'constructor',
+      'accept',
+      'acceptWithContext',
+      'getChildren',
+      'getParent',
+      'getNextSibling',
+      'getPreviousSibling',
+      'toJSON',
+    ]).has(key);
+  }
+
+  /** Legacy nodes use `.attributes`; enhanced parser nodes store USJ fields as own string properties. */
+  private copyCharacterAttributes(node: CharacterUSFMNode, charNode: USJNode): void {
+    const raw = node as any;
+    if (node.attributes) {
+      Object.entries(node.attributes).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        const s = String(value);
+        if (
+          key.startsWith('x-') ||
+          ['lemma', 'strong', 'occurrence', 'occurrences'].includes(key)
+        ) {
+          charNode[this.normalizeAttributeName(key)] = s;
+        } else {
+          charNode[key] = s;
+        }
+      });
+    }
+    for (const key of Object.keys(raw)) {
+      if (this.isInternalNodeKey(key) || key === 'caller' || key === 'category') continue;
+      const val = raw[key];
+      if (typeof val !== 'string') continue;
+      if (
+        key.startsWith('x-') ||
+        ['lemma', 'strong', 'occurrence', 'occurrences'].includes(key)
+      ) {
+        charNode[this.normalizeAttributeName(key)] = val;
+      }
+    }
   }
 
   private getCurrentBookCode(): string {

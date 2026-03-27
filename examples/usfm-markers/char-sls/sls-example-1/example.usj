@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "EZR",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "4",
       "type": "chapter",
       "marker": "c",
-      "number": "4",
       "sid": "EZR 4"
     },
     {
@@ -20,9 +20,9 @@
       "content": [
         "... ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "7",
+          "type": "verse",
           "sid": "EZR 4:7"
         },
         "Et aux jours d'Artaxerxès, Bishlam, Mitredath, Tabéel et le reste de leurs collègues écrivirent à Artaxerxès, roi de Perse. Le texte de la lettre fut écrit en araméen, traduit en araméen."
@@ -33,31 +33,31 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "8",
+          "type": "verse",
           "sid": "EZR 4:8"
         },
         {
-          "type": "char",
           "marker": "sls",
           "content": [
             "Rehoum, chancelier, et Shimshaï, secrétaire, écrivirent au roi Artaxerxès la lettre suivante concernant Jérusalem, savoir:"
-          ]
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "9",
+          "type": "verse",
           "sid": "EZR 4:9"
         },
         {
-          "type": "char",
           "marker": "sls",
           "content": [
             "«Rehoum, chancelier, Shimshaï, secrétaire, et le reste de leurs collègues, ceux de Dîn, d'Apharsatak, de Tarpel, d'Apharas, d'Erek, de Babylone, de Suse, de Déha, d'Elam,"
-          ]
+          ],
+          "type": "char"
         },
         "..."
       ]

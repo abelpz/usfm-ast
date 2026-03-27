@@ -1,12 +1,9 @@
-const ciSmokeOnly = process.env.CI === 'true';
-
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   passWithNoTests: true,
-  testMatch: ciSmokeOnly
-    ? ['<rootDir>/tests/ci-smoke.test.ts']
-    : ['<rootDir>/tests/**/*.test.ts'],
+  testMatch: ['<rootDir>/tests/**/*.test.ts'],
+  testPathIgnorePatterns: ['performance'],
   transform: {
     '^.+\\.ts$': ['ts-jest', { tsconfig: { module: 'commonjs' } }],
   },

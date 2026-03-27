@@ -32,6 +32,7 @@
           "sid": "MAT 2:23"
         },
         {
+          "type": "note",
           "marker": "x",
           "content": [
             {
@@ -49,10 +50,10 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         {
+          "type": "note",
           "marker": "ex",
           "content": [
             {
@@ -70,8 +71,7 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         "and made his home in a town named Nazareth. And so what the prophets had said came true: “He will be called a Nazarene.”"
       ]

@@ -3,6 +3,7 @@
   "version": "3.1",
   "content": [
     {
+      "type": "note",
       "marker": "f",
       "content": [
         {
@@ -27,8 +28,7 @@
           "type": "char"
         }
       ],
-      "caller": "⸀",
-      "type": "note"
+      "caller": "⸀"
     }
   ]
 }

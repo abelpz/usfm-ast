@@ -3,10 +3,10 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "TIT",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
       "type": "para",

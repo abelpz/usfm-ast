@@ -13,6 +13,7 @@
         },
         "This is the Good News about Jesus Christ, the Son of God. ",
         {
+          "type": "note",
           "marker": "f",
           "content": [
             {
@@ -37,8 +38,7 @@
               "type": "char"
             }
           ],
-          "caller": "+",
-          "type": "note"
+          "caller": "+"
         },
         "..."
       ]
@@ -54,6 +54,7 @@
         },
         "So John appeared in the desert, baptizing and preaching.",
         {
+          "type": "note",
           "marker": "f",
           "content": [
             {
@@ -85,8 +86,7 @@
               "type": "char"
             }
           ],
-          "caller": "+",
-          "type": "note"
+          "caller": "+"
         },
         " “Turn away from your sins and be baptized,” he told the people, “and God will forgive your sins.”"
       ]

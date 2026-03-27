@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MAT",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "13",
       "type": "chapter",
       "marker": "c",
-      "number": "13",
       "sid": "MAT 13"
     },
     {
@@ -33,9 +33,9 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "36",
+          "type": "verse",
           "sid": "MAT 13:36"
         },
         "After Jesus left the crowd and went inside, his disciples came to him and said, “Explain to us the story about the weeds in the wheat field.”"
@@ -46,9 +46,9 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "37",
+          "type": "verse",
           "sid": "MAT 13:37"
         },
         "Jesus answered:"
@@ -60,16 +60,16 @@
       "content": [
         "The one who scattered the good seed is the Son of Man. ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "38",
+          "type": "verse",
           "sid": "MAT 13:38"
         },
         "The field is the world, and the good seeds are the people who belong to the kingdom. The weed seeds are those who belong to the evil one, ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "39",
+          "type": "verse",
           "sid": "MAT 13:39"
         },
         "and the one who scattered them is the devil. The harvest is the end of time, and angels are the ones who bring in the harvest."

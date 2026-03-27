@@ -31,6 +31,7 @@
           "type": "verse"
         },
         {
+          "type": "note",
           "marker": "x",
           "content": [
             {
@@ -62,8 +63,7 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         "Their gods are made of silver and gold,"
       ]

@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "JHN",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "7",
       "type": "chapter",
       "marker": "c",
-      "number": "7",
       "sid": "JHN 7"
     },
     {
@@ -26,9 +26,9 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "52",
+          "type": "verse",
           "sid": "JHN 7:52"
         },
         "Then they said, “Nicodemus, you must be from Galilee! Read the Scriptures, and you will find that no prophet is to come from Galilee.”"
@@ -46,18 +46,18 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "53",
+          "type": "verse",
           "sid": "JHN 7:53"
         },
         "Everyone else went home,"
       ]
     },
     {
+      "number": "8",
       "type": "chapter",
       "marker": "c",
-      "number": "8",
       "sid": "JHN 8"
     },
     {
@@ -65,16 +65,16 @@
       "marker": "nb",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "1",
+          "type": "verse",
           "sid": "JHN 8:1"
         },
         "but Jesus walked out to the Mount of Olives. ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "2",
+          "type": "verse",
           "sid": "JHN 8:2"
         },
         "Then early the next morning he went to the temple. The people came to him, and he sat down and started teaching them."

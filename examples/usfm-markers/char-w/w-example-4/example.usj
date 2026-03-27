@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "NEH",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "9",
       "type": "chapter",
       "marker": "c",
-      "number": "9",
       "sid": "NEH 9"
     },
     {
@@ -19,9 +19,9 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "31",
+          "type": "verse",
           "sid": "NEH 9:31"
         },
         "And yet, because your mercy is great,"
@@ -30,7 +30,9 @@
     {
       "type": "para",
       "marker": "q2",
-      "content": ["you did not forsake or destroy them."]
+      "content": [
+        "you did not forsake or destroy them."
+      ]
     },
     {
       "type": "para",
@@ -38,11 +40,13 @@
       "content": [
         "You are a ",
         {
-          "type": "char",
           "marker": "w",
+          "content": [
+            "gracious"
+          ],
+          "type": "char",
           "lemma": "grace",
-          "strong": "H2587,G5485",
-          "content": ["gracious"]
+          "strong": "H2587,G5485"
         },
         " and merciful God!"
       ]

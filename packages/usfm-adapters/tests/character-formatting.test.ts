@@ -50,7 +50,7 @@ describe('Character and Note Marker Formatting', () => {
       const result = parser.load(input).parse().visit(visitor);
       const output = visitor.getResult().trim();
 
-      expect(output).toBe('\\p Paul\\f + \\fr 1:1 \\ft This is a footnote\\f* went');
+      expect(output).toBe('\\p Paul\\f  +  \\fr 1:1 \\ft This is a footnote\\f* went');
     });
 
     it('should handle cross-reference notes', () => {
@@ -58,7 +58,7 @@ describe('Character and Note Marker Formatting', () => {
       const result = parser.load(input).parse().visit(visitor);
       const output = visitor.getResult().trim();
 
-      expect(output).toBe('\\p Paul\\x - \\xo 1:1 \\xt See John 3:16\\x* went');
+      expect(output).toBe('\\p Paul\\x  -  \\xo 1:1 \\xt See John 3:16\\x* went');
     });
 
     it('should handle note markers with character markers inside', () => {
@@ -67,7 +67,7 @@ describe('Character and Note Marker Formatting', () => {
       const output = visitor.getResult().trim();
 
       // Character markers inside footnote text markers (like \ft) should be nested with +
-      expect(output).toBe('\\p Paul\\f + \\fr 1:1 \\ft This is \\+w important\\+w* text\\f* went');
+      expect(output).toBe('\\p Paul\\f  +  \\fr 1:1 \\ft This is \\+w important\\+w* text\\f* went');
     });
   });
 

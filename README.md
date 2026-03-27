@@ -53,6 +53,7 @@ npm install -g @usfm-tools/cli @usj-tools/cli
 
 ## 📖 Documentation
 
+- [Project goal & CI contract](./docs/00-project-goal.md)
 - [Getting Started Guide](./docs/guides/getting-started/README.md)
 - [API Reference](./docs/api/README.md)
 - [Examples](./examples/README.md)

@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "DEU",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "27",
       "type": "chapter",
       "marker": "c",
-      "number": "27",
       "sid": "DEU 27"
     },
     {
@@ -19,16 +19,18 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "15",
+          "type": "verse",
           "sid": "DEU 27:15"
         },
         "“ ‘God's curse on anyone who makes an idol of stone, wood, or metal and secretly worships it; the ",
         {
-          "type": "char",
           "marker": "nd",
-          "content": ["Lord"]
+          "content": [
+            "Lord"
+          ],
+          "type": "char"
         },
         " hates idolatry.’"
       ]
@@ -36,16 +38,18 @@
     {
       "type": "para",
       "marker": "pr",
-      "content": ["“And all the people will answer, ‘Amen!’"]
+      "content": [
+        "“And all the people will answer, ‘Amen!’"
+      ]
     },
     {
       "type": "para",
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "16",
+          "type": "verse",
           "sid": "DEU 27:16"
         },
         "“ ‘God's curse on anyone who dishonors his father or mother.’"
@@ -54,16 +58,18 @@
     {
       "type": "para",
       "marker": "pr",
-      "content": ["“And all the people will answer, ‘Amen!’"]
+      "content": [
+        "“And all the people will answer, ‘Amen!’"
+      ]
     },
     {
       "type": "para",
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "17",
+          "type": "verse",
           "sid": "DEU 27:17"
         },
         "“ ‘God's curse on anyone who moves a neighbor's property line.’"
@@ -72,7 +78,9 @@
     {
       "type": "para",
       "marker": "pr",
-      "content": ["“And all the people will answer, ‘Amen!’"]
+      "content": [
+        "“And all the people will answer, ‘Amen!’"
+      ]
     }
   ]
 }

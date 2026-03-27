@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "ACT",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "15",
       "type": "chapter",
       "marker": "c",
-      "number": "15",
       "sid": "ACT 15"
     },
     {
@@ -26,16 +26,16 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "22",
+          "type": "verse",
           "sid": "ACT 15:22"
         },
         "The apostles, the leaders, and all the church members decided to send some men to Antioch along with Paul and Barnabas. They chose Silas and Judas Barsabbas, who were two leaders of the Lord's followers. ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "23",
+          "type": "verse",
           "sid": "ACT 15:23"
         },
         "They wrote a letter that said:"
@@ -53,9 +53,9 @@
       "marker": "pm",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "24",
+          "type": "verse",
           "sid": "ACT 15:24"
         },
         "We have heard that some people from here have terribly upset you by what they said. But we did not send them!"

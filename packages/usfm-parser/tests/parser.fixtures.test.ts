@@ -2,7 +2,6 @@ import { USFMParser } from '../dist';
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { CharacterNode } from '../../shared-types';
 import { cleanForComparison } from './utils';
 
 describe('USFMParser - Fixtures', () => {
@@ -53,25 +52,24 @@ describe('USFMParser - Fixtures', () => {
     // Find the first word node with content
     const paragraphNode = result.find(
       (node) =>
-        node.type === 'paragraph' &&
+        node.type === 'para' &&
         node.marker === 'p' &&
         Array.isArray(node.content) &&
         node.content.length > 0
     );
 
     expect(paragraphNode).toBeDefined();
-    expect(paragraphNode?.content).toBeDefined();
+    const para = paragraphNode as { content?: unknown[] } | undefined;
+    expect(para?.content).toBeDefined();
 
-    const wordNode = paragraphNode?.content?.[1] as CharacterNode;
+    const wordNode = para?.content?.[1] as { type?: string; marker?: string } | undefined;
     expect(wordNode).toBeDefined();
     expect(cleanForComparison(wordNode)).toMatchObject({
-      type: 'character',
+      type: 'char',
       marker: 'w',
-      attributes: {
-        'x-occurrence': '1',
-        'x-occurrences': '1',
-      },
-      content: [{ type: 'text', content: 'Paul' }],
+      'x-occurrence': '1',
+      'x-occurrences': '1',
+      content: ['Paul'],
     });
   });
 
@@ -82,9 +80,9 @@ describe('USFMParser - Fixtures', () => {
     // Find a node with nested bold text
     const nodeWithBold = result.find(
       (node) =>
-        node.type === 'paragraph' &&
+        node.type === 'para' &&
         Array.isArray(node.content) &&
-        node.content.some((child) => child.type === 'character' && child.marker === 'bd')
+        node.content.some((child: { type?: string; marker?: string }) => child.type === 'char' && child.marker === 'bd')
     );
 
     expect(nodeWithBold).toBeTruthy();
@@ -97,12 +95,12 @@ describe('USFMParser - Fixtures', () => {
 
     // Find poetry sections (q1, q2)
     const poetryNodes = result.filter(
-      (node) => node.type === 'paragraph' && node.marker?.startsWith('q')
+      (node) => node.type === 'para' && node.marker?.startsWith('q')
     );
 
     // Find list items (li1)
     const listNodes = result.filter(
-      (node) => node.type === 'paragraph' && node.marker?.startsWith('li')
+      (node) => node.type === 'para' && node.marker?.startsWith('li')
     );
 
     expect(poetryNodes.length).toBeGreaterThan(0);

@@ -3,10 +3,10 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MRK",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
       "type": "para",
@@ -14,11 +14,11 @@
       "content": [
         "The two endings to the Gospel, which are enclosed in brackets, are generally regarded as written by someone other than the author of ",
         {
-          "type": "char",
           "marker": "bk",
           "content": [
             "Mark"
-          ]
+          ],
+          "type": "char"
         }
       ]
     },
@@ -72,9 +72,9 @@
       ]
     },
     {
+      "number": "1",
       "type": "chapter",
       "marker": "c",
-      "number": "1",
       "sid": "MRK 1"
     },
     {
@@ -96,9 +96,9 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "1",
+          "type": "verse",
           "sid": "MRK 1:1"
         },
         "This is the Good News about Jesus Christ"

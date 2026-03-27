@@ -3,30 +3,32 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "1CH",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "27",
       "type": "chapter",
       "marker": "c",
-      "number": "27",
       "sid": "1CH 27"
     },
     {
       "type": "para",
       "marker": "s1",
-      "content": ["Administration of the Tribes of Israel"]
+      "content": [
+        "Administration of the Tribes of Israel"
+      ]
     },
     {
       "type": "para",
       "marker": "lh",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "16-22",
+          "type": "verse",
           "sid": "1CH 27:16-22"
         },
         "This is the list of the administrators of the tribes of Israel:"
@@ -37,15 +39,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["Reuben"]
+          "content": [
+            "Reuben"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Eliezer son of Zichri"]
+          "content": [
+            "Eliezer son of Zichri"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -54,15 +60,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["Simeon"]
+          "content": [
+            "Simeon"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Shephatiah son of Maacah"]
+          "content": [
+            "Shephatiah son of Maacah"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -71,15 +81,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["Levi"]
+          "content": [
+            "Levi"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Hashabiah son of Kemuel"]
+          "content": [
+            "Hashabiah son of Kemuel"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -88,15 +102,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["Aaron"]
+          "content": [
+            "Aaron"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Zadok"]
+          "content": [
+            "Zadok"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -105,15 +123,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["Judah"]
+          "content": [
+            "Judah"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Elihu, one of King David's brothers"]
+          "content": [
+            "Elihu, one of King David's brothers"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -122,15 +144,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["Issachar"]
+          "content": [
+            "Issachar"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Omri son of Michael"]
+          "content": [
+            "Omri son of Michael"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -139,15 +165,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["Zebulun"]
+          "content": [
+            "Zebulun"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Ishmaiah son of Obadiah"]
+          "content": [
+            "Ishmaiah son of Obadiah"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -156,15 +186,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["Naphtali"]
+          "content": [
+            "Naphtali"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Jeremoth son of Azriel"]
+          "content": [
+            "Jeremoth son of Azriel"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -173,15 +207,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["Ephraim"]
+          "content": [
+            "Ephraim"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Hoshea son of Azaziah"]
+          "content": [
+            "Hoshea son of Azaziah"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -190,15 +228,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["West Manasseh"]
+          "content": [
+            "West Manasseh"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Joel son of Pedaiah"]
+          "content": [
+            "Joel son of Pedaiah"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -207,15 +249,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["East Manasseh"]
+          "content": [
+            "East Manasseh"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Iddo son of Zechariah"]
+          "content": [
+            "Iddo son of Zechariah"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -224,15 +270,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["Benjamin"]
+          "content": [
+            "Benjamin"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Jaasiel son of Abner"]
+          "content": [
+            "Jaasiel son of Abner"
+          ],
+          "type": "char"
         }
       ]
     },
@@ -241,15 +291,19 @@
       "marker": "li1",
       "content": [
         {
-          "type": "char",
           "marker": "lik",
-          "content": ["Dan"]
+          "content": [
+            "Dan"
+          ],
+          "type": "char"
         },
         " ",
         {
-          "type": "char",
           "marker": "liv1",
-          "content": ["Azarel son of Jeroham"]
+          "content": [
+            "Azarel son of Jeroham"
+          ],
+          "type": "char"
         }
       ]
     },

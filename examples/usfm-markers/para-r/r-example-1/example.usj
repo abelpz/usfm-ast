@@ -3,42 +3,46 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MAT",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "3",
       "type": "chapter",
       "marker": "c",
-      "number": "3",
       "sid": "MAT 3"
     },
     {
       "type": "para",
       "marker": "s1",
-      "content": ["The Preaching of John the Baptist"]
+      "content": [
+        "The Preaching of John the Baptist"
+      ]
     },
     {
       "type": "para",
       "marker": "r",
-      "content": ["(Mark 1.1-8; Luke 3.1-18; John 1.19-28)"]
+      "content": [
+        "(Mark 1.1-8; Luke 3.1-18; John 1.19-28)"
+      ]
     },
     {
       "type": "para",
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "1",
+          "type": "verse",
           "sid": "MAT 3:1"
         },
         "At that time John the Baptist came to the desert of Judea and started preaching. ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "2",
+          "type": "verse",
           "sid": "MAT 3:2"
         },
         "“Turn away from your sins,” he said, ..."

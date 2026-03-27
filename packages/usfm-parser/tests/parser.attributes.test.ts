@@ -12,10 +12,11 @@ describe('USFMParser - Attributes', () => {
     const result = JSON.parse(JSON.stringify(parser.load(input).parse().getNodes()));
     expect(result).toEqual([
       {
-        type: 'character',
+        type: 'char',
         marker: 'w',
-        content: [{ type: 'text', content: 'Paul' }],
-        attributes: { 'x-occurrence': '1', 'x-occurrences': '1' },
+        content: ['Paul'],
+        'x-occurrence': '1',
+        'x-occurrences': '1',
       },
     ]);
   });
@@ -26,26 +27,22 @@ describe('USFMParser - Attributes', () => {
       const result = parser.load(input).parse().getNodes();
       expect(result[0]).toEqual(
         expect.objectContaining({
-          type: 'character',
+          type: 'char',
           marker: 'w',
-          attributes: {
-            lemma: 'grace',
-          },
+          lemma: 'grace',
         })
       );
     });
 
     test('handles both default and explicit attributes', () => {
-      const input = String.raw`\w gracious|grace x-occurrence="1"\w*`;
+      const input = String.raw`\w gracious|lemma="grace" x-occurrence="1"\w*`;
       const result = parser.load(input).parse().getNodes();
       expect(result[0]).toEqual(
         expect.objectContaining({
-          type: 'character',
+          type: 'char',
           marker: 'w',
-          attributes: {
-            lemma: 'grace',
-            'x-occurrence': '1',
-          },
+          lemma: 'grace',
+          'x-occurrence': '1',
         })
       );
     });
@@ -55,12 +52,10 @@ describe('USFMParser - Attributes', () => {
       const result = parser.load(input).parse().getNodes();
       expect(result[0]).toEqual(
         expect.objectContaining({
-          type: 'character',
+          type: 'char',
           marker: 'w',
-          attributes: {
-            lemma: 'different',
-            'x-occurrence': '1',
-          },
+          lemma: 'different',
+          'x-occurrence': '1',
         })
       );
     });

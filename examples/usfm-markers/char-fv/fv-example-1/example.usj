@@ -19,6 +19,7 @@
         },
         "whoever believes in me should drink. As the scripture says, ‘Streams of life-giving water will pour out from his side.’” ",
         {
+          "type": "note",
           "marker": "f",
           "content": [
             {
@@ -51,8 +52,7 @@
               "type": "char"
             }
           ],
-          "caller": "+",
-          "type": "note"
+          "caller": "+"
         }
       ]
     }

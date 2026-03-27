@@ -3,10 +3,10 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MRK",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
       "type": "para",
@@ -49,19 +49,19 @@
       "content": [
         "Este evangelio, segundo de los libros del NT, contiene poco material que no aparezca igualmente en ",
         {
-          "type": "char",
           "marker": "bk",
           "content": [
             "Mateo"
-          ]
+          ],
+          "type": "char"
         },
         " y ",
         {
-          "type": "char",
           "marker": "bk",
           "content": [
             "Lucas."
-          ]
+          ],
+          "type": "char"
         }
       ]
     }

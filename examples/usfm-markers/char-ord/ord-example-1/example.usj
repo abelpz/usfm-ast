@@ -8,11 +8,11 @@
       "content": [
         "1",
         {
-          "type": "char",
           "marker": "ord",
           "content": [
             "st"
-          ]
+          ],
+          "type": "char"
         }
       ]
     }

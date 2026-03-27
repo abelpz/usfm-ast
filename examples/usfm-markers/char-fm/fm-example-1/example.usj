@@ -8,6 +8,7 @@
       "type": "verse"
     },
     {
+      "type": "note",
       "marker": "x",
       "content": [
         {
@@ -25,11 +26,11 @@
           "type": "char"
         }
       ],
-      "caller": "-",
-      "type": "note"
+      "caller": "-"
     },
     "He made all kinds of beautiful trees grow there and produce good fruit. In the middle of the garden stood the tree that gives life and the tree that gives knowledge of what is good and what is bad.",
     {
+      "type": "note",
       "marker": "f",
       "content": [
         {
@@ -61,8 +62,7 @@
           "type": "char"
         }
       ],
-      "caller": "+",
-      "type": "note"
+      "caller": "+"
     },
     "... ",
     {
@@ -78,6 +78,6 @@
       ],
       "type": "char"
     },
-    " You must not eat the fruit of that tree; if you do, you will die the same day.”"
+    "You must not eat the fruit of that tree; if you do, you will die the same day.”"
   ]
 }

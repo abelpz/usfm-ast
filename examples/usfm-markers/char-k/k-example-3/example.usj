@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "1TI",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "2",
       "type": "chapter",
       "marker": "c",
-      "number": "2",
       "sid": "1TI 2"
     },
     {
@@ -19,47 +19,47 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "15",
+          "type": "verse",
           "sid": "1TI 2:15"
         },
         {
           "type": "note",
           "marker": "f",
-          "caller": "-",
           "content": [
             {
-              "type": "char",
               "marker": "fr",
               "content": [
                 "2:15 "
-              ]
+              ],
+              "type": "char"
             },
             {
-              "type": "char",
               "marker": "fq",
               "content": [
                 "genom sitt moderskap "
-              ]
+              ],
+              "type": "char"
             },
             {
-              "type": "char",
               "marker": "ft",
               "content": [
                 "Troligen en anspelning på 1 Mos 3:16: det bidrar till kvinnans ",
                 {
-                  "type": "char",
                   "marker": "k",
-                  "key": "radda",
                   "content": [
                     "räddning"
-                  ]
+                  ],
+                  "type": "char",
+                  "key": "radda"
                 },
                 " om hon bär barnafödandets börda."
-              ]
+              ],
+              "type": "char"
             }
-          ]
+          ],
+          "caller": "-"
         }
       ]
     }

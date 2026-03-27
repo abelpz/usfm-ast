@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "PSA",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "119",
       "type": "chapter",
       "marker": "c",
-      "number": "119",
       "sid": "PSA 119"
     },
     {
@@ -26,9 +26,9 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "1",
+          "type": "verse",
           "sid": "PSA 119:1"
         },
         "Blessed are they whose ways are blameless,"
@@ -40,11 +40,11 @@
       "content": [
         "who walk according to the law of the ",
         {
-          "type": "char",
           "marker": "nd",
           "content": [
             "Lord"
-          ]
+          ],
+          "type": "char"
         },
         ". ..."
       ]
@@ -61,9 +61,9 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "9",
+          "type": "verse",
           "sid": "PSA 119:9"
         },
         "How can a young man keep his way pure?"

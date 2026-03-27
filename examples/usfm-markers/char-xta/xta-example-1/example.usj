@@ -13,6 +13,7 @@
       "content": [
         "The Preaching of John the Baptist",
         {
+          "type": "note",
           "marker": "x",
           "content": [
             {
@@ -58,8 +59,7 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         }
       ]
     },

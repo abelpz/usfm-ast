@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "NUM",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "2",
       "type": "chapter",
       "marker": "c",
-      "number": "2",
       "sid": "NUM 2"
     },
     {
@@ -19,9 +19,9 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "3-9",
+          "type": "verse",
           "sid": "NUM 2:3-9"
         },
         "On the east side, those under the banner of the division of Judah shall camp in their groups, under their leaders, as follows:"
@@ -158,10 +158,10 @@
               "type": "table:cell",
               "marker": "tcr1",
               "align": "end",
-              "colspan": "2",
               "content": [
                 "Total: "
-              ]
+              ],
+              "colspan": "2"
             },
             {
               "type": "table:cell",

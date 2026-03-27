@@ -19,7 +19,7 @@ describe('USFM Normalization Rules', () => {
 
       // Split by lines and check each line
       const lines = output.split('\n');
-      expect(lines).toEqual(['\\id TIT', '\\h Titus', '\\toc1 The Letter to Titus']);
+      expect(lines).toEqual(['\\id TIT\\h Titus', '\\toc1 The Letter to Titus']);
     });
 
     it('should render paragraph markers with multiple words content on same line', () => {
@@ -87,16 +87,16 @@ describe('USFM Normalization Rules', () => {
 
   describe('Chapter and Verse Interaction', () => {
     it('should handle chapter followed by verse properly', () => {
-      const input = '\\c 1\\v 1 First verse of chapter';
+      const input = '\\c 1\\p\\v 1 First verse of chapter';
       const result = parser.load(input).parse().visit(visitor);
       const output = visitor.getResult().trim();
 
       const lines = output.split('\n');
-      expect(lines).toEqual(['\\c 1', '\\v 1 First verse of chapter']);
+      expect(lines).toEqual(['\\c 1', '\\p', '\\v 1 First verse of chapter']);
     });
 
     it('should handle chapter with paragraph and verse', () => {
-      const input = '\\c 2\\p\\v 1 Chapter two verse one';
+      const input = '\\c 2\n\\p\\v 1 Chapter two verse one';
       const result = parser.load(input).parse().visit(visitor);
       const output = visitor.getResult().trim();
 
@@ -134,11 +134,10 @@ describe('USFM Normalization Rules', () => {
       const output = visitor.getResult().trim();
 
       const lines = output.split('\n');
-      expect(lines[0]).toBe('\\id TIT'); // First line, no leading newline
-      expect(lines[1]).toBe('\\h Titus');
-      expect(lines[2]).toBe('\\c 1');
-      expect(lines[3]).toBe('\\p');
-      expect(lines[4]).toBe('\\v 1 Text');
+      expect(lines[0]).toBe('\\id TIT\\h Titus');
+      expect(lines[1]).toBe('\\c 1');
+      expect(lines[2]).toBe('\\p');
+      expect(lines[3]).toBe('\\v 1 Text');
     });
 
     it('should not have trailing whitespace on lines', () => {

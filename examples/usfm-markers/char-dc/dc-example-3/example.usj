@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "1CO",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "15",
       "type": "chapter",
       "marker": "c",
-      "number": "15",
       "sid": "1CO 15"
     },
     {
@@ -19,34 +19,38 @@
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "51-52",
+          "type": "verse",
           "sid": "1CO 15:51-52"
         },
         {
           "type": "note",
           "marker": "x",
-          "caller": "-",
           "content": [
             {
-              "type": "char",
               "marker": "xo",
-              "content": ["15.51,52: "]
+              "content": [
+                "15.51,52: "
+              ],
+              "type": "char"
             },
             {
-              "type": "char",
               "marker": "xt",
               "content": [
                 {
-                  "type": "char",
                   "marker": "dc",
-                  "content": ["2Es 6.23; "]
+                  "content": [
+                    "2Es 6.23; "
+                  ],
+                  "type": "char"
                 },
                 "1Th 4.15-17."
-              ]
+              ],
+              "type": "char"
             }
-          ]
+          ],
+          "caller": "-"
         },
         " Listen to this secret truth: we shall not all die, but when the last trumpet sounds, we shall all be changed in an instant, as quickly as the blinking of an eye. For when the trumpet sounds, the dead will be raised, never to die again, and we shall all be changed."
       ]

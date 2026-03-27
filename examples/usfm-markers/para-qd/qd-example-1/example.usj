@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "HAB",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "3",
       "type": "chapter",
       "marker": "c",
-      "number": "3",
       "sid": "HAB 3"
     },
     {
@@ -19,16 +19,18 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "18",
+          "type": "verse",
           "sid": "HAB 3:18"
         },
         "yet I will rejoice in the ",
         {
-          "type": "char",
           "marker": "nd",
-          "content": ["Lord"]
+          "content": [
+            "Lord"
+          ],
+          "type": "char"
         },
         ","
       ]
@@ -36,7 +38,9 @@
     {
       "type": "para",
       "marker": "q2",
-      "content": ["I will be joyful in God my Savior."]
+      "content": [
+        "I will be joyful in God my Savior."
+      ]
     },
     {
       "type": "para",
@@ -47,16 +51,18 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "19",
+          "type": "verse",
           "sid": "HAB 3:19"
         },
         "The Sovereign ",
         {
-          "type": "char",
           "marker": "nd",
-          "content": ["Lord"]
+          "content": [
+            "Lord"
+          ],
+          "type": "char"
         },
         " is my strength;"
       ]
@@ -64,12 +70,16 @@
     {
       "type": "para",
       "marker": "q2",
-      "content": ["he makes my feet like the feet of a deer,"]
+      "content": [
+        "he makes my feet like the feet of a deer,"
+      ]
     },
     {
       "type": "para",
       "marker": "q2",
-      "content": ["he enables me to tread on the heights."]
+      "content": [
+        "he enables me to tread on the heights."
+      ]
     },
     {
       "type": "para",
@@ -78,7 +88,9 @@
     {
       "type": "para",
       "marker": "qd",
-      "content": ["For the director of music. On my stringed instruments."]
+      "content": [
+        "For the director of music. On my stringed instruments."
+      ]
     }
   ]
 }

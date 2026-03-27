@@ -3,36 +3,44 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "1CH",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "27",
       "type": "chapter",
       "marker": "c",
-      "number": "27",
       "sid": "1CH 27"
     },
     {
       "type": "para",
       "marker": "li1",
-      "content": ["..."]
+      "content": [
+        "..."
+      ]
     },
     {
       "type": "para",
       "marker": "li1",
-      "content": ["East Manasseh - Iddo son of Zechariah"]
+      "content": [
+        "East Manasseh - Iddo son of Zechariah"
+      ]
     },
     {
       "type": "para",
       "marker": "li1",
-      "content": ["Benjamin - Jaasiel son of Abner"]
+      "content": [
+        "Benjamin - Jaasiel son of Abner"
+      ]
     },
     {
       "type": "para",
       "marker": "li1",
-      "content": ["Dan - Azarel son of Jeroham"]
+      "content": [
+        "Dan - Azarel son of Jeroham"
+      ]
     },
     {
       "type": "para",

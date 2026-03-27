@@ -3,15 +3,17 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MRK",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
       "type": "para",
       "marker": "imte",
-      "content": ["End of the Introduction to the Gospel of Mark"]
+      "content": [
+        "End of the Introduction to the Gospel of Mark"
+      ]
     }
   ]
 }

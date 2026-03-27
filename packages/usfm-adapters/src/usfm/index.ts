@@ -50,6 +50,37 @@ function isNoteContentMarkerName(marker: string): boolean {
   return Boolean(info?.context?.includes('NoteContent'));
 }
 
+function isInternalASTKey(key: string): boolean {
+  return new Set([
+    'type',
+    'marker',
+    'content',
+    'index',
+    'attributes',
+    'constructor',
+    'accept',
+    'acceptWithContext',
+    'getChildren',
+    'getParent',
+    'getNextSibling',
+    'getPreviousSibling',
+    'toJSON',
+    'number',
+    'caller',
+    'category',
+    'code',
+  ]).has(key);
+}
+
+/** Paragraph nodes from legacy class AST or enhanced parser (`ParsedParagraphNode`, type `para`). */
+function isParagraphASTNode(parent: unknown): parent is { content: unknown[] } {
+  if (!parent || typeof parent !== 'object') return false;
+  const p = parent as { type?: string; constructor?: { name?: string }; content?: unknown };
+  if (p.type === 'para' || p.type === 'paragraph') return true;
+  const name = p.constructor?.name;
+  return name === 'ParagraphUSFMNode' || name === 'ParsedParagraphNode';
+}
+
 /**
  * Clean, simplified USFM visitor that uses the new USFMFormatter API
  */
@@ -103,6 +134,58 @@ export class USFMVisitor implements BaseUSFMVisitor {
     };
 
     this.formatter = new USFMFormatter(this.options.formatterOptions);
+  }
+
+  visitBook(node: ParagraphUSFMNodeInterface): string {
+    const raw = node as any;
+    this.contextStack.push('paragraph');
+    const formatted = this.formatter.addMarker(this.result, 'id');
+    this.result = formatted.normalizedOutput;
+    if (raw.code) {
+      const t = this.formatter.addTextContent(this.result, String(raw.code));
+      this.result = t.normalizedOutput;
+    }
+    if (Array.isArray(raw.content) && raw.content.length > 0) {
+      const contentText = raw.content.map((x: unknown) => String(x)).join(' ');
+      if (contentText.trim()) {
+        const t = this.formatter.addTextContent(this.result, ' ' + contentText);
+        this.result = t.normalizedOutput;
+      }
+    }
+    this.contextStack.pop();
+    return this.result;
+  }
+
+  visitChapter(node: ParagraphUSFMNodeInterface): string {
+    const raw = node as any;
+    this.contextStack.push('paragraph');
+    const formatted = this.formatter.addMarker(this.result, 'c');
+    this.result = formatted.normalizedOutput;
+    if (raw.number != null && String(raw.number) !== '') {
+      const t = this.formatter.addTextContent(this.result, String(raw.number));
+      this.result = t.normalizedOutput;
+    }
+    if (Array.isArray(raw.content) && raw.content.length > 0) {
+      this.visitChildren(raw, raw.content);
+    }
+    this.contextStack.pop();
+    return this.result;
+  }
+
+  visitVerse(node: CharacterUSFMNodeInterface): string {
+    const raw = node as any;
+    this.contextStack.push('character');
+    const openingFormatted = this.formatter.addMarker(this.result, 'v');
+    this.result = openingFormatted.normalizedOutput;
+    if (raw.number != null && String(raw.number) !== '') {
+      const t = this.formatter.addTextContent(this.result, String(raw.number) + ' ');
+      this.result = t.normalizedOutput;
+    }
+    if (Array.isArray(raw.content) && raw.content.length > 0) {
+      this.visitChildren(raw, raw.content);
+    }
+    this.contextStack.pop();
+    return this.result;
   }
 
   /**
@@ -297,19 +380,8 @@ export class USFMVisitor implements BaseUSFMVisitor {
     }
 
     // Add attributes AFTER content (for non-special markers)
-    if (
-      marker !== 'v' &&
-      marker !== 'c' &&
-      node.attributes &&
-      Object.keys(node.attributes).length > 0
-    ) {
-      // Filter out undefined values to match expected type
-      const validAttributes = Object.fromEntries(
-        Object.entries(node.attributes).filter(
-          ([_, value]) => value !== undefined && value !== null
-        )
-      ) as Record<string, string>;
-
+    if (marker !== 'v' && marker !== 'c') {
+      const validAttributes = this.collectCharacterAttributes(node);
       if (Object.keys(validAttributes).length > 0) {
         const attributesFormatted = this.formatter.addAttributes(this.result, validAttributes);
         this.result = attributesFormatted.normalizedOutput;
@@ -387,9 +459,10 @@ export class USFMVisitor implements BaseUSFMVisitor {
     const shouldTrimEdges =
       whitespaceHandling === 'trim-edges' || whitespaceHandling === 'normalize-and-trim';
     if (shouldTrimEdges && this.currentParent) {
-      const isParagraphChild = this.currentParent.constructor.name === 'ParagraphUSFMNode';
+      const isParagraphChild =
+        isParagraphASTNode(this.currentParent) && Array.isArray(this.currentParent.content);
 
-      if (isParagraphChild && Array.isArray(this.currentParent.content)) {
+      if (isParagraphChild) {
         const siblings = this.currentParent.content;
         const isFirstChild = this.currentChildIndex === 0;
         const isLastChild = this.currentChildIndex === siblings.length - 1;
@@ -419,14 +492,12 @@ export class USFMVisitor implements BaseUSFMVisitor {
   visitMilestone(node: MilestoneUSFMNodeInterface): string {
     const marker = node.marker;
 
-    // Use the new formatter API for milestones
-    const validAttributes = node.attributes
-      ? (Object.fromEntries(
-          Object.entries(node.attributes).filter(([_, value]) => value !== undefined)
-        ) as Record<string, string>)
-      : undefined;
-
-    const formatted = this.formatter.addMilestone(this.result, marker, validAttributes);
+    const validAttributes = this.collectMilestoneAttributes(node);
+    const formatted = this.formatter.addMilestone(
+      this.result,
+      marker,
+      Object.keys(validAttributes).length > 0 ? validAttributes : undefined
+    );
     this.result = formatted.normalizedOutput;
 
     return this.result;
@@ -464,6 +535,47 @@ export class USFMVisitor implements BaseUSFMVisitor {
     this.contextStack.pop();
 
     return this.result;
+  }
+
+  private collectCharacterAttributes(node: CharacterUSFMNodeInterface): Record<string, string> {
+    const out: Record<string, string> = {};
+    const raw = node as any;
+    if (node.attributes) {
+      for (const [k, v] of Object.entries(node.attributes)) {
+        if (v !== undefined && v !== null) out[k] = String(v);
+      }
+    }
+    for (const key of Object.keys(raw)) {
+      if (isInternalASTKey(key)) continue;
+      const val = raw[key];
+      if (typeof val !== 'string') continue;
+      if (
+        key.startsWith('x-') ||
+        ['lemma', 'strong', 'occurrence', 'occurrences'].includes(key)
+      ) {
+        out[key] = val;
+      }
+    }
+    return out;
+  }
+
+  private collectMilestoneAttributes(node: MilestoneUSFMNodeInterface): Record<string, string> {
+    const out: Record<string, string> = {};
+    const raw = node as any;
+    if (node.attributes) {
+      for (const [k, v] of Object.entries(node.attributes)) {
+        if (v !== undefined && v !== null) out[k] = String(v);
+      }
+    }
+    for (const key of Object.keys(raw)) {
+      if (key === 'type' || key === 'marker' || key === 'content' || key === 'attributes') continue;
+      const val = raw[key];
+      if (typeof val !== 'string') continue;
+      if (key.startsWith('x-') || ['sid', 'eid', 'who'].includes(key)) {
+        out[key] = val;
+      }
+    }
+    return out;
   }
 }
 

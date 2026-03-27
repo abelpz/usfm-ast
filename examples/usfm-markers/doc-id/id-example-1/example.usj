@@ -3,10 +3,12 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MAT",
-      "content": ["41MATGNT92.SFM, Good News Translation, June 2003"]
+      "content": [
+        "41MATGNT92.SFM, Good News Translation, June 2003"
+      ],
+      "type": "book",
+      "marker": "id"
     }
   ]
 }

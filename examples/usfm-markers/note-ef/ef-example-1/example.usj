@@ -13,6 +13,7 @@
         },
         "This is the Good News about Jesus Christ, the Son of God",
         {
+          "type": "note",
           "marker": "ef",
           "content": [
             {
@@ -37,10 +38,10 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         {
+          "type": "note",
           "marker": "f",
           "content": [
             {
@@ -65,8 +66,7 @@
               "type": "char"
             }
           ],
-          "caller": "+",
-          "type": "note"
+          "caller": "+"
         },
         ". ",
         {
@@ -75,6 +75,7 @@
           "type": "verse"
         },
         {
+          "type": "note",
           "marker": "ef",
           "content": [
             {
@@ -92,10 +93,10 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         {
+          "type": "note",
           "marker": "x",
           "content": [
             {
@@ -113,11 +114,11 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         "It began as the prophet Isaiah had written",
         {
+          "type": "note",
           "marker": "ef",
           "content": [
             {
@@ -142,8 +143,7 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         ":"
       ]
@@ -172,6 +172,7 @@
           "type": "verse"
         },
         {
+          "type": "note",
           "marker": "x",
           "content": [
             {
@@ -189,8 +190,7 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         "Someone is shouting in the desert,"
       ]
@@ -208,6 +208,7 @@
       "content": [
         "make a straight path for him to travel",
         {
+          "type": "note",
           "marker": "ef",
           "content": [
             {
@@ -232,8 +233,7 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         "!’”"
       ]
@@ -248,6 +248,7 @@
           "type": "verse"
         },
         {
+          "type": "note",
           "marker": "ef",
           "content": [
             {
@@ -265,11 +266,11 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         "So John appeared",
         {
+          "type": "note",
           "marker": "ef",
           "content": [
             {
@@ -294,11 +295,11 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         " in the desert",
         {
+          "type": "note",
           "marker": "ef",
           "content": [
             {
@@ -323,11 +324,11 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         ", baptizing and preaching.",
         {
+          "type": "note",
           "marker": "f",
           "content": [
             {
@@ -359,10 +360,10 @@
               "type": "char"
             }
           ],
-          "caller": "+",
-          "type": "note"
+          "caller": "+"
         },
         {
+          "type": "note",
           "marker": "ef",
           "content": [
             {
@@ -387,8 +388,7 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         " “Turn away from your sins and be baptized,” he told the people, “and God will forgive your sins.” ",
         {
@@ -398,6 +398,7 @@
         },
         "Many people from the province of Judea",
         {
+          "type": "note",
           "marker": "ef",
           "content": [
             {
@@ -422,8 +423,7 @@
               "type": "char"
             }
           ],
-          "caller": "-",
-          "type": "note"
+          "caller": "-"
         },
         " and the city of Jerusalem went out to hear John. They confessed their sins, and he baptized them in the River Jordan. ..."
       ]

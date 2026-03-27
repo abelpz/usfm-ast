@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MAT",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "2",
       "type": "chapter",
       "marker": "c",
-      "number": "2",
       "sid": "MAT 2"
     },
     {
@@ -20,44 +20,52 @@
       "content": [
         "... ",
         {
-          "type": "verse",
           "marker": "v",
           "number": "4",
+          "type": "verse",
           "sid": "MAT 2:4"
         },
         {
           "type": "note",
           "marker": "ef",
-          "caller": "-",
           "content": [
             {
-              "type": "char",
               "marker": "fr",
-              "content": ["2.4: "]
+              "content": [
+                "2.4: "
+              ],
+              "type": "char"
             },
             {
-              "type": "char",
               "marker": "fk",
-              "content": ["Chief Priests"]
+              "content": [
+                "Chief Priests"
+              ],
+              "type": "char"
             }
-          ]
+          ],
+          "caller": "-"
         },
         {
           "type": "note",
           "marker": "ef",
-          "caller": "-",
           "content": [
             {
-              "type": "char",
               "marker": "fr",
-              "content": ["2.4: "]
+              "content": [
+                "2.4: "
+              ],
+              "type": "char"
             },
             {
-              "type": "char",
               "marker": "fk",
-              "content": ["Teachers of the Law"]
+              "content": [
+                "Teachers of the Law"
+              ],
+              "type": "char"
             }
-          ]
+          ],
+          "caller": "-"
         },
         "He called together all the chief priests and the teachers of the Law and asked them, “Where will the Messiah be born?”"
       ]
@@ -65,12 +73,13 @@
     {
       "type": "sidebar",
       "marker": "esb",
-      "category": "Ideas",
       "content": [
         {
           "type": "para",
           "marker": "ms",
-          "content": ["Dates in B.C. and A.D."]
+          "content": [
+            "Dates in B.C. and A.D."
+          ]
         },
         {
           "type": "para",
@@ -78,33 +87,43 @@
           "content": [
             "The initials ",
             {
-              "type": "char",
               "marker": "sc",
-              "content": ["b.c."]
+              "content": [
+                "b.c."
+              ],
+              "type": "char"
             },
             " have traditionally been an abbreviation for “Before Christ.” If ",
             {
-              "type": "char",
               "marker": "bk",
-              "content": ["Luke"]
+              "content": [
+                "Luke"
+              ],
+              "type": "char"
             },
             "'s dating is correct, then Jesus was born at least four years before the years known as ",
             {
-              "type": "char",
               "marker": "sc",
-              "content": ["a.d."]
+              "content": [
+                "a.d."
+              ],
+              "type": "char"
             },
             " began. (",
             {
-              "type": "char",
               "marker": "sc",
-              "content": ["a.d."]
+              "content": [
+                "a.d."
+              ],
+              "type": "char"
             },
             " stands for the Latin phrase “in the year of our Lord”). Christian dating was actually not introduced until ",
             {
-              "type": "char",
               "marker": "sc",
-              "content": ["a.d."]
+              "content": [
+                "a.d."
+              ],
+              "type": "char"
             },
             " 526 by a monk named Dionysius Exiguus. He was given the job of creating a calendar for the feasts of the church. He fixed the birth of Jesus in the Roman year 754, which was selected as the first year of the Christian era beginning on January 1. Dionysius apparently misjudged Herod's reign by about five years."
           ]
@@ -115,52 +134,63 @@
           "content": [
             "The initials ",
             {
-              "type": "char",
               "marker": "sc",
-              "content": ["b.c."]
+              "content": [
+                "b.c."
+              ],
+              "type": "char"
             },
             "e. (Before the Common Era) and c.e. (in the Common Era) are sometimes used for the traditional ",
             {
-              "type": "char",
               "marker": "sc",
-              "content": ["b.c."]
+              "content": [
+                "b.c."
+              ],
+              "type": "char"
             },
             " and ",
             {
-              "type": "char",
               "marker": "sc",
-              "content": ["a.d."]
+              "content": [
+                "a.d."
+              ],
+              "type": "char"
             }
           ]
         }
-      ]
+      ],
+      "category": "Ideas"
     },
     {
       "type": "para",
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "5",
+          "type": "verse",
           "sid": "MAT 2:5"
         },
         {
           "type": "note",
           "marker": "ef",
-          "caller": "-",
           "content": [
             {
-              "type": "char",
               "marker": "fr",
-              "content": ["2.5: "]
+              "content": [
+                "2.5: "
+              ],
+              "type": "char"
             },
             {
-              "type": "char",
               "marker": "fk",
-              "content": ["Prophet"]
+              "content": [
+                "Prophet"
+              ],
+              "type": "char"
             }
-          ]
+          ],
+          "caller": "-"
         },
         "“In the town of Bethlehem in Judea,” they answered. “For this is what the prophet wrote:"
       ]

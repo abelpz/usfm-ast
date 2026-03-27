@@ -3,10 +3,10 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "MRK",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
       "type": "para",
@@ -14,11 +14,11 @@
       "content": [
         "The beginning of the gospel ",
         {
-          "type": "char",
           "marker": "ior",
           "content": [
             "(1.1-13)"
-          ]
+          ],
+          "type": "char"
         }
       ]
     },
@@ -28,11 +28,11 @@
       "content": [
         "Jesus' public ministry in Galilee ",
         {
-          "type": "char",
           "marker": "ior",
           "content": [
             "(1.14–9.50)"
-          ]
+          ],
+          "type": "char"
         }
       ]
     },
@@ -42,11 +42,11 @@
       "content": [
         "From Galilee to Jerusalem ",
         {
-          "type": "char",
           "marker": "ior",
           "content": [
             "(10.1-52)"
-          ]
+          ],
+          "type": "char"
         }
       ]
     },
@@ -56,11 +56,11 @@
       "content": [
         "The last week in and near Jerusalem ",
         {
-          "type": "char",
           "marker": "ior",
           "content": [
             "(11.1–15.47)"
-          ]
+          ],
+          "type": "char"
         }
       ]
     },
@@ -70,11 +70,11 @@
       "content": [
         "The resurrection of Jesus ",
         {
-          "type": "char",
           "marker": "ior",
           "content": [
             "(16.1-8)"
-          ]
+          ],
+          "type": "char"
         }
       ]
     },
@@ -84,11 +84,11 @@
       "content": [
         "The appearances and ascension of the risen Lord ",
         {
-          "type": "char",
           "marker": "ior",
           "content": [
             "(16.9-20)"
-          ]
+          ],
+          "type": "char"
         }
       ]
     }

@@ -3,30 +3,32 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "JOB",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "3",
       "type": "chapter",
       "marker": "c",
-      "number": "3",
       "sid": "JOB 3"
     },
     {
       "type": "para",
       "marker": "s1",
-      "content": ["Job's Complaint to God"]
+      "content": [
+        "Job's Complaint to God"
+      ]
     },
     {
       "type": "para",
       "marker": "p",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "1",
+          "type": "verse",
           "sid": "JOB 3:1"
         },
         "Finally Job broke the silence and cursed the day on which he had been born."
@@ -35,16 +37,18 @@
     {
       "type": "para",
       "marker": "sp",
-      "content": ["Job"]
+      "content": [
+        "Job"
+      ]
     },
     {
       "type": "para",
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "2-3",
+          "type": "verse",
           "sid": "JOB 3:2-3"
         },
         "O God, put a curse on the day I was born;"
@@ -53,7 +57,9 @@
     {
       "type": "para",
       "marker": "q2",
-      "content": ["put a curse on the night when I was conceived!"]
+      "content": [
+        "put a curse on the night when I was conceived!"
+      ]
     }
   ]
 }

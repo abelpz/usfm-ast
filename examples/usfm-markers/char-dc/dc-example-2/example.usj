@@ -3,15 +3,15 @@
   "version": "3.1",
   "content": [
     {
-      "type": "book",
-      "marker": "id",
       "code": "PSA",
-      "content": []
+      "content": [],
+      "type": "book",
+      "marker": "id"
     },
     {
+      "number": "115",
       "type": "chapter",
       "marker": "c",
-      "number": "115",
       "sid": "PSA 115"
     },
     {
@@ -19,9 +19,9 @@
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "3",
+          "type": "verse",
           "sid": "PSA 115:3"
         },
         "Our God is in heaven;"
@@ -30,46 +30,54 @@
     {
       "type": "para",
       "marker": "q2",
-      "content": ["he does whatever he wishes."]
+      "content": [
+        "he does whatever he wishes."
+      ]
     },
     {
       "type": "para",
       "marker": "q1",
       "content": [
         {
-          "type": "verse",
           "marker": "v",
           "number": "4",
+          "type": "verse",
           "sid": "PSA 115:4"
         },
         {
           "type": "note",
           "marker": "x",
-          "caller": "-",
           "content": [
             {
-              "type": "char",
               "marker": "xo",
-              "content": ["115.4-8: "]
+              "content": [
+                "115.4-8: "
+              ],
+              "type": "char"
             },
             {
-              "type": "char",
               "marker": "xt",
               "content": [
                 "Ps 135.15-18; ",
                 {
-                  "type": "char",
                   "marker": "dc",
-                  "content": ["Ltj Jr 4-73; "]
+                  "content": [
+                    "Ltj Jr 4-73; "
+                  ],
+                  "type": "char"
                 }
-              ]
+              ],
+              "type": "char"
             },
             {
-              "type": "char",
               "marker": "xt",
-              "content": ["Rev 9.20."]
+              "content": [
+                "Rev 9.20."
+              ],
+              "type": "char"
             }
-          ]
+          ],
+          "caller": "-"
         },
         " Their gods are made of silver and gold,"
       ]
@@ -77,7 +85,9 @@
     {
       "type": "para",
       "marker": "q2",
-      "content": ["formed by human hands."]
+      "content": [
+        "formed by human hands."
+      ]
     }
   ]
 }
