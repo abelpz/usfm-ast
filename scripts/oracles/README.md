@@ -1,18 +1,27 @@
 # External parser comparison (oracles)
 
-Optional tooling to compare **usfmtc** (Python, USFM TC) and **usfm3** (npm, Rust/WASM) against repo USFM files, and to compare **`USFMParser`** (this repo) against **usfmtc** USJ using tolerant similarity.
+Optional tooling to compare **usfmtc** (Python, USFM TC) and **usfm3** (npm, Rust/WASM) against repo USFM files, and to compare **this repo’s** USFM → USJ and USFM → USX against those oracles using **tolerant** similarity (not byte equality).
 
-## Parser vs usfmtc (USJ similarity)
+## Parser + USXVisitor vs oracles (`compare-parser.mjs`)
 
-After `bun run build` at the repo root (so `packages/usfm-parser/dist` exists):
+After `bun run build` at the repo root (needs **`packages/usfm-parser/dist`** and **`packages/usfm-adapters/dist`** — both are built by the default turbo build):
 
 ```bash
+bun run oracles:parity
+# or
 node scripts/oracles/compare-parser.mjs packages/usfm-parser/tests/fixtures/usfm/basic.usfm
 ```
 
-This runs **usfmtc** when Python + `pip install usfmtc` are available, then compares its USJ to **`USFMParser.prototype.toJSON()`** using text + node-type histogram scores (not byte-for-byte). If usfmtc is missing, the script exits **0** and only reports the parser output summary (set **`ORACLE_REQUIRE_USFMTC=1`** to fail when usfmtc cannot run).
+When **usfmtc** is available (Python + `pip install usfmtc`):
 
-Programmatic API: `@usfm-tools/parser/oracle` exports `compareUsjSimilarity`, `flattenTextNodes`, etc.
+1. **USJ:** `USFMParser.prototype.toJSON()` vs usfmtc `outUsj` — text + USJ node-type histogram (`compareUsjSimilarity`).
+2. **USX:** `USXVisitor` on the same parse vs usfmtc `outUsx` — text extracted from XML + tag-name histogram (`compareUsxSimilarity`).
+
+Exit **1** if either USJ or USX (vs usfmtc) is below the default thresholds. If usfmtc is missing, the script exits **0** and only prints a short summary (set **`ORACLE_REQUIRE_USFMTC=1`** to fail when usfmtc cannot run).
+
+**Optional third block — USX vs usfm3:** if **`ORACLE_SKIP_USFM3`** is not set, the script runs `dump-usfm3.mjs` and prints **`compareUsxSimilarity(oursUsx, usfm3Usx)`** for information; **exit code** is still driven only by the **usfmtc** USJ+USX checks.
+
+Programmatic API: `@usfm-tools/parser/oracle` exports `compareUsjSimilarity`, `compareUsxSimilarity`, `flattenTextNodes`, `extractXmlTextContent`, etc.
 
 ## One-shot (external tools only)
 
