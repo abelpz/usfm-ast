@@ -19,5 +19,6 @@ export default defineConfig([
     sourcemap: true,
     clean: false,
     banner: { js: '#!/usr/bin/env node' },
+    external: ['@usj-tools/core'],
   },
 ]);

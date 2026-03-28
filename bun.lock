@@ -121,6 +121,7 @@
         "usj": "./dist/cli.js",
       },
       "dependencies": {
+        "@usj-tools/core": "workspace:*",
         "commander": "14.0.0",
       },
       "devDependencies": {
@@ -147,6 +148,9 @@
     "packages/usj-validator": {
       "name": "@usj-tools/validator",
       "version": "0.1.0",
+      "dependencies": {
+        "@usj-tools/core": "workspace:*",
+      },
       "devDependencies": {
         "tsup": "^8.3.5",
         "typescript": "5.9.3",

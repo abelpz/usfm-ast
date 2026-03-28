@@ -30,6 +30,11 @@ bun run usfm:validate -- path/to/file.usfm
 bun run usj:pretty -- path/to/file.usj.json
 ```
 
+```bash
+# Structural check (root type USJ, version, typed nodes; not a full schema)
+bun run usj:validate -- path/to/file.usj.json
+```
+
 When published, the same binaries are available as `usfm`, `usfm-validate`, and `usj` via the respective package `bin` fields.
 
 ## Examples and goldens

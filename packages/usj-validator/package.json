@@ -44,6 +44,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "dependencies": {
+    "@usj-tools/core": "workspace:*"
+  },
   "devDependencies": {
     "tsup": "^8.3.5",
     "typescript": "5.9.3"

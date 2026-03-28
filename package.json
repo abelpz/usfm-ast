@@ -34,7 +34,8 @@
     "oracles:compare": "node scripts/oracles/compare.mjs",
     "usfm:parse": "node packages/usfm-cli/dist/cli.js parse",
     "usfm:validate": "node packages/usfm-validator/dist/cli.js validate",
-    "usj:pretty": "node packages/usj-cli/dist/cli.js pretty"
+    "usj:pretty": "node packages/usj-cli/dist/cli.js pretty",
+    "usj:validate": "node packages/usj-cli/dist/cli.js validate"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
