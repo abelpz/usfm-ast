@@ -1,8 +1,20 @@
 # External parser comparison (oracles)
 
-Optional tooling to compare **usfmtc** (Python, USFM TC) and **usfm3** (npm, Rust/WASM) against repo USFM files.
+Optional tooling to compare **usfmtc** (Python, USFM TC) and **usfm3** (npm, Rust/WASM) against repo USFM files, and to compare **`USFMParser`** (this repo) against **usfmtc** USJ using tolerant similarity.
 
-## One-shot
+## Parser vs usfmtc (USJ similarity)
+
+After `bun run build` at the repo root (so `packages/usfm-parser/dist` exists):
+
+```bash
+node scripts/oracles/compare-parser.mjs packages/usfm-parser/tests/fixtures/usfm/basic.usfm
+```
+
+This runs **usfmtc** when Python + `pip install usfmtc` are available, then compares its USJ to **`USFMParser.prototype.toJSON()`** using text + node-type histogram scores (not byte-for-byte). If usfmtc is missing, the script exits **0** and only reports the parser output summary (set **`ORACLE_REQUIRE_USFMTC=1`** to fail when usfmtc cannot run).
+
+Programmatic API: `@usfm-tools/parser/oracle` exports `compareUsjSimilarity`, `flattenTextNodes`, etc.
+
+## One-shot (external tools only)
 
 From the repo root (after `bun install`):
 

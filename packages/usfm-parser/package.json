@@ -11,6 +11,12 @@
       "import": "./dist/index.js",
       "require": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./oracle": {
+      "types": "./dist/oracle/compareUsj.d.ts",
+      "import": "./dist/oracle/compareUsj.js",
+      "require": "./dist/oracle/compareUsj.js",
+      "default": "./dist/oracle/compareUsj.js"
     }
   },
   "files": [

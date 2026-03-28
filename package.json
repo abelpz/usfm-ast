@@ -32,6 +32,7 @@
     "examples:create-usj": "bun tools/example-manager.js create-usj",
     "regenerate:example-usj": "bunx turbo run build --filter=@usfm-tools/parser && bun tools/regenerate-example-usj.ts",
     "oracles:compare": "node scripts/oracles/compare.mjs",
+    "oracles:parity": "node scripts/oracles/compare-parser.mjs packages/usfm-parser/tests/fixtures/usfm/basic.usfm",
     "usfm:parse": "node packages/usfm-cli/dist/cli.js parse",
     "usfm:validate": "node packages/usfm-validator/dist/cli.js validate",
     "usj:pretty": "node packages/usj-cli/dist/cli.js pretty",
