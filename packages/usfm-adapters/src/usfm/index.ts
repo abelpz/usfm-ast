@@ -3,6 +3,9 @@ import {
   CharacterUSFMNode,
   MilestoneUSFMNode,
   ParagraphUSFMNode,
+  ParsedTableCellNode,
+  ParsedTableNode,
+  ParsedTableRowNode,
   TextUSFMNode,
 } from '@usfm-tools/parser';
 import {
@@ -46,6 +49,7 @@ export interface USFMVisitorOptions {
 
 /** Matches parser note-content detection: markers with `context` including NoteContent. */
 function isNoteContentMarkerName(marker: string): boolean {
+  if (!marker || typeof marker !== 'string') return false;
   const info = USFMMarkerRegistry.getInstance().getMarkerInfo(marker);
   return Boolean(info?.context?.includes('NoteContent'));
 }
@@ -188,6 +192,78 @@ export class USFMVisitor implements BaseUSFMVisitor {
     return this.result;
   }
 
+  visitTable(node: ParsedTableNode): string {
+    if (Array.isArray(node.content) && node.content.length > 0) {
+      this.visitChildren(node, node.content);
+    }
+    return this.result;
+  }
+
+  visitTableRow(node: ParsedTableRowNode): string {
+    this.contextStack.push('table-row');
+    const openingFormatted = this.formatter.addMarker(this.result, 'tr');
+    this.result = openingFormatted.normalizedOutput;
+    if (Array.isArray(node.content) && node.content.length > 0) {
+      this.visitChildren(node, node.content);
+    }
+    this.contextStack.pop();
+    return this.result;
+  }
+
+  /**
+   * Table cells use character-style markers but are not closed with \\marker* in USFM;
+   * the next cell marker ends the previous cell implicitly.
+   */
+  visitTableCell(node: ParsedTableCellNode): string {
+    const marker = this.formatTableCellMarker(node);
+    this.contextStack.push('table-cell');
+    const openingFormatted = this.formatter.addMarker(this.result, marker);
+    this.result = openingFormatted.normalizedOutput;
+    if (Array.isArray(node.content) && node.content.length > 0) {
+      this.visitChildren(node, node.content);
+    }
+    this.contextStack.pop();
+    return this.result;
+  }
+
+  /** Optional line break `//` (parser `ParsedOptbreakNode`). */
+  visitOptbreak(_node: unknown): string {
+    const t = this.formatter.addTextContent(this.result, '//');
+    this.result = t.normalizedOutput;
+    return this.result;
+  }
+
+  /** Scripture reference span `\\ref …|loc\\ref*`. */
+  visitRef(node: { loc?: string; content?: unknown[] }): string {
+    const raw = node as { loc?: string; content?: unknown[] };
+    const loc = typeof raw.loc === 'string' ? raw.loc : '';
+    let t = this.formatter.addTextContent(this.result, '\\ref ');
+    this.result = t.normalizedOutput;
+    if (Array.isArray(raw.content) && raw.content.length > 0) {
+      this.visitChildren(raw, raw.content);
+    }
+    if (loc) {
+      t = this.formatter.addTextContent(this.result, '|' + loc);
+      this.result = t.normalizedOutput;
+    }
+    const close = this.formatter.addMarker(this.result, 'ref', true);
+    this.result = close.normalizedOutput;
+    return this.result;
+  }
+
+  private formatTableCellMarker(node: ParsedTableCellNode): string {
+    const m = node.marker;
+    if (!node.colspan) return m;
+    const span = parseInt(node.colspan, 10);
+    if (!Number.isFinite(span) || span <= 1) return m;
+    const match = m.match(/^(thc|tcc|thr|tcr|th|tc)(\d+)$/);
+    if (!match) return m;
+    const [, prefix, startStr] = match;
+    const start = parseInt(startStr, 10);
+    const end = start + span - 1;
+    return `${prefix}${start}-${end}`;
+  }
+
   /**
    * Gets the current result string
    */
@@ -274,6 +350,10 @@ export class USFMVisitor implements BaseUSFMVisitor {
       (!obj.type && obj.marker && this.getMarkerType(obj.marker) === 'milestone')
     ) {
       this.visitMilestone(obj as MilestoneUSFMNodeInterface);
+    } else if (obj.type === 'optbreak') {
+      this.visitOptbreak(obj);
+    } else if (obj.type === 'ref') {
+      this.visitRef(obj);
     } else if (obj.content !== undefined && typeof obj.content === 'string') {
       // Text node
       this.visitText(obj as TextUSFMNodeInterface);

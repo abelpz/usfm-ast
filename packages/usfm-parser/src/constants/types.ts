@@ -443,7 +443,21 @@ export interface CustomMarkerRule {
   isMilestone?: boolean;
 }
 
+/** Optional sinks for parse-time messages. `getLogs()` always records regardless. */
+export interface USFMParserLogger {
+  warn?: (message: string) => void;
+  error?: (message: string) => void;
+}
+
 export interface USFMParserOptions {
   customMarkers?: Record<string, USFMMarkerInfo>;
   positionTracking?: boolean;
+  /**
+   * When `true`, do not call `console.warn` / `console.error` for parse messages.
+   * Use `getLogs()` for programmatic access. If `logger` supplies a handler for a channel,
+   * that handler is still called.
+   */
+  silentConsole?: boolean;
+  /** Custom logging; per-channel fallback is `console` unless `silentConsole` is set. */
+  logger?: USFMParserLogger;
 }

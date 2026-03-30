@@ -9,7 +9,9 @@ On **push** to `main` and **pull requests** targeting `main`:
 1. Checkout on Ubuntu
 2. **Bun** `1.3.3` (see root `packageManager`) + **Node** `>=18` for tooling where required (`engines`)
 3. `bun install --frozen-lockfile`
-4. `bun run lint` → `bun run check-types` → `bun run test` → `bun run build` (orchestrated by **Turborepo** — [`turbo.json`](../turbo.json))
+4. `bun run lint` → `bun run check-types` → `bun run test` → `bun run examples:check` → `bun run build` (orchestrated by **Turborepo** — [`turbo.json`](../turbo.json))
+
+`bun run examples:check` runs `check-missing-usj.sh` to ensure each `examples/usfm-markers/**/example.usfm` has a paired `example.usj`. **`@usfm-tools/parser`** also runs a small **perf budget** test (`parser.perf-budget.test.ts`) on every CI run (separate from ignored `parser.performance.test.ts`).
 
 GitHub Actions sets **`CI=true`**. **`@usfm-tools/parser`** and **`@usfm-tools/adapters`** run their full Jest suites except **`performance`** tests (`testPathIgnorePatterns` in each package’s `jest.config.js`). Golden `example.usj` files under `examples/usfm-markers/` are regenerated from **`USFMParser`** when parser output changes intentionally (`bun run regenerate:example-usj` after building the parser).
 

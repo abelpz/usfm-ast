@@ -179,15 +179,24 @@ Applies a visitor with context to all top-level nodes in the AST.
 Configuration options for the USFMParser constructor.
 
 ```typescript
+interface USFMParserLogger {
+  warn?: (message: string) => void;
+  error?: (message: string) => void;
+}
+
 interface USFMParserOptions {
   customMarkers?: Record<string, USFMMarkerInfo>;
   positionTracking?: boolean;
+  silentConsole?: boolean;
+  logger?: USFMParserLogger;
 }
 ```
 
 **Properties:**
 - `customMarkers` (optional): Custom USFM markers to register with the parser
 - `positionTracking` (optional): Enable position tracking for debugging infinite loops
+- `silentConsole` (optional): Omit `console` for warnings/errors; use `getLogs()` for programmatic access
+- `logger` (optional): Custom warn/error sinks; used instead of `console` for the channels provided
 
 ### USFMMarkerInfo
 

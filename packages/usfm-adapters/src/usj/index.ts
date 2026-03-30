@@ -15,7 +15,8 @@ interface USJNode {
 }
 
 export class USJVisitor implements BaseUSFMVisitor<USJNode> {
-  private result: USJNode[] = [];
+  /** Top-level USJ `content` may mix objects and bare text strings (parser `toJSON`). */
+  private result: (USJNode | string)[] = [];
   private currentNode: USJNode | null = null;
   private pendingTableRows: USJNode[] = [];
   private inTable: boolean = false;
@@ -239,10 +240,56 @@ export class USJVisitor implements BaseUSFMVisitor<USJNode> {
 
     if (this.currentNode && Array.isArray(this.currentNode.content)) {
       this.currentNode.content.push(textContent);
+    } else {
+      // Root-level or other non-container siblings (matches parser `toJSON` / plain USJ)
+      this.result.push(textContent);
     }
 
-    // Return a simple representation
     return { type: 'text', content: textContent };
+  }
+
+  visitOptbreak(_node: unknown): USJNode {
+    const n: USJNode = { type: 'optbreak' };
+    if (this.currentNode && Array.isArray(this.currentNode.content)) {
+      this.currentNode.content.push(n);
+    } else {
+      this.result.push(n);
+    }
+    return n;
+  }
+
+  visitRef(node: { loc?: string; content?: unknown[]; gen?: boolean }): USJNode {
+    const raw = node as { loc?: string; content?: unknown[]; gen?: boolean };
+    const refNode: USJNode = {
+      type: 'ref',
+      loc: typeof raw.loc === 'string' ? raw.loc : '',
+      content: [],
+    };
+    if (raw.gen !== undefined) refNode.gen = raw.gen;
+
+    const prev = this.currentNode;
+    this.currentNode = refNode;
+    if (Array.isArray(raw.content)) {
+      raw.content.forEach((child: any) => {
+        if (child && typeof child.accept === 'function') child.accept(this);
+      });
+    }
+    this.currentNode = prev;
+
+    if (
+      Array.isArray(refNode.content) &&
+      refNode.content.length === 1 &&
+      typeof refNode.content[0] === 'string'
+    ) {
+      refNode.content = refNode.content[0];
+    }
+
+    if (this.currentNode && Array.isArray(this.currentNode.content)) {
+      this.currentNode.content.push(refNode);
+    } else {
+      this.result.push(refNode);
+    }
+    return refNode;
   }
 
   visitMilestone(node: MilestoneUSFMNode): USJNode {
@@ -346,8 +393,10 @@ export class USJVisitor implements BaseUSFMVisitor<USJNode> {
   private getCurrentBookCode(): string {
     // Find the most recent book node
     for (let i = this.result.length - 1; i >= 0; i--) {
-      if (this.result[i].type === 'book') {
-        return this.result[i].code || '';
+      const n = this.result[i];
+      if (typeof n === 'string') continue;
+      if (n.type === 'book') {
+        return n.code || '';
       }
     }
     return '';
@@ -356,8 +405,10 @@ export class USJVisitor implements BaseUSFMVisitor<USJNode> {
   private getCurrentChapterNumber(): string {
     // Find the most recent chapter node
     for (let i = this.result.length - 1; i >= 0; i--) {
-      if (this.result[i].type === 'chapter') {
-        return this.result[i].number || '';
+      const n = this.result[i];
+      if (typeof n === 'string') continue;
+      if (n.type === 'chapter') {
+        return n.number || '';
       }
     }
     return '1';
@@ -369,9 +420,13 @@ export class USJVisitor implements BaseUSFMVisitor<USJNode> {
       this.finalizeTable();
     }
 
-    // For single node tests, return the node directly
+    // For single node tests, return the node directly (wrap bare text like `getDocument()`)
     if (this.result.length === 1) {
-      return this.result[0];
+      const only = this.result[0];
+      if (typeof only === 'string') {
+        return { type: 'usfm', version: '3.0', content: [only] };
+      }
+      return only;
     }
     // For multiple nodes, return a document structure
     return {

@@ -1,6 +1,9 @@
 /**
  * Publish workspace packages whose name starts with the given scope prefix
  * (e.g. @usfm-tools, @usj-tools). Run `bun run build` first.
+ *
+ * Optional: npm 9+ provenance — `npm publish --access public --provenance` from each
+ * package directory when OIDC / token allow (see docs/16-production-readiness.md).
  */
 const { execSync } = require('child_process');
 const fs = require('fs');

@@ -37,11 +37,7 @@ describe('USFMParser - Basic', () => {
       },
       'this is a verse.',
     ]);
-    expect(parser.getLogs()).toHaveLength(1);
-    expect(parser.getLogs()[0]).toEqual({
-      type: 'warn',
-      message: expect.stringContaining('Unexpected character outside a paragraph'),
-    });
+    expect(parser.getLogs()).toHaveLength(0);
   });
 
   test('handles character inside note content', () => {

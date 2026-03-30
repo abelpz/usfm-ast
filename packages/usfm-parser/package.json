@@ -37,7 +37,8 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@usfm-tools/types": "workspace:*"
+    "@usfm-tools/types": "workspace:*",
+    "@xmldom/xmldom": "0.8.11"
   },
   "keywords": [
     "usfm",

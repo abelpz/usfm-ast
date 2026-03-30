@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<usx version="3.1"><book style="id" code="TIT">EN_ULT</book>
+  <para style="h">Titus</para>
+  <para style="mt1">The Letter of Paul to</para>
+  <para style="mt2">Titus</para>
+  <para style="is">Introduction</para>
+  <para style="ip">This is a letter from Paul to Titus.</para>
+  <chapter style="c" number="1" />
+  <para style="p"><verse style="v" number="1" />Paul, a <char style="bd">servant</char> of God and an <char style="bd">apostle</char> of Jesus Christ, for the faith of God&apos;s chosen people and the knowledge of the truth.
+<verse style="v" number="2" />These are in hope of eternal life that God, who does not lie, <char style="add">promised</char> before all the ages of time.
+<verse style="v" number="3" />At the right time, he revealed his word by the message that he trusted me to deliver by the command of God our Savior.</para>
+  <para style="p"><verse style="v" number="4" />To Titus, a true son in our common faith. <note style="f" caller="+"><char style="fr">1:4 </char><char style="fq">true son </char><char style="ft">This is a metaphor that means Titus became a Christian through Paul&apos;s ministry.</char></note>
+Grace and peace from God <note style="f" caller="+"><char style="fr">1:4 </char><char style="fq">God </char><char style="ft">Some versions add </char><char style="fqa">the Father</char> .</note> and Christ Jesus our Savior.
+
+<ms style="s5" x-bare="true" /></para>
+  <para style="p"><verse style="v" number="5" />For this purpose I left you in Crete, that you might set in order things not yet complete and ordain elders in every city as I directed you.
+<verse style="v" number="6" />An elder must be without blame, the husband of one wife, with faithful children not accused of reckless behavior or rebellion.</para></usx>

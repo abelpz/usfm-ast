@@ -45,6 +45,6 @@ When published, the same binaries are available as `usfm`, `usfm-validate`, and 
 
 ## External oracles
 
-To compare **usfmtc** and **usfm3** on a file, see [`scripts/oracles/README.md`](../scripts/oracles/README.md) and `bun run oracles:compare`.
+To compare **usfmtc** and **usfm3** on a file, see [`scripts/oracles/README.md`](../scripts/oracles/README.md) and `bun run oracles:compare`. For **batch runs**, `PYTHON` setup, and how to read gaps vs official parsers, see [`17-oracle-comparison.md`](./17-oracle-comparison.md).
 
 To compare **`USFMParser` USJ** and **`USXVisitor` USX** with **usfmtc** (tolerant scores), run `bun run build` (parser + adapters) then `bun run oracles:parity` (needs Python + `pip install usfmtc` for a full diff; otherwise the script exits successfully and only summarizes output). See [`scripts/oracles/README.md`](../scripts/oracles/README.md) for `ORACLE_REQUIRE_USFMTC`, `ORACLE_SKIP_USFM3`, and `compare-parser.mjs`.

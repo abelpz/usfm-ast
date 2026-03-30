@@ -28,7 +28,12 @@ import {
   TextUSFMNode,
   USFMNodeUnion,
 } from '../nodes';
-import { USFMMarkerRegistry, USFMMarkerInfo, USFMParserOptions } from '../constants';
+import {
+  USFMMarkerRegistry,
+  USFMMarkerInfo,
+  USFMParserOptions,
+  USFMParserLogger,
+} from '../constants';
 import { MarkerType, MarkerTypeEnum } from '@usfm-tools/types';
 
 import {
@@ -77,6 +82,8 @@ export class USFMParser {
   private readonly trackPositions: boolean;
   private readonly markerRegistry: USFMMarkerRegistry;
   private inferredMarkers: Record<string, USFMMarkerInfo> = {};
+  private readonly emitConsoleWarn: (message: string) => void;
+  private readonly emitConsoleError: (message: string) => void;
 
   // USJ version we support for version comparison
   private static readonly SUPPORTED_USJ_VERSION = '3.1';
@@ -91,10 +98,22 @@ export class USFMParser {
    * @param {USFMParserOptions} [options] - Configuration options for the parser
    * @param {Record<string, USFMMarkerInfo>} [options.customMarkers] - Custom USFM markers to be recognized by the parser
    * @param {boolean} [options.positionTracking] - Whether to track positions for infinite loop detection
+   * @param {boolean} [options.silentConsole] - When true, omit `console` for warnings/errors (see `getLogs()`)
+   * @param {USFMParserLogger} [options.logger] - Optional custom warn/error sinks
    */
   constructor(options?: USFMParserOptions) {
     this.trackPositions = options?.positionTracking ?? process.env.NODE_ENV !== 'production';
     this.markerRegistry = USFMMarkerRegistry.getInstance(options?.customMarkers);
+    const logger: USFMParserLogger | undefined = options?.logger;
+    const silent = options?.silentConsole ?? false;
+    this.emitConsoleWarn = (message: string) => {
+      if (logger?.warn) logger.warn(message);
+      else if (!silent) console.warn(message);
+    };
+    this.emitConsoleError = (message: string) => {
+      if (logger?.error) logger.error(message);
+      else if (!silent) console.error(message);
+    };
   }
 
   /**
@@ -295,12 +314,18 @@ export class USFMParser {
       } else if (this.isWhitespace(char)) {
         this.advance(false);
       } else {
-        const { context, pointer } = this.getContextAndPointer(this.pos);
-        this.logWarning(
-          `Unexpected character outside a paragraph: '${char}'\n` +
-            `Context: ${context}\n` +
-            `         ${pointer}`
-        );
+        const prev =
+          rootNode.content.length > 0
+            ? rootNode.content[rootNode.content.length - 1]
+            : undefined;
+        if (!this.allowsImplicitRootTextAfter(prev)) {
+          const { context, pointer } = this.getContextAndPointer(this.pos);
+          this.logWarning(
+            `Unexpected character outside a paragraph: '${char}'\n` +
+              `Context: ${context}\n` +
+              `         ${pointer}`
+          );
+        }
         rootNode.content.push(this.parseEnhancedText(false, rootNode.content.length));
       }
     }
@@ -308,14 +333,36 @@ export class USFMParser {
     return rootNode;
   }
 
+  /**
+   * USJ allows bare text at document root after inline-style content (e.g. `\\v 1` then verse text
+   * without `\\p`). That is valid for snippets; only warn for truly unexpected leading/junk text.
+   */
+  private allowsImplicitRootTextAfter(prev: EnhancedUSJNode | undefined): boolean {
+    if (!prev || typeof prev !== 'object') return false;
+    const t = (prev as { type?: string }).type;
+    switch (t) {
+      case 'verse':
+      case 'chapter':
+      case 'note':
+      case 'text':
+      case 'char':
+      case 'ms':
+      case 'optbreak':
+      case 'ref':
+        return true;
+      default:
+        return false;
+    }
+  }
+
   private logWarning(message: string): void {
     this.logs.push({ type: 'warn', message });
-    console.warn(message);
+    this.emitConsoleWarn(message);
   }
 
   private logError(message: string): void {
     this.logs.push({ type: 'error', message });
-    console.error(message);
+    this.emitConsoleError(message);
   }
 
   private isLineBreakingWhitespace(char: string): boolean {
@@ -889,7 +936,7 @@ export class USFMParser {
 
     this.restorePosition(savedPos, false);
 
-    const markerInfo = this.markerRegistry.getMarkerInfo(marker);
+    const markerInfo = marker ? this.markerRegistry.getMarkerInfo(marker) : undefined;
 
     return { marker, cleanMarker: this.cleanMarkerSuffix(marker), markerInfo };
   }
@@ -939,7 +986,9 @@ export class USFMParser {
     }
 
     // Handle default attribute case
-    const markerInfo = this.markerRegistry.getMarkerInfo(currentMarker);
+    const markerInfo = currentMarker
+      ? this.markerRegistry.getMarkerInfo(currentMarker)
+      : undefined;
     const defaultAttr = markerInfo?.defaultAttribute;
     if (isDefaultAttribute && defaultAttr) {
       let defaultValue = '';
