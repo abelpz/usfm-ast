@@ -22,7 +22,10 @@ After intentional **`USFMParser` / `toJSON()`** output changes, run `bun run reg
 - `USFMParser` options `silentConsole` and `logger` for production-friendly logging (`getLogs()` unchanged). See [`docs/16-production-readiness.md`](./docs/16-production-readiness.md).
 - CI checks: `examples:check` (golden USJ coverage), parser perf budget test.
 - Contributor docs: production readiness, issue template for parser mismatches.
-- Oracle: `oracles:batch-examples` (curated `examples/usfm-markers`), `oracles:summarize`, [`docs/17-oracle-comparison.md`](./docs/17-oracle-comparison.md). Refreshed `oracle-out/ORACLE_REPORT.md` (metrics depend on local Python/usfmtc).
+- Oracle: `oracles:batch-examples` (curated `examples/usfm-markers`), `oracles:batch-examples-all` (full `**/example.usfm` tree), `oracles:summarize`, [`docs/17-oracle-comparison.md`](./docs/17-oracle-comparison.md). Refreshed `oracle-out/ORACLE_REPORT.md` (metrics depend on local Python/usfmtc).
+- Adapter tests: `conversion-roundtrip.test.ts` covers all unique package `fixtures/**/*.usfm` (deduped parser vs adapters); milestone fixture checks USX is well-formed before/after round-trip instead of similarity (until USX/milestone parity improves).
+- Docs: upstream parser repos in [`docs/17-oracle-comparison.md`](./docs/17-oracle-comparison.md). Slightly **stricter** default `compareUsjSimilarity` / `compareUsxSimilarity` thresholds and tighter `fixture-matrix` / `conversion-roundtrip` alignment checks.
+- **`bun run roundtrip-diff`** — unified diffs for USFM / USJ / USX after one round-trip (`scripts/roundtrip-diff.mjs`, devDependency `diff`). See [`docs/10-parsing-quickstart.md`](./docs/10-parsing-quickstart.md).
 
 ### Changed
 

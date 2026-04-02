@@ -39,18 +39,18 @@
             {
               "marker": "fqa",
               "content": [
-                "“Whoever is thirsty should come to me and drink. ",
-                {
-                  "marker": "fv",
-                  "content": [
-                    "38"
-                  ],
-                  "type": "char"
-                },
-                " As the scripture says, ‘Streams of life-giving water will pour out from within anyone who believes in me.’”"
+                "“Whoever is thirsty should come to me and drink. "
               ],
               "type": "char"
-            }
+            },
+            {
+              "marker": "fv",
+              "content": [
+                "38"
+              ],
+              "type": "char"
+            },
+            " As the scripture says, ‘Streams of life-giving water will pour out from within anyone who believes in me.’”"
           ],
           "caller": "+"
         }

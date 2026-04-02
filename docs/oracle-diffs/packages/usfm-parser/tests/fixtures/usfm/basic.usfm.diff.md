@@ -1,0 +1,64 @@
+# Oracle diff: `packages/usfm-parser/tests/fixtures/usfm/basic.usfm`
+
+## Scores
+
+| Metric | Value |
+|---|---|
+| **USJ text similarity** | 100.0% |
+| **USJ structure similarity** | 100.0% |
+| **USJ combined score** | 100.0% |
+| **USX structure similarity** | 100.0% |
+| **USX attribute similarity** | 100.0% |
+| **USX tag-histogram similarity** | 100.0% |
+| **USX combined score** | 100.0% |
+| **Overall** | ✅ PASS |
+
+## USFM diff (1 hunk)
+
+```diff
+--- packages/usfm-parser/tests/fixtures/usfm/basic.usfm (original)
++++ packages/usfm-parser/tests/fixtures/usfm/basic.usfm (roundtripped)
+@@ -1 +1 @@
++ \id TIT EN_ULT
++ \h Titus
++ \mt Titus
++ \c 1
++ \p
++ \v 1 \w Paul|x-occurrence="1" x-occurrences="1"\w*, \w a|x-occurrence="1" x-occurrences="1"\w* \w servant|x-occurrence="1" x-occurrences="1"\w* \w of|x-occurrence="1" x-occurrences="5"\w* \w God|x-occurrence="1" x-occurrences="2"\w* \w and|x-occurrence="1" x-occurrences="2"\w* \w an|x-occurrence="1" x-occurrences="1"\w* \w apostle|x-occurrence="1" x-occurrences="1"\w* \w of|x-occurrence="2" x-occurrences="5"\w* \w Jesus|x-occurrence="1" x-occurrences="1"\w* \w Christ|x-occurrence="1" x-occurrences="1"\w*,
++ \v 2 In hope of eternal life, which God promised before time began. 
++ \v 3 At the proper time, he revealed his word through the message.
++ \p
++ \v 4 To Titus, a true son in our common faith: 
++ \v 5 For this purpose I left you in Crete, that you would set in order things unfinished.
++ \c 2
++ \p
++ \v 1 An elder must be without blame, the husband of one wife, with faithful children not accused of reckless behavior or rebellion.
+- \id TIT EN_ULT
+- \h Titus
+- \mt Titus
+- 
+- \c 1
+- \p
+- \v 1 \w Paul|x-occurrence="1" x-occurrences="1"\w*,
+- \w a|x-occurrence="1" x-occurrences="1"\w*
+- \w servant|x-occurrence="1" x-occurrences="1"\w*
+- \w of|x-occurrence="1" x-occurrences="5"\w*
+- \w God|x-occurrence="1" x-occurrences="2"\w*
+- \w and|x-occurrence="1" x-occurrences="2"\w*
+- \w an|x-occurrence="1" x-occurrences="1"\w*
+- \w apostle|x-occurrence="1" x-occurrences="1"\w*
+- \w of|x-occurrence="2" x-occurrences="5"\w*
+- \w Jesus|x-occurrence="1" x-occurrences="1"\w*
+- \w Christ|x-occurrence="1" x-occurrences="1"\w*,
+- \v 2 In hope of eternal life, which God promised before time began.
+- \v 3 At the proper time, he revealed his word through the message.
+- 
+- \p
+- \v 4 To Titus, a true son in our common faith:
+- \v 5 For this purpose I left you in Crete, that you would set in order things unfinished.
+- 
+- \c 2
+- \p
+- \v 1 An elder must be without blame, the husband of one wife, with faithful children not accused of reckless behavior or rebellion.
+- 
+```

@@ -11,5 +11,5 @@ export * from './rules';
 // Export utilities
 export * from './utils';
 
-export { USFMFormatter, USFMFormatterOptions, BuildNodeInput } from './formatters/Formatter';
-export { FormatResult } from './formatters/Formatter';
+// Interfaces are type-only — use `export type` so ESM consumers (Vite dev + native ESM) do not expect runtime exports.
+export type { USFMFormatterOptions, BuildNodeInput, FormatResult } from './formatters/Formatter';

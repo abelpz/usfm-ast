@@ -2,6 +2,8 @@
 
 Optional tooling to compare **usfmtc** (Python, USFM TC) and **usfm3** (npm, Rust/WASM) against repo USFM files, and to compare **this repo’s** USFM → USJ and USFM → USX against those oracles using **tolerant** similarity (not byte equality).
 
+**Upstream sources** (tests, fixtures, spec context): [usfm-bible/usfmtc](https://github.com/usfm-bible/usfmtc), [jcuenod/usfm3](https://github.com/jcuenod/usfm3), [usfm-bible/tcdocs](https://github.com/usfm-bible/tcdocs). See [`docs/17-oracle-comparison.md`](../../docs/17-oracle-comparison.md) for how default **`compareUsjSimilarity` / `compareUsxSimilarity`** thresholds are set.
+
 ## Parser + USXVisitor vs oracles (`compare-parser.mjs`)
 
 After `bun run build` at the repo root (needs **`packages/usfm-parser/dist`** and **`packages/usfm-adapters/dist`** — both are built by the default turbo build):
@@ -66,11 +68,18 @@ Pass extra USFM paths to include more files:
 node scripts/oracles/oracle-batch.mjs examples/usfm-markers/note-x/x-example-1/example.usfm
 ```
 
-Curated **`examples/usfm-markers`** only (12 files, see `EXAMPLE_MARKER_FIXTURES` in `oracle-batch.mjs`):
+**Curated** smoke set (12 files, `CURATED_EXAMPLE_FIXTURES` in `oracle-batch.mjs`):
 
 ```bash
 bun run oracles:batch-examples
 # → oracle-out/batch-examples/BATCH_REPORT.md
+```
+
+**Full** `examples/usfm-markers/**/example.usfm` tree (same files as `fixture-matrix` examples; long run):
+
+```bash
+bun run oracles:batch-examples-all
+# → oracle-out/batch-examples-all/BATCH_REPORT.md
 ```
 
 Summarize **USX vs usfm3** (and USJ vs usfmtc when present) for any batch directory:
@@ -78,6 +87,7 @@ Summarize **USX vs usfm3** (and USJ vs usfmtc when present) for any batch direct
 ```bash
 bun run oracles:summarize
 bun run oracles:summarize oracle-out/batch-examples
+bun run oracles:summarize oracle-out/batch-examples-all
 ```
 
 See also [`docs/17-oracle-comparison.md`](../../docs/17-oracle-comparison.md).

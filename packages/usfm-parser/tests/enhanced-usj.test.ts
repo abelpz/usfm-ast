@@ -150,7 +150,7 @@ describe('Enhanced USJ Node Generation', () => {
   });
 
   test('should handle complex structure with nested markers', () => {
-    const usfm = ['\\id GEN', '\\c 1', '\\p \\v 1 Text with \\w word\\+nd nested\\+nd*\\w* content.'].join(
+    const usfm = ['\\id GEN', '\\c 1', '\\p \\v 1 Text with \\w word\\nd nested\\nd*\\w* content.'].join(
       '\n'
     );
 

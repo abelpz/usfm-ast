@@ -1,0 +1,47 @@
+# Oracle diff: `examples/usfm-markers/ms-ts/ts-example-1/example.usfm`
+
+## Scores
+
+| Metric | Value |
+|---|---|
+| **USJ text similarity** | 100.0% |
+| **USJ structure similarity** | 100.0% |
+| **USJ combined score** | 100.0% |
+| **USX structure similarity** | 100.0% |
+| **USX attribute similarity** | 100.0% |
+| **USX tag-histogram similarity** | 100.0% |
+| **USX combined score** | 100.0% |
+| **Overall** | ✅ PASS |
+
+## USFM diff (1 hunk)
+
+```diff
+--- examples/usfm-markers/ms-ts/ts-example-1/example.usfm (original)
++++ examples/usfm-markers/ms-ts/ts-example-1/example.usfm (roundtripped)
+@@ -1 +1 @@
++ \ts\*
++ \p
++ \v 5 Now I wish to remind you, although you know everything, that the Lord once saved a people out of the land of Egypt, but that afterward he destroyed those who did not believe. 
++ \v 6 And angels who did not keep to their own principality, but left their proper dwelling place—God has kept them in everlasting chains in darkness for the judgment of the great day. \ts\*
++ \v 7 It is just like Sodom and Gomorrah and the cities around them, which in a similar way gave themselves over to fornication and pursued unnatural desires. They were given as examples of those who suffer the punishment of eternal fire.
++ \p
++ \v 8 Yet in the same way these also pollute their bodies in their dreams, and they reject authority, and they say evil things about the glorious ones. \ts\*...
+- \ts\*
+- \p
+- \v 5 Now I wish to remind you, although you know everything, that the Lord 
+- once saved a people out of the land of Egypt, but that afterward he destroyed 
+- those who did not believe.
+- \v 6 And angels who did not keep to their own principality, but left their 
+- proper dwelling place—God has kept them in everlasting chains in darkness for 
+- the judgment of the great day.
+- \ts\*
+- \v 7 It is just like Sodom and Gomorrah and the cities around them, which in 
+- a similar way gave themselves over to fornication and pursued unnatural 
+- desires. They were given as examples of those who suffer the punishment of 
+- eternal fire.
+- \p
+- \v 8 Yet in the same way these also pollute their bodies in their dreams, and 
+- they reject authority, and they say evil things about the glorious ones.
+- \ts\*
+- ...
+```

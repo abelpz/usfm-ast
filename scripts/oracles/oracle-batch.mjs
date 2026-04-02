@@ -7,14 +7,15 @@
  *
  * Usage:
  *   node scripts/oracles/oracle-batch.mjs [--batch-root ./oracle-out/batch] [--strict]
- *   node scripts/oracles/oracle-batch.mjs [--examples]   # curated examples/usfm-markers only
+ *   node scripts/oracles/oracle-batch.mjs [--examples]       # curated 12 under examples/usfm-markers
+ *   node scripts/oracles/oracle-batch.mjs [--examples-all]   # every **/example.usfm under examples/usfm-markers
  *   node scripts/oracles/oracle-batch.mjs path/to/a.usfm path/to/b.usfm
  *
- * With no paths, uses DEFAULT_FIXTURES unless --examples is set (then EXAMPLE_MARKER_FIXTURES).
+ * With no paths: DEFAULT_FIXTURES, or --examples (curated 12), or --examples-all (full marker tree).
  *
  * Requires: built parser + adapters; Python + usfmtc for full usfmtc columns (set PYTHON).
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -36,8 +37,25 @@ const DEFAULT_FIXTURES = [
   'packages/usfm-adapters/tests/fixtures/usfm/jmp.usfm',
 ];
 
-/** Diverse example.usfm files under examples/usfm-markers (oracle gaps vs usfmtc / usfm3). */
-const EXAMPLE_MARKER_FIXTURES = [
+/** Every `examples/usfm-markers/**/example.usfm` (same surface as fixture-matrix examples). */
+function collectAllExampleUsfmPaths() {
+  const root = join(repoRoot, 'examples/usfm-markers');
+  const out = [];
+  if (!existsSync(root)) return out;
+  const walk = (dir) => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      const st = statSync(p);
+      if (st.isDirectory()) walk(p);
+      else if (name === 'example.usfm') out.push(relative(repoRoot, p).replace(/\\/g, '/'));
+    }
+  };
+  walk(root);
+  return out.sort();
+}
+
+/** Small smoke set for fast oracle runs (diverse markers). */
+const CURATED_EXAMPLE_FIXTURES = [
   'examples/usfm-markers/note-f/f-example-1/example.usfm',
   'examples/usfm-markers/note-x/x-example-2/example.usfm',
   'examples/usfm-markers/fig-fig/fig-example-2/example.usfm',
@@ -61,19 +79,22 @@ function parseArgs() {
   let batchRoot = join(repoRoot, 'oracle-out/batch');
   let strict = false;
   let useExamples = false;
+  let useExamplesAll = false;
   const paths = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--batch-root' && args[i + 1]) {
       batchRoot = resolve(args[++i]);
     } else if (args[i] === '--strict') {
       strict = true;
+    } else if (args[i] === '--examples-all') {
+      useExamplesAll = true;
     } else if (args[i] === '--examples') {
       useExamples = true;
     } else {
       paths.push(args[i]);
     }
   }
-  return { batchRoot, strict, useExamples, paths: paths.length ? paths : null };
+  return { batchRoot, strict, useExamples, useExamplesAll, paths: paths.length ? paths : null };
 }
 
 function mdTable(headers, rows) {
@@ -88,12 +109,14 @@ function mdTable(headers, rows) {
 const compareScript = join(__dirname, 'compare.mjs');
 const reportScript = join(__dirname, 'generate-report.mjs');
 
-const { batchRoot, strict, useExamples, paths: cliPaths } = parseArgs();
+const { batchRoot, strict, useExamples, useExamplesAll, paths: cliPaths } = parseArgs();
 const relList = cliPaths
   ? cliPaths.map((p) => relative(repoRoot, resolve(p)).replace(/\\/g, '/'))
-  : useExamples
-    ? EXAMPLE_MARKER_FIXTURES
-    : DEFAULT_FIXTURES;
+  : useExamplesAll
+    ? collectAllExampleUsfmPaths()
+    : useExamples
+      ? CURATED_EXAMPLE_FIXTURES
+      : DEFAULT_FIXTURES;
 
 mkdirSync(batchRoot, { recursive: true });
 
@@ -181,9 +204,11 @@ for (const rel of relList) {
 const generatedAt = new Date().toISOString();
 const fixtureMode = cliPaths
   ? 'explicit paths'
-  : useExamples
-    ? '`--examples` (examples/usfm-markers)'
-    : 'default (packages fixtures)';
+  : useExamplesAll
+    ? '`--examples-all` (all `examples/usfm-markers/**/example.usfm`)'
+    : useExamples
+      ? '`--examples` (curated 12)'
+      : 'default (packages fixtures)';
 
 const summaryLines = [
   '# Oracle batch report',
@@ -219,7 +244,8 @@ const summaryLines = [
   '',
   '```bash',
   'bun run oracles:batch',
-  'bun run oracles:batch-examples',
+  'bun run oracles:batch-examples        # curated 12',
+  'bun run oracles:batch-examples-all    # full examples/usfm-markers tree',
   'bun run oracles:batch -- --strict   # exit 1 if any USJ/USX vs usfmtc fails',
   '# optional extra files:',
   'node scripts/oracles/oracle-batch.mjs packages/usfm-parser/tests/fixtures/usfm/complex.usfm',

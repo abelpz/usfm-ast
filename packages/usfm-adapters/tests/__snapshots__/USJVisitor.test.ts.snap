@@ -17239,7 +17239,6 @@ exports[`USJ Visitor converts USFM to USJ correctly Outputs correct USX structur
           "marker": "f",
           "type": "note",
         },
-        "",
       ],
       "marker": "m",
       "type": "para",

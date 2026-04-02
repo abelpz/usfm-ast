@@ -87,9 +87,9 @@ describe('fixture matrix (parser + visitors)', () => {
     parser.visit(ujVisitor);
     const fromVisitor = ujVisitor.getDocument();
     const vCmp = compareUsjSimilarity(usj, fromVisitor, {
-      minScore: 0.72,
-      minTextSimilarity: 0.65,
-      minStructureSimilarity: 0.55,
+      minScore: 0.78,
+      minTextSimilarity: 0.72,
+      minStructureSimilarity: 0.62,
     });
     expect(vCmp.ok).toBe(true);
 

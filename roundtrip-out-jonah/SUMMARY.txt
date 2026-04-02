@@ -1,0 +1,11 @@
+Mode: USFM input
+Input: C:\Users\LENOVO\Git\Github\usfm-ast\packages\usfm-parser\tests\fixtures\usfm\jonah.bsb.usfm
+USFM text identical: false
+USJ structure identical: true
+USX text identical (default USXVisitor): true
+
+Artifacts:
+  C:\Users\LENOVO\Git\Github\usfm-ast\roundtrip-out-jonah\usfm-roundtrip.diff
+  C:\Users\LENOVO\Git\Github\usfm-ast\roundtrip-out-jonah\usj-roundtrip.diff
+  C:\Users\LENOVO\Git\Github\usfm-ast\roundtrip-out-jonah\usx-roundtrip.diff
+

@@ -1,0 +1,32 @@
+{
+  "name": "@usfm-tools/playground",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser playground for USFM ↔ USJ ↔ USX (usfm-tools parser)",
+  "scripts": {
+    "dev": "vite",
+    "build": "esbuild src/main.ts --bundle --outdir=dist --format=esm --platform=browser --sourcemap && node ./scripts/copy-html.mjs",
+    "preview": "serve dist -p 4179",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "check-types": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.6.2",
+    "@codemirror/lang-json": "^6.0.1",
+    "@codemirror/lang-xml": "^6.1.0",
+    "@codemirror/language": "^6.10.6",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@codemirror/view": "^6.35.3",
+    "@usfm-tools/adapters": "workspace:*",
+    "@usfm-tools/parser": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "serve": "^14.2.4",
+    "typescript": "5.9.3",
+    "vite": "^6.0.0"
+  }
+}

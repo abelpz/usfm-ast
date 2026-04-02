@@ -5,7 +5,8 @@
  * using the new Universal Visitor system.
  */
 
-import { USFMFormatter, USFMFormatterOptions } from '@usfm-tools/formatter';
+import { USFMFormatter } from '@usfm-tools/formatter';
+import type { USFMFormatterOptions } from '@usfm-tools/formatter';
 import {
   UniversalUSFMVisitor,
   UniversalNode,
@@ -227,9 +228,8 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     // Push character context to stack
     this.contextStack.push('character');
 
-    // Determine if this is a nested marker
-    const isNested = this.contextStack.filter((ctx) => ctx === 'character').length > 1;
-    const actualMarker = isNested ? `+${marker}` : marker;
+    // Nested spans: emit `\\marker` / `\\marker*` only (no `+` prefix; USFM 3.x explicit close).
+    const actualMarker = marker;
 
     // Add opening character marker
     const formatted = this.formatter.addMarker(this.result, actualMarker);
@@ -258,7 +258,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     if (typeof node === 'string') return '';
 
     const marker = this.getMarker(node);
-    const caller = this.getProperty(node, 'caller') || '+';
+    const caller = this.getProperty(node, 'caller');
 
     if (!marker) return '';
 
@@ -269,8 +269,10 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     const formatted = this.formatter.addMarker(this.result, marker);
     this.result = formatted.normalizedOutput;
 
-    // Add caller
-    this.formatter.addTextContent(this.result, ` ${caller} `);
+    if (caller !== undefined && caller !== null && String(caller) !== '') {
+      const t = this.formatter.addTextContent(this.result, String(caller));
+      this.result = t.normalizedOutput;
+    }
 
     // Visit children (content)
     const children = this.getContent(node);
@@ -307,6 +309,30 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     const formatted = this.formatter.addTextContent(this.result, content);
     this.result = formatted.normalizedOutput;
 
+    return this.result;
+  }
+
+  /**
+   * Scripture reference `\\ref …|loc\\ref*` (plain USJ `type: 'ref'`).
+   */
+  visitRef(node: UniversalNode): string {
+    if (typeof node === 'string') return '';
+    const raw = node as { loc?: string; content?: unknown[] | string };
+    const loc = typeof raw.loc === 'string' ? raw.loc : '';
+    let formatted = this.formatter.addTextContent(this.result, '\\ref ');
+    this.result = formatted.normalizedOutput;
+    if (typeof raw.content === 'string' && raw.content.length > 0) {
+      formatted = this.formatter.addTextContent(this.result, raw.content);
+      this.result = formatted.normalizedOutput;
+    } else if (Array.isArray(raw.content)) {
+      this.visitChildren(node, raw.content);
+    }
+    if (loc) {
+      formatted = this.formatter.addTextContent(this.result, '|' + loc);
+      this.result = formatted.normalizedOutput;
+    }
+    formatted = this.formatter.addMarker(this.result, 'ref', true);
+    this.result = formatted.normalizedOutput;
     return this.result;
   }
 
@@ -430,23 +456,7 @@ export function convertEnhancedUSJToUSFM(
   return visitor.getResult();
 }
 
-/**
- * Convert plain USJ document to USFM
- */
-export function convertUSJDocumentToUSFM(
-  usjDocument: any,
-  options?: UniversalUSFMVisitorOptions
-): string {
-  const visitor = new UniversalUSFMVisitorImpl(options);
-
-  if (usjDocument.content && Array.isArray(usjDocument.content)) {
-    usjDocument.content.forEach((node: any) => {
-      visitUniversal(node, visitor);
-    });
-  }
-
-  return visitor.getResult();
-}
+// `convertUSJDocumentToUSFM` is implemented in `./index.ts` via {@link USFMVisitor} (correct \\ref, notes, callers).
 
 /**
  * Convert mixed format (enhanced + plain) to USFM

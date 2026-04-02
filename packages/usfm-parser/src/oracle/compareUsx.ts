@@ -9,13 +9,13 @@ import { DOMParser } from '@xmldom/xmldom';
 import { histogramCosine } from './compareUsj';
 
 export type CompareUsxOptions = {
-  /** Minimum combined score (0–1). Default 0.72 */
+  /** Minimum combined score (0–1). Default 0.73 */
   minScore?: number;
-  /** Minimum recursive structure score. Default 0.62 */
+  /** Minimum recursive structure score. Default 0.63 */
   minStructureSimilarity?: number;
-  /** Minimum mean attribute Jaccard on aligned elements. Default 0.55 */
+  /** Minimum mean attribute Jaccard on aligned elements. Default 0.56 */
   minAttributeSimilarity?: number;
-  /** Minimum tag-name histogram cosine (element nodes only). Default 0.5 */
+  /** Minimum tag-name histogram cosine (element nodes only). Default 0.52 */
   minTagHistogramSimilarity?: number;
 };
 
@@ -182,10 +182,10 @@ export function compareUsxSimilarity(
   oracle: string,
   options: CompareUsxOptions = {}
 ): CompareUsxResult {
-  const minScore = options.minScore ?? 0.72;
-  const minStruct = options.minStructureSimilarity ?? 0.62;
-  const minAttr = options.minAttributeSimilarity ?? 0.55;
-  const minTagHist = options.minTagHistogramSimilarity ?? 0.5;
+  const minScore = options.minScore ?? 0.73;
+  const minStruct = options.minStructureSimilarity ?? 0.63;
+  const minAttr = options.minAttributeSimilarity ?? 0.56;
+  const minTagHist = options.minTagHistogramSimilarity ?? 0.52;
 
   const messages: string[] = [];
 

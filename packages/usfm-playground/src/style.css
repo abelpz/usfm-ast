@@ -1,0 +1,234 @@
+:root {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --bg-elevated: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --input-accent: #388bfd;
+  --input-accent-dim: rgba(56, 139, 253, 0.12);
+  --output-accent: #3fb950;
+  --output-accent-dim: rgba(63, 185, 80, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.top {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.top h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.mode span {
+  color: var(--muted);
+  margin-right: 8px;
+  font-size: 0.9rem;
+}
+
+select#mode {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+#run {
+  background: #238636;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#run:hover {
+  filter: brightness(1.08);
+}
+
+.auto {
+  color: var(--muted);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Fills viewport under header; no full-page scroll */
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panes {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* Narrow screens: keep three columns side-by-side with horizontal scroll */
+@media (max-width: 1200px) {
+  .panes {
+    grid-template-columns: repeat(3, minmax(280px, 1fr));
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+}
+
+.panel:last-child {
+  border-right: none;
+}
+
+.panel--input {
+  background: linear-gradient(180deg, var(--input-accent-dim) 0%, var(--bg) 48%);
+  box-shadow: inset 3px 0 0 0 var(--input-accent);
+}
+
+.panel--output {
+  background: linear-gradient(180deg, var(--output-accent-dim) 0%, var(--bg) 40%);
+  box-shadow: inset 3px 0 0 0 rgba(63, 185, 80, 0.45);
+}
+
+.panel-head {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.panel-role {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.panel--input .panel-role {
+  background: rgba(56, 139, 253, 0.22);
+  color: #79c0ff;
+}
+
+.panel--output .panel-role {
+  background: rgba(63, 185, 80, 0.18);
+  color: #56d364;
+}
+
+.panel-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.panel-hint {
+  flex: 1 1 100%;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.panel-hint--readonly {
+  flex: 1 1 auto;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.editor-mount {
+  flex: 1;
+  min-height: 0;
+}
+
+.editor-mount .cm-editor {
+  height: 100%;
+}
+
+.debug {
+  flex: 0 0 auto;
+  height: min(200px, 28vh);
+  min-height: 100px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.debug h2 {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.debug-pre {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

@@ -4,11 +4,11 @@
  */
 
 export type CompareUsjOptions = {
-  /** Minimum combined score (0–1) to treat as pass. Default 0.82 */
+  /** Minimum combined score (0–1) to treat as pass. Default 0.84 */
   minScore?: number;
-  /** Minimum text similarity alone. Default 0.78 */
+  /** Minimum text similarity alone. Default 0.79 */
   minTextSimilarity?: number;
-  /** Minimum node-type histogram similarity. Default 0.65 */
+  /** Minimum node-type histogram similarity. Default 0.67 */
   minStructureSimilarity?: number;
 };
 
@@ -134,9 +134,9 @@ export function compareUsjSimilarity(
   oracle: unknown,
   options: CompareUsjOptions = {}
 ): CompareUsjResult {
-  const minScore = options.minScore ?? 0.82;
-  const minText = options.minTextSimilarity ?? 0.78;
-  const minStruct = options.minStructureSimilarity ?? 0.65;
+  const minScore = options.minScore ?? 0.84;
+  const minText = options.minTextSimilarity ?? 0.79;
+  const minStruct = options.minStructureSimilarity ?? 0.67;
 
   const messages: string[] = [];
 

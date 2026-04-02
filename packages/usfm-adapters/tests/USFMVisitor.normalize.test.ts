@@ -1,4 +1,5 @@
-import { USFMFormatter, USFMFormatterOptions } from '@usfm-tools/formatter';
+import { USFMFormatter } from '@usfm-tools/formatter';
+import type { USFMFormatterOptions } from '@usfm-tools/formatter';
 import { USFMParser } from '@usfm-tools/parser';
 import { USFMVisitor, USFMVisitorOptions } from '../src/';
 
@@ -53,7 +54,7 @@ describe('USFMVisitor with New Formatter API', () => {
       const input = '\\p Paul\\f + note\\f* wrote this.';
       const result = normalizeWithOptions(input);
 
-      expect(result).toBe('\\p Paul\\f  +  note\\f* wrote this.');
+      expect(result).toBe('\\p Paul\\f + note\\f* wrote this.');
     });
 
     it('should handle milestone markers', () => {
@@ -61,6 +62,46 @@ describe('USFMVisitor with New Formatter API', () => {
       const result = normalizeWithOptions(input);
 
       expect(result).toBe('\\p Text\\zaln-s |who="Paul"\\*content\\zaln-e\\*more');
+    });
+
+    it('should emit a newline after \\id when the next root marker is a milestone (parseBook safety)', () => {
+      const input = '\\id REV \n\\ts\\*\n\\c 1\n\\p\n\\v 1 Text';
+      const result = normalizeWithOptions(input);
+      expect(result).toMatch(/\\id REV\s*\n\\ts\\\*/);
+      const ast2 = parser.load(result).parse();
+      const root = ast2.getRootNode();
+      expect(root?.content?.length).toBeGreaterThanOrEqual(3);
+      expect((root?.content?.[0] as { type?: string }).type).toBe('book');
+      expect((root?.content?.[1] as { type?: string }).type).toBe('ms');
+    });
+
+    it('should close \\fqa with generic \\f* inside a footnote so trailing text stays in \\ft (re-parse safe)', () => {
+      // Jonah 1:13-style: \\fqa … \\f* closes only the inner span; text continues in \\ft until \\f*.
+      const input =
+        '\\p \\v 13 rowed hard\\f + \\fr 1:13 \\ft Hebrew \\fqa the men dug in\\f* to get back.\\f*';
+      const result = normalizeWithOptions(input);
+      expect(result).toMatch(/\\\+?fqa the men dug in\\f\*/);
+      const p1 = new USFMParser();
+      p1.load(input).parse();
+      const j1 = p1.toJSON();
+      const visitor = new USFMVisitor();
+      p1.visit(visitor);
+      const p2 = new USFMParser();
+      p2.load(visitor.getResult()).parse();
+      expect(p2.toJSON()).toEqual(j1);
+    });
+
+    it('should round-trip \\jmp with link-href / link-title attributes (USJ naming)', () => {
+      const input =
+        '\\p \\jmp |link-href="prj:GEN" link-title="See Genesis"\\jmp* See also Genesis for reference.';
+      const p1 = new USFMParser();
+      p1.load(input).parse();
+      const j1 = p1.toJSON();
+      const visitor = new USFMVisitor();
+      p1.visit(visitor);
+      const p2 = new USFMParser();
+      p2.load(visitor.getResult()).parse();
+      expect(p2.toJSON()).toEqual(j1);
     });
   });
 
@@ -114,17 +155,17 @@ describe('USFMVisitor with New Formatter API', () => {
 
   describe('Complex scenarios', () => {
     it('should handle nested character markers', () => {
-      const input = '\\p Text \\w outer\\+nd inner\\+nd*\\w* more';
+      const input = '\\p Text \\w outer\\nd inner\\nd*\\w* more';
       const result = normalizeWithOptions(input);
 
-      expect(result).toBe('\\p Text \\w outer\\+nd inner\\+nd*\\w* more');
+      expect(result).toBe('\\p Text \\w outer\\nd inner\\nd*\\w* more');
     });
 
     it('should handle notes with content markers', () => {
       const input = '\\p Text\\f + \\fr 1:1 \\ft Note text\\f* more';
       const result = normalizeWithOptions(input);
 
-      expect(result).toBe('\\p Text\\f  +  \\fr 1:1 \\ft Note text\\f* more');
+      expect(result).toBe('\\p Text\\f + \\fr 1:1 \\ft Note text\\f* more');
     });
 
     it('should handle attributes in character markers', () => {
@@ -211,6 +252,32 @@ describe('USFMVisitor with New Formatter API', () => {
 
       expect(result1).toBe('\\p\n\\v 1 Text');
       expect(result2).toBe('\\p \\v 1 Text');
+    });
+  });
+
+  describe('USJ toJSON stability after USFM round-trip', () => {
+    function assertUsjStable(usfm: string): void {
+      const p = new USFMParser();
+      p.load(usfm).parse();
+      const before = JSON.stringify(p.toJSON());
+      const visitor = new USFMVisitor();
+      p.visit(visitor);
+      const p2 = new USFMParser();
+      p2.load(visitor.getResult()).parse();
+      const after = JSON.stringify(p2.toJSON());
+      expect(after).toBe(before);
+    }
+
+    it('keeps USJ identical for \\ft then space inside a footnote', () => {
+      assertUsjStable(`\\id TST
+\\m
+\\v 1 Hello\\f + \\ft Ref\\ft* \\f*`);
+    });
+
+    it('keeps USJ identical when a paragraph ends with whitespace-only after a footnote', () => {
+      assertUsjStable(
+        '\\p .\\f + \\fr 3:15 \\ft BYZ and TR include Amen.\\f* '
+      );
     });
   });
 });

@@ -43,6 +43,20 @@ When published, the same binaries are available as `usfm`, `usfm-validate`, and 
 - Parser fixtures: `packages/usfm-parser/tests/fixtures/usfm/`.
 - Regenerate example USJ after intentional parser changes: `bun run regenerate:example-usj` (see [`09-ci-and-branch-protection.md`](./09-ci-and-branch-protection.md)).
 
+## Round-trip diffs (USFM / USJ / USX)
+
+After `bun run build`, see **unified diffs** (original vs after one conversion loop) for each serialized format:
+
+```bash
+bun run roundtrip-diff -- packages/usfm-parser/tests/fixtures/usfm/basic.usfm --out ./roundtrip-out
+# USJ file: USJ → USFM → parse → USJ
+bun run roundtrip-diff -- --usj path/to/example.usj --out ./roundtrip-out
+# Optional: extra USX diff with minimal verse milestones (usfmtc-style options)
+bun run roundtrip-diff -- path/to/file.usfm --usx-minimal --out ./roundtrip-out
+```
+
+Writes `usfm-roundtrip.diff`, `usj-roundtrip.diff`, `usx-roundtrip.diff`, and `SUMMARY.txt` under `--out` (default `./roundtrip-out/`). See `scripts/roundtrip-diff.mjs` header for exact definitions.
+
 ## External oracles
 
 To compare **usfmtc** and **usfm3** on a file, see [`scripts/oracles/README.md`](../scripts/oracles/README.md) and `bun run oracles:compare`. For **batch runs**, `PYTHON` setup, and how to read gaps vs official parsers, see [`17-oracle-comparison.md`](./17-oracle-comparison.md).

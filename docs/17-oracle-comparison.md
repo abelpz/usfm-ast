@@ -25,9 +25,13 @@ bun run oracles:batch
 # Curated examples/usfm-markers (12 files) → oracle-out/batch-examples/
 bun run oracles:batch-examples
 
+# Every examples/usfm-markers/**/example.usfm (aligns with fixture-matrix corpus)
+bun run oracles:batch-examples-all
+
 # Compact table (USX vs usfm3, and USJ vs usfmtc when available)
 bun run oracles:summarize
 bun run oracles:summarize oracle-out/batch-examples
+bun run oracles:summarize oracle-out/batch-examples-all
 ```
 
 ## What “progress” means here
@@ -35,6 +39,29 @@ bun run oracles:summarize oracle-out/batch-examples
 1. **`usfmtc` available** — You get **USJ** and **USX** similarity vs the same input (official-style pipeline). This is the strongest signal for parity with a **complete** USFM→USJ/USX path.
 2. **`usfmtc` missing** — Rely on **`usxVsUsfm3`** in each `ORACLE_METRICS.json` (our explicit `USXVisitor` vs npm `usfm3` USX) and on **internal** tests (`fixture-matrix`, `usfmtc-parity` snapshots for `basic` / `medium`).
 3. **npm `usfm3` USJ** — Often a **placeholder**; treat **USX** as the npm comparison surface unless you add a Python USJ path.
+
+## Upstream repositories (fixtures, tests, examples)
+
+Use these sources to **add** USFM cases and to understand how reference tools behave. Prefer **small, licensed** snippets adapted into `examples/usfm-markers/` or `packages/*/tests/fixtures/` rather than copying whole Bibles.
+
+| Project | Role | Links |
+| -------- | ----- | ----- |
+| **usfmtc** | USFM TC reference implementation (Python); what `scripts/oracles/usfmtc_dump.py` calls | [GitHub: usfm-bible/usfmtc](https://github.com/usfm-bible/usfmtc) · [PyPI](https://pypi.org/project/usfmtc/) |
+| **usfm3** | Error-tolerant USFM 3.x (Rust → WASM); what `dump-usfm3.mjs` uses | [GitHub: jcuenod/usfm3](https://github.com/jcuenod/usfm3) · [npm](https://www.npmjs.com/package/usfm3) · [crates.io](https://crates.io/crates/usfm3) |
+| **tcdocs** | Committee docs (markers, migration notes) | [GitHub: usfm-bible/tcdocs](https://github.com/usfm-bible/tcdocs) |
+
+Our **`fixture-matrix`** test already walks every `examples/usfm-markers/**/*.usfm` and package fixtures; new upstream-inspired files there are picked up automatically. **`oracles:batch-examples-all`** runs the same example tree through `compare.mjs`.
+
+## Default similarity thresholds (not byte equality)
+
+Oracle scripts use **`compareUsjSimilarity`** and **`compareUsxSimilarity`** (`packages/usfm-parser/src/oracle/`). They are **tolerant** (Dice bigrams, histograms, DOM alignment) but defaults are tuned to be **meaningful**, not rubber-stamps. Pass requires **both** the blended score **and** each sub-metric to clear its floor.
+
+| API | Combined `minScore` | Other floors |
+| --- | ------------------- | ------------ |
+| **USJ** | **0.84** | text **0.79**, node-type histogram **0.67** |
+| **USX** | **0.73** | structure **0.63**, attributes **0.56**, tag histogram **0.52** |
+
+Some **internal** tests use **stricter** explicit options (e.g. `fixture-matrix` USJVisitor vs `toJSON`, conversion round-trips). For a **known** gap, fix the parser or document it; avoid permanently lowering globals without a tracked reason.
 
 ## Latest local batch snapshot (2026-03-30, no usfmtc on PATH)
 
@@ -44,7 +71,7 @@ Summarized with `bun run oracles:summarize oracle-out/batch` and `…/batch-exam
 
 **Example markers (`oracle-out/batch-examples`):** **Fails** default USX vs `usfm3` on:
 
-- **`fig-fig/fig-example-2`** — combined score ~0.72 (threshold 0.72): borderline / figure markup.
+- **`fig-fig/fig-example-2`** — combined score ~0.72 (default USX `minScore` **0.73**): borderline / figure markup.
 - **`periph-periph/periph-example-1`** — structure similarity very low (~0.15); peripheral / front-matter USX shape diverges most.
 
 These are good **backlog targets** for USX alignment (or documented differences), independent of USJ golden files.
