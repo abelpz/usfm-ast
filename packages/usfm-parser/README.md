@@ -446,6 +446,12 @@ MIT License - see the [LICENSE](../../LICENSE) file for details.
 - [`@usfm-tools/adapters`](../usfm-adapters) - Format conversion tools
 - [`@usfm-tools/formatter`](../usfm-formatter) - USFM formatting and normalization
 - [`@usj-tools/adapters`](../usj-adapters) - USJ conversion utilities
+- [`@usfm-tools/editor-core`](../usfm-editor-core) - Chapter slices, alignment, document store
+
+## 📖 More documentation
+
+- [Parser metadata & USFM output buffer](../../docs/19-parser-metadata-and-usfm-buffer.md) — `sourcePositions`, `getParserNodeId`, `getParserSourceSpan`, oracle helpers
+- [Editor core](../../docs/18-editor-core.md) — uses `@usfm-tools/parser` with higher-level editing APIs
 
 ## 📞 Support
 

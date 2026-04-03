@@ -1,12 +1,36 @@
 # @usfm-tools/editor-core
 
-Framework-agnostic helpers for scripture editing: **chapter slices**, **alignment strip/rebuild** (gateway ↔ original language), and shared **types** for structured operations.
+Framework-agnostic helpers for scripture editing: **chapter slices**, **alignment** strip/rebuild (gateway ↔ original language), **`DocumentStore`**, **structured operations**, and **OT-style** transforms. No UI (Slate, ProseMirror, etc.).
 
-This package does not include UI (Slate, ProseMirror, etc.).
+## Documentation
 
-## API (initial)
+**Full guide (APIs, examples):** [`docs/18-editor-core.md`](../../docs/18-editor-core.md)
 
-- `splitUsjByChapter` — split a USJ `content` array into chapter-sized slices (header + per `\c` section).
-- `stripAlignments` — remove `zaln-s` / `zaln-e` and unwrap `\w` into plain text; extract an `AlignmentMap`.
+**Related:** [Parser metadata & USFM buffer](../../docs/19-parser-metadata-and-usfm-buffer.md) · [Parsing quickstart](../../docs/10-parsing-quickstart.md)
 
-See source exports in `src/index.ts`.
+## Install
+
+```bash
+npm install @usfm-tools/editor-core @usfm-tools/parser @usfm-tools/adapters @usfm-tools/types
+```
+
+## Quick example
+
+```typescript
+import { DocumentStore } from '@usfm-tools/editor-core';
+
+const store = new DocumentStore({ silentConsole: true });
+store.loadUSFM('\\id MAT Matthew\\n\\c 1\\n\\p\\n\\v 1 Hello.');
+const { editable, alignments } = store.getEditableChapter(1);
+// Edit `editable`, adjust `alignments`, then:
+store.updateEditableChapter(1, editable, alignments);
+console.log(store.toUSFM());
+```
+
+## Exports
+
+See [`src/index.ts`](./src/index.ts) for the full surface: `splitUsjByChapter`, `ChapterChunker`, `stripAlignments`, `rebuildAlignedUsj`, `reconcileAlignments`, `DocumentStore`, `applyOperation`, `transformOpLists`, `diffUsjDocuments`, verse helpers, word-diff utilities, and `StubGitSyncAdapter`.
+
+## License
+
+MIT — see [repository root LICENSE](../../LICENSE).

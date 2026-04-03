@@ -41,3 +41,5 @@ Default behavior matches earlier releases: warnings and errors are mirrored to `
 - [`00-project-goal.md`](./00-project-goal.md) — maintainer contract  
 - [`09-ci-and-branch-protection.md`](./09-ci-and-branch-protection.md) — CI pipeline  
 - [`10-parsing-quickstart.md`](./10-parsing-quickstart.md) — parse / CLI quickstart  
+- [`18-editor-core.md`](./18-editor-core.md) — chapter slices, alignment, `DocumentStore`  
+- [`19-parser-metadata-and-usfm-buffer.md`](./19-parser-metadata-and-usfm-buffer.md) — `sourcePositions`, `USFMOutputBuffer`  

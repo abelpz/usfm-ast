@@ -29,6 +29,7 @@ After intentional **`USFMParser` / `toJSON()`** output changes, run `bun run reg
 - **`USFMOutputBuffer`** (`@usfm-tools/formatter`) with `clear` / `trimEnd` / `getTrailingContext`; **`USFMFormatter`** buffer helpers (`appendTextContentToBuffer`, `appendAttributesToBuffer`, `mergeMarkerIntoBuffer`, `mergeMilestoneIntoBuffer`) for visitor serialization without allocating a new full string on every text/close-marker append.
 - **`USFMVisitor`** and **`UniversalUSFMVisitorImpl`** build USFM via `USFMOutputBuffer`; **`USFMOutputBuffer`** re-exported from `@usfm-tools/adapters`.
 - **`@usfm-tools/editor-core`** — `DocumentStore`, chapter slicing, alignment strip/rebuild, document diff, OT helpers (`packages/usfm-editor-core`).
+- Docs: [`docs/18-editor-core.md`](./docs/18-editor-core.md), [`docs/19-parser-metadata-and-usfm-buffer.md`](./docs/19-parser-metadata-and-usfm-buffer.md); expanded [`packages/usfm-editor-core/README.md`](./packages/usfm-editor-core/README.md).
 
 ### Changed
 

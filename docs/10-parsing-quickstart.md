@@ -62,3 +62,8 @@ Writes `usfm-roundtrip.diff`, `usj-roundtrip.diff`, `usx-roundtrip.diff`, and `S
 To compare **usfmtc** and **usfm3** on a file, see [`scripts/oracles/README.md`](../scripts/oracles/README.md) and `bun run oracles:compare`. For **batch runs**, `PYTHON` setup, and how to read gaps vs official parsers, see [`17-oracle-comparison.md`](./17-oracle-comparison.md).
 
 To compare **`USFMParser` USJ** and **`USXVisitor` USX** with **usfmtc** (tolerant scores), run `bun run build` (parser + adapters) then `bun run oracles:parity` (needs Python + `pip install usfmtc` for a full diff; otherwise the script exits successfully and only summarizes output). See [`scripts/oracles/README.md`](../scripts/oracles/README.md) for `ORACLE_REQUIRE_USFMTC`, `ORACLE_SKIP_USFM3`, and `compare-parser.mjs`.
+
+## Editor core, metadata, serialization
+
+- **Chapter slicing, alignment strip/rebuild, `DocumentStore`, structured ops:** see [`18-editor-core.md`](./18-editor-core.md) (with runnable-style examples).
+- **Parse-time node ids / source spans (`sourcePositions`), `USFMOutputBuffer` / visitor serialization:** see [`19-parser-metadata-and-usfm-buffer.md`](./19-parser-metadata-and-usfm-buffer.md).

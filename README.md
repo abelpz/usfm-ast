@@ -547,12 +547,15 @@ packages/
 ### Further documentation
 
 - [Parsing quickstart](./docs/10-parsing-quickstart.md)
+- [Editor core (chapter slices, alignment, `DocumentStore`, ops)](./docs/18-editor-core.md)
+- [Parser metadata & USFM output buffer](./docs/19-parser-metadata-and-usfm-buffer.md)
 - [Oracle comparison guide](./docs/17-oracle-comparison.md)
 - [CI and branch protection](./docs/09-ci-and-branch-protection.md)
 - [Production readiness](./docs/16-production-readiness.md)
 - [GitHub agent workflow](./docs/08-github-agent-workflow.md)
 - [Oracle diff reports](./docs/oracle-diffs/SUMMARY.md)
 - [Package: @usfm-tools/parser](./packages/usfm-parser/README.md)
+- [Package: @usfm-tools/editor-core](./packages/usfm-editor-core/README.md)
 
 ---
 
