@@ -2,3 +2,4 @@
 export * from './usfm';
 export * from './usj';
 export * from './shared';
+export * from './alignment';

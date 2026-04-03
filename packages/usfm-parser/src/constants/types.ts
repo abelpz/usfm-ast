@@ -451,6 +451,12 @@ export interface USFMParserLogger {
 
 export interface USFMParserOptions {
   customMarkers?: Record<string, USFMMarkerInfo>;
+  /**
+   * When true, record non-enumerable `_sourceSpan` `{ start, end }` on AST nodes (UTF-16 indices
+   * into the input string). Root nodes and parsed leaves (e.g. text) get spans during parse;
+   * containers may receive a span from {@link propagateSourceSpans}. Off by default.
+   */
+  sourcePositions?: boolean;
   positionTracking?: boolean;
   /**
    * When `true`, do not call `console.warn` / `console.error` for parse messages.

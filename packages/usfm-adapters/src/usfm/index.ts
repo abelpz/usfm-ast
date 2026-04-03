@@ -16,7 +16,7 @@ import {
   TextUSFMNode as TextUSFMNodeInterface,
   MilestoneUSFMNode as MilestoneUSFMNodeInterface,
 } from '@usfm-tools/types';
-import { USFMFormatter } from '@usfm-tools/formatter';
+import { USFMFormatter, USFMOutputBuffer } from '@usfm-tools/formatter';
 import type { USFMFormatterOptions } from '@usfm-tools/formatter';
 
 /**
@@ -223,7 +223,7 @@ function isVerseASTNode(parent: unknown): parent is { content: unknown[] } {
 export * from './universal-usfm-visitor';
 
 export class USFMVisitor implements BaseUSFMVisitor {
-  private result: string = '';
+  private readonly out = new USFMOutputBuffer();
   private options: Required<
     Omit<USFMVisitorOptions, 'preserveWhitespace' | 'trimParagraphEdges' | 'usjVersion'>
   > & {
@@ -287,8 +287,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
       sameLineAsBookId = info?.type === 'paragraph';
     }
     if (!sameLineAsBookId) {
-      const t = this.formatter.addTextContent(this.result, '\n');
-      this.result = t.normalizedOutput;
+      this.formatter.appendTextContentToBuffer(this.out, '\n');
     }
     this.afterBookIdentificationLine = false;
   }
@@ -297,8 +296,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
     const raw = node as any;
     const atRoot = this.contextStack.length === 0;
     this.contextStack.push('paragraph');
-    const formatted = this.formatter.addMarker(this.result, 'id');
-    this.result = formatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, 'id');
     if (raw.code) {
       // Build the full \id line text in a single addTextContent call so the formatter's
       // parseIdContent sees "JON Title" as one unit and doesn't inject an extra space.
@@ -309,8 +307,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
             .join(' ')
         : '';
       const fullIdText = contentText ? `${raw.code} ${contentText}` : String(raw.code);
-      const t = this.formatter.addTextContent(this.result, fullIdText);
-      this.result = t.normalizedOutput;
+      this.formatter.appendTextContentToBuffer(this.out, fullIdText);
     }
     this.contextStack.pop();
     if (atRoot && isBookIdentificationMarker('id')) {
@@ -318,15 +315,13 @@ export class USFMVisitor implements BaseUSFMVisitor {
       // trimEnd() removes the structural trailing space that parseIdContent added after the book
       // code so addMarker can start a clean new line.
       if (this.options.usjVersion) {
-        this.result = this.result.trimEnd();
-        const usfmMarkerFormatted = this.formatter.addMarker(this.result, 'usfm');
-        this.result = usfmMarkerFormatted.normalizedOutput;
-        const verFormatted = this.formatter.addTextContent(this.result, this.options.usjVersion);
-        this.result = verFormatted.normalizedOutput;
+        this.out.trimEnd();
+        this.formatter.mergeMarkerIntoBuffer(this.out, 'usfm');
+        this.formatter.appendTextContentToBuffer(this.out, this.options.usjVersion);
       }
       this.afterBookIdentificationLine = true;
     }
-    return this.result;
+    return '';
   }
 
   visitChapter(node: ParagraphUSFMNodeInterface): string {
@@ -335,17 +330,15 @@ export class USFMVisitor implements BaseUSFMVisitor {
       this.consumeLeadingNewlineAfterBookIdentificationLineIfNeeded('c');
     }
     this.contextStack.push('paragraph');
-    const formatted = this.formatter.addMarker(this.result, 'c');
-    this.result = formatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, 'c');
     if (raw.number != null && String(raw.number) !== '') {
-      const t = this.formatter.addTextContent(this.result, String(raw.number));
-      this.result = t.normalizedOutput;
+      this.formatter.appendTextContentToBuffer(this.out, String(raw.number));
     }
     if (Array.isArray(raw.content) && raw.content.length > 0) {
       this.visitChildren(raw, raw.content);
     }
     this.contextStack.pop();
-    return this.result;
+    return '';
   }
 
   visitVerse(node: CharacterUSFMNodeInterface): string {
@@ -354,17 +347,15 @@ export class USFMVisitor implements BaseUSFMVisitor {
       this.consumeLeadingNewlineAfterBookIdentificationLineIfNeeded('v');
     }
     this.contextStack.push('character');
-    const openingFormatted = this.formatter.addMarker(this.result, 'v');
-    this.result = openingFormatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, 'v');
     if (raw.number != null && String(raw.number) !== '') {
-      const t = this.formatter.addTextContent(this.result, String(raw.number) + ' ');
-      this.result = t.normalizedOutput;
+      this.formatter.appendTextContentToBuffer(this.out, String(raw.number) + ' ');
     }
     if (Array.isArray(raw.content) && raw.content.length > 0) {
       this.visitChildren(raw, raw.content);
     }
     this.contextStack.pop();
-    return this.result;
+    return '';
   }
 
   visitTable(node: ParsedTableNode): string {
@@ -374,18 +365,17 @@ export class USFMVisitor implements BaseUSFMVisitor {
     if (Array.isArray(node.content) && node.content.length > 0) {
       this.visitChildren(node, node.content);
     }
-    return this.result;
+    return '';
   }
 
   visitTableRow(node: ParsedTableRowNode): string {
     this.contextStack.push('table-row');
-    const openingFormatted = this.formatter.addMarker(this.result, 'tr');
-    this.result = openingFormatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, 'tr');
     if (Array.isArray(node.content) && node.content.length > 0) {
       this.visitChildren(node, node.content);
     }
     this.contextStack.pop();
-    return this.result;
+    return '';
   }
 
   /**
@@ -395,13 +385,12 @@ export class USFMVisitor implements BaseUSFMVisitor {
   visitTableCell(node: ParsedTableCellNode): string {
     const marker = this.formatTableCellMarker(node);
     this.contextStack.push('table-cell');
-    const openingFormatted = this.formatter.addMarker(this.result, marker);
-    this.result = openingFormatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, marker);
     if (Array.isArray(node.content) && node.content.length > 0) {
       this.visitChildren(node, node.content);
     }
     this.contextStack.pop();
-    return this.result;
+    return '';
   }
 
   /** Optional line break `//` (parser `ParsedOptbreakNode`). */
@@ -409,9 +398,8 @@ export class USFMVisitor implements BaseUSFMVisitor {
     if (this.contextStack.length === 0) {
       this.consumeLeadingNewlineAfterBookIdentificationLineIfNeeded(undefined);
     }
-    const t = this.formatter.addTextContent(this.result, '//');
-    this.result = t.normalizedOutput;
-    return this.result;
+    this.formatter.appendTextContentToBuffer(this.out, '//');
+    return '';
   }
 
   /** Scripture reference span `\\ref …|loc\\ref*`. */
@@ -421,20 +409,17 @@ export class USFMVisitor implements BaseUSFMVisitor {
     }
     const raw = node as { loc?: string; content?: unknown[] | string };
     const loc = typeof raw.loc === 'string' ? raw.loc : '';
-    let t = this.formatter.addTextContent(this.result, '\\ref ');
-    this.result = t.normalizedOutput;
+    this.formatter.appendTextContentToBuffer(this.out, '\\ref ');
     if (typeof raw.content === 'string' && raw.content.length > 0) {
       this.visitText({ content: raw.content } as TextUSFMNodeInterface);
     } else if (Array.isArray(raw.content) && raw.content.length > 0) {
       this.visitChildren(raw, raw.content);
     }
     if (loc) {
-      t = this.formatter.addTextContent(this.result, '|' + loc);
-      this.result = t.normalizedOutput;
+      this.formatter.appendTextContentToBuffer(this.out, '|' + loc);
     }
-    const close = this.formatter.addMarker(this.result, 'ref', true);
-    this.result = close.normalizedOutput;
-    return this.result;
+    this.formatter.mergeMarkerIntoBuffer(this.out, 'ref', true);
+    return '';
   }
 
   private formatTableCellMarker(node: ParsedTableCellNode): string {
@@ -454,7 +439,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
    * Gets the current result string
    */
   getResult(): string {
-    let result = this.result;
+    let result = this.out.build();
 
     // Apply line ending normalization if requested
     if (this.options.normalizeLineEndings) {
@@ -468,7 +453,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
    * Resets the visitor state for reuse
    */
   reset(): void {
-    this.result = '';
+    this.out.clear();
     this.contextStack = [];
     this.currentParent = null;
     this.currentChildIndex = -1;
@@ -592,8 +577,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
     this.contextStack.push('paragraph');
 
     // Add paragraph marker using formatter
-    const formatted = this.formatter.addMarker(this.result, marker);
-    this.result = formatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, marker);
 
     // Book identification (`\id`): code + optional description (see `isBookIdentificationMarker`)
     if (isBookIdentificationMarker(marker)) {
@@ -610,8 +594,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
         const fullIdText = contentText
           ? `${(node as any).code} ${contentText}`
           : String((node as any).code);
-        const codeFormatted = this.formatter.addTextContent(this.result, fullIdText);
-        this.result = codeFormatted.normalizedOutput;
+        this.formatter.appendTextContentToBuffer(this.out, fullIdText);
       }
     } else {
       // Visit children (content) for other paragraph types
@@ -621,7 +604,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
       // Remove the structural trailing space that addMarker added for expected content when
       // this paragraph has no children (e.g. \mt1 with empty content array).
       if (!Array.isArray(node.content) || node.content.length === 0) {
-        this.result = this.result.trimEnd();
+        this.out.trimEnd();
       }
     }
 
@@ -632,7 +615,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
       this.afterBookIdentificationLine = true;
     }
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -652,8 +635,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
     this.contextStack.push('character');
 
     // Add opening marker using formatter
-    const openingFormatted = this.formatter.addMarker(this.result, effectiveMarker);
-    this.result = openingFormatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, effectiveMarker);
 
     // Handle special content for verses, chapters, and ID markers
     if (marker === 'v' || marker === 'c') {
@@ -670,8 +652,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
     if (marker !== 'v' && marker !== 'c') {
       const validAttributes = this.collectCharacterAttributes(node);
       if (Object.keys(validAttributes).length > 0) {
-        const attributesFormatted = this.formatter.addAttributes(this.result, validAttributes);
-        this.result = attributesFormatted.normalizedOutput;
+        this.formatter.appendAttributesToBuffer(this.out, validAttributes);
       }
     }
 
@@ -718,14 +699,13 @@ export class USFMVisitor implements BaseUSFMVisitor {
       const closeMarker = useGenericNoteClose
         ? (noteCtx as string).slice('note:'.length)
         : effectiveMarker;
-      const closingFormatted = this.formatter.addMarker(this.result, closeMarker, true);
-      this.result = closingFormatted.normalizedOutput;
+      this.formatter.mergeMarkerIntoBuffer(this.out, closeMarker, true);
     }
 
     // Pop context from stack
     this.contextStack.pop();
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -736,8 +716,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
       // For verses, add the verse number directly
       if ((node as any).number) {
         const verseNumber = (node as any).number;
-        const formatted = this.formatter.addTextContent(this.result, verseNumber + ' ');
-        this.result = formatted.normalizedOutput;
+        this.formatter.appendTextContentToBuffer(this.out, verseNumber + ' ');
       }
 
       // Visit children for verse content
@@ -748,8 +727,7 @@ export class USFMVisitor implements BaseUSFMVisitor {
       // For chapters, add the chapter number directly
       if ((node as any).number) {
         const chapterNumber = (node as any).number;
-        const formatted = this.formatter.addTextContent(this.result, chapterNumber);
-        this.result = formatted.normalizedOutput;
+        this.formatter.appendTextContentToBuffer(this.out, chapterNumber);
       }
 
       // Visit children for chapter content
@@ -817,10 +795,9 @@ export class USFMVisitor implements BaseUSFMVisitor {
     }
 
     // Add text content using formatter
-    const formatted = this.formatter.addTextContent(this.result, textContent);
-    this.result = formatted.normalizedOutput;
+    this.formatter.appendTextContentToBuffer(this.out, textContent);
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -833,14 +810,13 @@ export class USFMVisitor implements BaseUSFMVisitor {
     }
 
     const validAttributes = this.collectMilestoneAttributes(node);
-    const formatted = this.formatter.addMilestone(
-      this.result,
+    this.formatter.mergeMilestoneIntoBuffer(
+      this.out,
       marker,
       Object.keys(validAttributes).length > 0 ? validAttributes : undefined
     );
-    this.result = formatted.normalizedOutput;
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -856,13 +832,11 @@ export class USFMVisitor implements BaseUSFMVisitor {
     this.contextStack.push(`note:${marker}`);
 
     // Add opening note marker using formatter
-    const openingFormatted = this.formatter.addMarker(this.result, marker);
-    this.result = openingFormatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, marker);
 
     // Caller immediately after \f / \x (no extra spaces — matches Paratext/BSF `\f+`, `\x-`, etc.)
     if (node.caller) {
-      const callerFormatted = this.formatter.addTextContent(this.result, node.caller);
-      this.result = callerFormatted.normalizedOutput;
+      this.formatter.appendTextContentToBuffer(this.out, node.caller);
     }
 
     // Visit children (note content)
@@ -871,13 +845,12 @@ export class USFMVisitor implements BaseUSFMVisitor {
     }
 
     // Add closing note marker
-    const closingFormatted = this.formatter.addMarker(this.result, marker, true);
-    this.result = closingFormatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, marker, true);
 
     // Pop context from stack
     this.contextStack.pop();
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -975,5 +948,5 @@ export function convertUSJDocumentToUSFM(
 }
 
 // Re-export for convenience
-export { USFMFormatter } from '@usfm-tools/formatter';
+export { USFMFormatter, USFMOutputBuffer } from '@usfm-tools/formatter';
 export type { USFMFormatterOptions, FormatResult } from '@usfm-tools/formatter';

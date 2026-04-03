@@ -33,6 +33,7 @@ A comprehensive toolkit for working with **USFM** (Unified Standard Format Marke
 | `packages/shared-types` | `@usfm-tools/types` | Shared TypeScript interfaces and visitor base classes |
 | `packages/usfm-validator` | `@usfm-tools/validator` | USFM linting CLI (`usfm-validate`) |
 | `packages/usfm-cli` | `@usfm-tools/cli` | `usfm parse` CLI — parse to USJ |
+| `packages/usfm-editor-core` | `@usfm-tools/editor-core` | Document store, alignment layer, chapter slices, structured editing |
 | `packages/usj-core` | `@usj-tools/core` | `validateUsjStructure` — structural USJ validation |
 | `packages/usj-validator` | `@usj-tools/validator` | Re-exports `validateUsjStructure` |
 | `packages/usj-cli` | `@usj-tools/cli` | `usj pretty` / `usj validate` CLIs |
@@ -536,6 +537,7 @@ packages/
   shared-types/     @usfm-tools/types     — shared interfaces + visitor base
   usfm-validator/   @usfm-tools/validator — validator CLI
   usfm-cli/         @usfm-tools/cli       — usfm parse CLI
+  usfm-editor-core/ @usfm-tools/editor-core — document store + alignment editing
   usj-core/         @usj-tools/core       — validateUsjStructure
   usj-validator/    @usj-tools/validator  — re-exports usj-core
   usj-cli/          @usj-tools/cli        — usj pretty / validate CLIs

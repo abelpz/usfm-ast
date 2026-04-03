@@ -5,7 +5,7 @@
  * using the new Universal Visitor system.
  */
 
-import { USFMFormatter } from '@usfm-tools/formatter';
+import { USFMFormatter, USFMOutputBuffer } from '@usfm-tools/formatter';
 import type { USFMFormatterOptions } from '@usfm-tools/formatter';
 import {
   UniversalUSFMVisitor,
@@ -37,7 +37,7 @@ export interface UniversalUSFMVisitorOptions {
  * Universal USFM Visitor implementation that works with both enhanced and plain USJ nodes
  */
 export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
-  private result: string = '';
+  private readonly out = new USFMOutputBuffer();
   private options: Required<
     Omit<UniversalUSFMVisitorOptions, 'preserveWhitespace' | 'trimParagraphEdges'>
   > & {
@@ -89,7 +89,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
    * Resets the visitor state for reuse
    */
   reset(): void {
-    this.result = '';
+    this.out.clear();
     this.contextStack = [];
     this.currentParent = null;
     this.currentChildIndex = -1;
@@ -155,13 +155,13 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     const code = this.getProperty(node, 'code');
     const content = this.getProperty(node, 'content');
 
-    this.result += `\\id ${code}`;
+    this.out.append(`\\id ${code}`);
     if (Array.isArray(content) && content.length > 0) {
-      this.result += ` ${content.join(' ')}`;
+      this.out.append(` ${content.join(' ')}`);
     }
-    this.result += '\n';
+    this.out.append('\n');
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -171,9 +171,9 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     if (typeof node === 'string') return '';
 
     const number = this.getProperty(node, 'number');
-    this.result += `\\c ${number}\n`;
+    this.out.append(`\\c ${number}\n`);
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -183,9 +183,9 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     if (typeof node === 'string') return '';
 
     const number = this.getProperty(node, 'number');
-    this.result += `\\v ${number} `;
+    this.out.append(`\\v ${number} `);
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -201,8 +201,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     this.contextStack.push('paragraph');
 
     // Add paragraph marker using formatter
-    const formatted = this.formatter.addMarker(this.result, marker);
-    this.result = formatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, marker);
 
     // Visit children (content)
     const children = this.getContent(node);
@@ -213,7 +212,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     // Pop context from stack
     this.contextStack.pop();
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -232,8 +231,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     const actualMarker = marker;
 
     // Add opening character marker
-    const formatted = this.formatter.addMarker(this.result, actualMarker);
-    this.result = formatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, actualMarker);
 
     // Visit children (content)
     const children = this.getContent(node);
@@ -242,13 +240,12 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     }
 
     // Add closing character marker
-    const closingFormatted = this.formatter.addMarker(this.result, `${actualMarker}*`);
-    this.result = closingFormatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, actualMarker, true);
 
     // Pop context from stack
     this.contextStack.pop();
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -266,12 +263,10 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     this.contextStack.push('note');
 
     // Add opening note marker with caller
-    const formatted = this.formatter.addMarker(this.result, marker);
-    this.result = formatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, marker);
 
     if (caller !== undefined && caller !== null && String(caller) !== '') {
-      const t = this.formatter.addTextContent(this.result, String(caller));
-      this.result = t.normalizedOutput;
+      this.formatter.appendTextContentToBuffer(this.out, String(caller));
     }
 
     // Visit children (content)
@@ -281,13 +276,12 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     }
 
     // Add closing note marker
-    const closingFormatted = this.formatter.addMarker(this.result, `${marker}*`);
-    this.result = closingFormatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, marker, true);
 
     // Pop context from stack
     this.contextStack.pop();
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -306,10 +300,9 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     content = this.applyWhitespaceHandling(content);
 
     // Add text content using formatter
-    const formatted = this.formatter.addTextContent(this.result, content);
-    this.result = formatted.normalizedOutput;
+    this.formatter.appendTextContentToBuffer(this.out, content);
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -319,21 +312,17 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     if (typeof node === 'string') return '';
     const raw = node as { loc?: string; content?: unknown[] | string };
     const loc = typeof raw.loc === 'string' ? raw.loc : '';
-    let formatted = this.formatter.addTextContent(this.result, '\\ref ');
-    this.result = formatted.normalizedOutput;
+    this.formatter.appendTextContentToBuffer(this.out, '\\ref ');
     if (typeof raw.content === 'string' && raw.content.length > 0) {
-      formatted = this.formatter.addTextContent(this.result, raw.content);
-      this.result = formatted.normalizedOutput;
+      this.formatter.appendTextContentToBuffer(this.out, raw.content);
     } else if (Array.isArray(raw.content)) {
       this.visitChildren(node, raw.content);
     }
     if (loc) {
-      formatted = this.formatter.addTextContent(this.result, '|' + loc);
-      this.result = formatted.normalizedOutput;
+      this.formatter.appendTextContentToBuffer(this.out, '|' + loc);
     }
-    formatted = this.formatter.addMarker(this.result, 'ref', true);
-    this.result = formatted.normalizedOutput;
-    return this.result;
+    this.formatter.mergeMarkerIntoBuffer(this.out, 'ref', true);
+    return '';
   }
 
   /**
@@ -357,10 +346,13 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     }
 
     // Add milestone using formatter
-    const formatted = this.formatter.addMilestone(this.result, marker, attributes);
-    this.result = formatted.normalizedOutput;
+    this.formatter.mergeMilestoneIntoBuffer(
+      this.out,
+      marker,
+      Object.keys(attributes).length > 0 ? attributes : undefined
+    );
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -374,7 +366,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
       this.visitChildren(node, children);
     }
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -428,7 +420,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
    * Gets the final result
    */
   getResult(): string {
-    let result = this.result;
+    let result = this.out.build();
 
     if (this.options.normalizeLineEndings) {
       result = result.replace(/\r\n|\r/g, '\n');

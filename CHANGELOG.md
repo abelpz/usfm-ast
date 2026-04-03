@@ -26,7 +26,14 @@ After intentional **`USFMParser` / `toJSON()`** output changes, run `bun run reg
 - Adapter tests: `conversion-roundtrip.test.ts` covers all unique package `fixtures/**/*.usfm` (deduped parser vs adapters); milestone fixture checks USX is well-formed before/after round-trip instead of similarity (until USX/milestone parity improves).
 - Docs: upstream parser repos in [`docs/17-oracle-comparison.md`](./docs/17-oracle-comparison.md). Slightly **stricter** default `compareUsjSimilarity` / `compareUsxSimilarity` thresholds and tighter `fixture-matrix` / `conversion-roundtrip` alignment checks.
 - **`bun run roundtrip-diff`** — unified diffs for USFM / USJ / USX after one round-trip (`scripts/roundtrip-diff.mjs`, devDependency `diff`). See [`docs/10-parsing-quickstart.md`](./docs/10-parsing-quickstart.md).
+- **`USFMOutputBuffer`** (`@usfm-tools/formatter`) with `clear` / `trimEnd` / `getTrailingContext`; **`USFMFormatter`** buffer helpers (`appendTextContentToBuffer`, `appendAttributesToBuffer`, `mergeMarkerIntoBuffer`, `mergeMilestoneIntoBuffer`) for visitor serialization without allocating a new full string on every text/close-marker append.
+- **`USFMVisitor`** and **`UniversalUSFMVisitorImpl`** build USFM via `USFMOutputBuffer`; **`USFMOutputBuffer`** re-exported from `@usfm-tools/adapters`.
+- **`@usfm-tools/editor-core`** — `DocumentStore`, chapter slicing, alignment strip/rebuild, document diff, OT helpers (`packages/usfm-editor-core`).
 
 ### Changed
 
 - (none yet — populate when releasing)
+
+### Fixed
+
+- **`rebuildAlignedUsj` / `rebuildArray`:** nested verse `content` now receives the verse `sid` so `rebuildVerseInlineContent` runs for string siblings (partial alignment rebuild).

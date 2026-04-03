@@ -22,7 +22,7 @@ import {
 import { USFMMarkerRegistry } from '../constants';
 
 // Base implementation with common enhanced methods for parser nodes
-abstract class BaseEnhancedUSJNode {
+export abstract class BaseEnhancedUSJNode {
   private _index!: number;
   private _parent?: BaseEnhancedUSJNode;
 
@@ -30,16 +30,16 @@ abstract class BaseEnhancedUSJNode {
     // Store enhanced properties as non-enumerable
     Object.defineProperty(this, '_index', {
       value: index,
-      writable: false,
+      writable: true,
       enumerable: false,
-      configurable: false,
+      configurable: true,
     });
 
     Object.defineProperty(this, '_parent', {
       value: parent,
-      writable: false,
+      writable: true,
       enumerable: false,
-      configurable: false,
+      configurable: true,
     });
   }
 

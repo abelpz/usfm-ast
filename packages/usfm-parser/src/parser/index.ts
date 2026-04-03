@@ -66,6 +66,7 @@ import {
   createParsedTableRow,
   createParsedTableCell,
 } from '../nodes/enhanced-usj-nodes';
+import { finalizeParsedTree, propagateSourceSpans, type RootSourceSpanMap } from './parser-metadata';
 
 /**
  * A parser for USFM (Unified Standard Format Markers) text.
@@ -92,6 +93,9 @@ export class USFMParser {
   private currentBookCode: string = '';
   private currentChapter: string = '';
   private currentVerse: string = '';
+  /** Tree-wide spans when `sourcePositions` option is enabled (see {@link propagateSourceSpans}). */
+  private sourceSpans: RootSourceSpanMap = new WeakMap();
+  private readonly recordSourcePositions: boolean;
 
   /**
    * Creates a new instance of the USFMParser.
@@ -114,6 +118,7 @@ export class USFMParser {
       if (logger?.error) logger.error(message);
       else if (!silent) console.error(message);
     };
+    this.recordSourcePositions = options?.sourcePositions ?? false;
   }
 
   /**
@@ -155,9 +160,48 @@ export class USFMParser {
     this.currentBookCode = '';
     this.currentChapter = '';
     this.currentVerse = '';
+    this.sourceSpans = new WeakMap();
 
     this.currentMethod = 'parse';
     this.rootNode = this.parseNodes();
+    finalizeParsedTree(
+      this.rootNode,
+      this.recordSourcePositions ? { sourceSpans: this.sourceSpans } : undefined
+    );
+    if (this.recordSourcePositions && this.rootNode) {
+      propagateSourceSpans(this.rootNode);
+    }
+    return this;
+  }
+
+  /**
+   * Parse a USFM fragment with book/chapter context so `sid` and nested structure match a chapter slice.
+   * Does not require `\\id` in the fragment when `bookCode` is provided. After parsing, the AST is
+   * finalized (parent links, stable `_nodeId`) like {@link parse}.
+   *
+   * @param usfm Chapter USFM (often starts with `\\c` or paragraph markers)
+   * @param bookCode Three-letter book code (e.g. `TIT`)
+   * @param chapterNumber Chapter number as in `\\c`
+   */
+  parseChapter(usfm: string, bookCode: string, chapterNumber: number): USFMParser {
+    this.load(usfm);
+    this.setPosition(0);
+    if (this.trackPositions) {
+      this.positionVisits.clear();
+    }
+    this.currentBookCode = bookCode.trim();
+    this.currentChapter = String(chapterNumber);
+    this.currentVerse = '';
+    this.sourceSpans = new WeakMap();
+    this.currentMethod = 'parseChapter';
+    this.rootNode = this.parseNodes();
+    finalizeParsedTree(
+      this.rootNode,
+      this.recordSourcePositions ? { sourceSpans: this.sourceSpans } : undefined
+    );
+    if (this.recordSourcePositions && this.rootNode) {
+      propagateSourceSpans(this.rootNode);
+    }
     return this;
   }
 
@@ -248,7 +292,15 @@ export class USFMParser {
       const char = this.getCurrentCharacter();
 
       if (char === '\\') {
+        const spanStart = this.pos;
         const { marker, isNested, markerInfo } = this.parseMarker();
+
+        const pushRoot = (node: EnhancedUSJNode) => {
+          rootNode.content.push(node);
+          if (this.recordSourcePositions) {
+            this.sourceSpans.set(node, { start: spanStart, end: this.pos });
+          }
+        };
 
         // Skip empty markers (like milestone closing markers)
         if (!marker) {
@@ -275,40 +327,37 @@ export class USFMParser {
           case MarkerTypeEnum.PARAGRAPH:
             // Use styleType-based dispatch instead of hardcoded marker comparisons
             if (styleType === 'book') {
-              rootNode.content.push(this.parseBook(marker, rootNode.content.length));
+              pushRoot(this.parseBook(marker, rootNode.content.length));
             } else if (styleType === 'chapter') {
-              const chapterNode = this.parseChapter(marker, rootNode.content.length);
-              rootNode.content.push(chapterNode);
+              pushRoot(this.parseChapterMarker(marker, rootNode.content.length));
             } else if (styleType === 'table:row') {
               // Handle table parsing - parse consecutive \tr markers as a table
-              rootNode.content.push(this.parseTable(rootNode.content.length));
+              pushRoot(this.parseTable(rootNode.content.length));
             } else if (markerInfo.sectionContainer) {
               // Handle section containers like \esb
-              rootNode.content.push(this.parseSection(marker, rootNode.content.length));
+              pushRoot(this.parseSection(marker, rootNode.content.length));
             } else if (markerInfo.closes) {
               // This is a closing marker like \esbe - skip it as it's handled by parseSection
               continue;
             } else if (markerInfo.role === 'break') {
               // Handle break markers that don't have content
-              rootNode.content.push(this.parseBreakParagraph(marker, rootNode.content.length));
+              pushRoot(this.parseBreakParagraph(marker, rootNode.content.length));
             } else {
-              rootNode.content.push(this.parseEnhancedParagraph(marker, rootNode.content.length));
+              pushRoot(this.parseEnhancedParagraph(marker, rootNode.content.length));
             }
             break;
           case MarkerTypeEnum.CHARACTER:
             if (styleType === 'verse') {
-              rootNode.content.push(this.parseVerse(marker, rootNode.content.length));
+              pushRoot(this.parseVerse(marker, rootNode.content.length));
             } else {
-              rootNode.content.push(
-                this.parseEnhancedCharacter(marker, isNested, rootNode.content.length)
-              );
+              pushRoot(this.parseEnhancedCharacter(marker, isNested, rootNode.content.length));
             }
             break;
           case MarkerTypeEnum.NOTE:
-            rootNode.content.push(this.parseNote(marker, rootNode.content.length));
+            pushRoot(this.parseNote(marker, rootNode.content.length));
             break;
           case MarkerTypeEnum.MILESTONE:
-            rootNode.content.push(this.parseEnhancedMilestone(marker, rootNode.content.length));
+            pushRoot(this.parseEnhancedMilestone(marker, rootNode.content.length));
             break;
         }
       } else if (this.isWhitespace(char)) {
@@ -325,8 +374,14 @@ export class USFMParser {
           );
         }
         {
+          const spanStart = this.pos;
           const t = this.parseEnhancedText(false, rootNode.content.length);
-          if (t) rootNode.content.push(t);
+          if (t) {
+            rootNode.content.push(t);
+            if (this.recordSourcePositions) {
+              this.sourceSpans.set(t, { start: spanStart, end: this.pos });
+            }
+          }
         }
       }
     }
@@ -1149,7 +1204,7 @@ export class USFMParser {
   /**
    * Parses a chapter marker (\c)
    */
-  private parseChapter(marker: string, index: number): ParsedChapterNode {
+  private parseChapterMarker(marker: string, index: number): ParsedChapterNode {
     // Skip whitespace after marker
     while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
       this.advance(false);
@@ -1226,7 +1281,7 @@ export class USFMParser {
   /**
    * Parses a verse marker (\v)
    */
-  private parseVerse(marker: string, index: number): ParsedVerseNode {
+  private parseVerse(marker: string, index: number, spanStart?: number): ParsedVerseNode {
     // Skip whitespace after marker
     while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
       this.advance(false);
@@ -1305,6 +1360,9 @@ export class USFMParser {
       }
     }
 
+    if (spanStart !== undefined && this.recordSourcePositions) {
+      this.sourceSpans.set(node, { start: spanStart, end: this.pos });
+    }
     return node;
   }
 
@@ -1352,7 +1410,7 @@ export class USFMParser {
             break;
           case MarkerTypeEnum.CHARACTER:
             if (this.getMarkerStyleType(markerInfo) === 'verse') {
-              node.content.push(this.parseVerse(marker, node.content.length));
+              node.content.push(this.parseVerse(marker, node.content.length, savedPos));
             } else {
               node.content.push(this.parseEnhancedCharacter(marker, isNested, node.content.length));
             }
@@ -1875,6 +1933,7 @@ export class USFMParser {
    * Parses text content using enhanced USJ nodes
    */
   private parseEnhancedText(isInsideParagraph: boolean, index: number): ParsedTextNode | null {
+    const spanStart = this.pos;
     let content = '';
 
     while (this.pos < this.input.length) {
@@ -1904,7 +1963,11 @@ export class USFMParser {
     if (content === '') {
       return null;
     }
-    return createParsedText(content, index);
+    const textNode = createParsedText(content, index);
+    if (this.recordSourcePositions) {
+      this.sourceSpans.set(textNode, { start: spanStart, end: this.pos });
+    }
+    return textNode;
   }
 
   private parseSection(marker: string, index: number): ParsedSidebarNode {
@@ -2293,3 +2356,12 @@ export class USFMParser {
     return { align, colspan, baseMarker };
   }
 }
+
+export {
+  finalizeParsedTree,
+  propagateSourceSpans,
+  attachParserNodeMeta,
+  getParserNodeId,
+  getParserSourceSpan,
+} from './parser-metadata';
+export type { SourceSpan, ParserNodeMeta, RootSourceSpanMap, SourceSpanMap } from './parser-metadata';
