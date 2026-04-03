@@ -1,0 +1,63 @@
+name: Parser / USJ mismatch
+description: Report unexpected USFM parse results or USJ shape vs expectation (see docs/10-parsing-quickstart.md)
+title: "[parser] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us reproduce the issue with **minimal USFM** and **actual vs expected** output.
+
+  - type: textarea
+    id: package
+    attributes:
+      label: Package & version
+      description: e.g. `@usfm-tools/parser@0.1.0` from npm or local workspace.
+      placeholder: "@usfm-tools/parser 0.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: usfm
+    attributes:
+      label: Minimal USFM input
+      description: Smallest snippet that shows the problem (attach a file if huge).
+      render: plain
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual output
+      description: `JSON.stringify(parser.toJSON(), null, 2)` or relevant fragment.
+      render: plain
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output (or reference)
+      description: What you expected, or link to USFM/USJ spec / usfmtc / another tool.
+      render: plain
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Parser logs (optional)
+      description: Output of `parser.getLogs()` after parse, if relevant.
+      render: plain
+    validations:
+      required: false
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Node version, OS, bundler if applicable.
+      placeholder: "Node 22, Windows 11"
+    validations:
+      required: false

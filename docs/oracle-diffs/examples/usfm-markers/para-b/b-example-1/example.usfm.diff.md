@@ -1,0 +1,69 @@
+# Oracle diff: `examples/usfm-markers/para-b/b-example-1/example.usfm`
+
+## Scores
+
+| Metric | Value |
+|---|---|
+| **USJ text similarity** | 100.0% |
+| **USJ structure similarity** | 100.0% |
+| **USJ combined score** | 100.0% |
+| **USX structure similarity** | 100.0% |
+| **USX attribute similarity** | 100.0% |
+| **USX tag-histogram similarity** | 100.0% |
+| **USX combined score** | 100.0% |
+| **Overall** | ✅ PASS |
+
+## USFM diff (1 hunk)
+
+```diff
+--- examples/usfm-markers/para-b/b-example-1/example.usfm (original)
++++ examples/usfm-markers/para-b/b-example-1/example.usfm (roundtripped)
+@@ -1 +1 @@
++ \id PSA
++ \c 3
++ \s1 Morning Prayer for Help
++ \q1
++ \v 1 I have so many enemies, \nd Lord\nd*,
++ \q2 so many who turn against me!
++ \q1
++ \v 2 They talk about me and say,
++ \q2 “God will not help him.”
++ \b
++ \q1
++ \v 3 But you, O \nd Lord\nd*, are always my shield from danger;
++ \q2 you give me victory
++ \q2 and restore my courage.
++ \q1
++ \v 4 I call to the \nd Lord\nd* for help,
++ \q2 and from his sacred hill he answers me.
++ \b
++ \q1
++ \v 5 I lie down and sleep,
++ \q2 and all night long the \nd Lord\nd* protects me.
++ \q1
++ \v 6 I am not afraid of the thousands of enemies
+- \id PSA
+- \c 3
+- \s1 Morning Prayer for Help
+- \q1
+- \v 1 I have so many enemies, \nd Lord\nd*,
+- \q2 so many who turn against me!
+- \q1
+- \v 2 They talk about me and say,
+- \q2 “God will not help him.”
+- \b
+- \q1
+- \v 3 But you, O \nd Lord\nd*, are always my shield from danger;
+- \q2 you give me victory
+- \q2 and restore my courage.
+- \q1
+- \v 4 I call to the \nd Lord\nd* for help,
+- \q2 and from his sacred hill he answers me.
+- \b
+- \q1
+- \v 5 I lie down and sleep,
+- \q2 and all night long the \nd Lord\nd* protects me.
+- \q1
+- \v 6 I am not afraid of the thousands of enemies
+  \q2 who surround me on every side.
+```

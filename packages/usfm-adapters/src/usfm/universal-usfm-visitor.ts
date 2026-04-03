@@ -5,7 +5,8 @@
  * using the new Universal Visitor system.
  */
 
-import { USFMFormatter, USFMFormatterOptions } from '@usfm-tools/formatter';
+import { USFMFormatter, USFMOutputBuffer } from '@usfm-tools/formatter';
+import type { USFMFormatterOptions } from '@usfm-tools/formatter';
 import {
   UniversalUSFMVisitor,
   UniversalNode,
@@ -36,7 +37,7 @@ export interface UniversalUSFMVisitorOptions {
  * Universal USFM Visitor implementation that works with both enhanced and plain USJ nodes
  */
 export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
-  private result: string = '';
+  private readonly out = new USFMOutputBuffer();
   private options: Required<
     Omit<UniversalUSFMVisitorOptions, 'preserveWhitespace' | 'trimParagraphEdges'>
   > & {
@@ -88,7 +89,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
    * Resets the visitor state for reuse
    */
   reset(): void {
-    this.result = '';
+    this.out.clear();
     this.contextStack = [];
     this.currentParent = null;
     this.currentChildIndex = -1;
@@ -154,13 +155,13 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     const code = this.getProperty(node, 'code');
     const content = this.getProperty(node, 'content');
 
-    this.result += `\\id ${code}`;
+    this.out.append(`\\id ${code}`);
     if (Array.isArray(content) && content.length > 0) {
-      this.result += ` ${content.join(' ')}`;
+      this.out.append(` ${content.join(' ')}`);
     }
-    this.result += '\n';
+    this.out.append('\n');
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -170,9 +171,9 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     if (typeof node === 'string') return '';
 
     const number = this.getProperty(node, 'number');
-    this.result += `\\c ${number}\n`;
+    this.out.append(`\\c ${number}\n`);
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -182,9 +183,9 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     if (typeof node === 'string') return '';
 
     const number = this.getProperty(node, 'number');
-    this.result += `\\v ${number} `;
+    this.out.append(`\\v ${number} `);
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -200,8 +201,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     this.contextStack.push('paragraph');
 
     // Add paragraph marker using formatter
-    const formatted = this.formatter.addMarker(this.result, marker);
-    this.result = formatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, marker);
 
     // Visit children (content)
     const children = this.getContent(node);
@@ -212,7 +212,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     // Pop context from stack
     this.contextStack.pop();
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -227,13 +227,11 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     // Push character context to stack
     this.contextStack.push('character');
 
-    // Determine if this is a nested marker
-    const isNested = this.contextStack.filter((ctx) => ctx === 'character').length > 1;
-    const actualMarker = isNested ? `+${marker}` : marker;
+    // Nested spans: emit `\\marker` / `\\marker*` only (no `+` prefix; USFM 3.x explicit close).
+    const actualMarker = marker;
 
     // Add opening character marker
-    const formatted = this.formatter.addMarker(this.result, actualMarker);
-    this.result = formatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, actualMarker);
 
     // Visit children (content)
     const children = this.getContent(node);
@@ -242,13 +240,12 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     }
 
     // Add closing character marker
-    const closingFormatted = this.formatter.addMarker(this.result, `${actualMarker}*`);
-    this.result = closingFormatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, actualMarker, true);
 
     // Pop context from stack
     this.contextStack.pop();
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -258,7 +255,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     if (typeof node === 'string') return '';
 
     const marker = this.getMarker(node);
-    const caller = this.getProperty(node, 'caller') || '+';
+    const caller = this.getProperty(node, 'caller');
 
     if (!marker) return '';
 
@@ -266,11 +263,11 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     this.contextStack.push('note');
 
     // Add opening note marker with caller
-    const formatted = this.formatter.addMarker(this.result, marker);
-    this.result = formatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, marker);
 
-    // Add caller
-    this.formatter.addTextContent(this.result, ` ${caller} `);
+    if (caller !== undefined && caller !== null && String(caller) !== '') {
+      this.formatter.appendTextContentToBuffer(this.out, String(caller));
+    }
 
     // Visit children (content)
     const children = this.getContent(node);
@@ -279,13 +276,12 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     }
 
     // Add closing note marker
-    const closingFormatted = this.formatter.addMarker(this.result, `${marker}*`);
-    this.result = closingFormatted.normalizedOutput;
+    this.formatter.mergeMarkerIntoBuffer(this.out, marker, true);
 
     // Pop context from stack
     this.contextStack.pop();
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -304,10 +300,29 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     content = this.applyWhitespaceHandling(content);
 
     // Add text content using formatter
-    const formatted = this.formatter.addTextContent(this.result, content);
-    this.result = formatted.normalizedOutput;
+    this.formatter.appendTextContentToBuffer(this.out, content);
 
-    return this.result;
+    return '';
+  }
+
+  /**
+   * Scripture reference `\\ref …|loc\\ref*` (plain USJ `type: 'ref'`).
+   */
+  visitRef(node: UniversalNode): string {
+    if (typeof node === 'string') return '';
+    const raw = node as { loc?: string; content?: unknown[] | string };
+    const loc = typeof raw.loc === 'string' ? raw.loc : '';
+    this.formatter.appendTextContentToBuffer(this.out, '\\ref ');
+    if (typeof raw.content === 'string' && raw.content.length > 0) {
+      this.formatter.appendTextContentToBuffer(this.out, raw.content);
+    } else if (Array.isArray(raw.content)) {
+      this.visitChildren(node, raw.content);
+    }
+    if (loc) {
+      this.formatter.appendTextContentToBuffer(this.out, '|' + loc);
+    }
+    this.formatter.mergeMarkerIntoBuffer(this.out, 'ref', true);
+    return '';
   }
 
   /**
@@ -331,10 +346,13 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
     }
 
     // Add milestone using formatter
-    const formatted = this.formatter.addMilestone(this.result, marker, attributes);
-    this.result = formatted.normalizedOutput;
+    this.formatter.mergeMilestoneIntoBuffer(
+      this.out,
+      marker,
+      Object.keys(attributes).length > 0 ? attributes : undefined
+    );
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -348,7 +366,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
       this.visitChildren(node, children);
     }
 
-    return this.result;
+    return '';
   }
 
   /**
@@ -402,7 +420,7 @@ export class UniversalUSFMVisitorImpl implements UniversalUSFMVisitor<string> {
    * Gets the final result
    */
   getResult(): string {
-    let result = this.result;
+    let result = this.out.build();
 
     if (this.options.normalizeLineEndings) {
       result = result.replace(/\r\n|\r/g, '\n');
@@ -430,23 +448,7 @@ export function convertEnhancedUSJToUSFM(
   return visitor.getResult();
 }
 
-/**
- * Convert plain USJ document to USFM
- */
-export function convertUSJDocumentToUSFM(
-  usjDocument: any,
-  options?: UniversalUSFMVisitorOptions
-): string {
-  const visitor = new UniversalUSFMVisitorImpl(options);
-
-  if (usjDocument.content && Array.isArray(usjDocument.content)) {
-    usjDocument.content.forEach((node: any) => {
-      visitUniversal(node, visitor);
-    });
-  }
-
-  return visitor.getResult();
-}
+// `convertUSJDocumentToUSFM` is implemented in `./index.ts` via {@link USFMVisitor} (correct \\ref, notes, callers).
 
 /**
  * Convert mixed format (enhanced + plain) to USFM

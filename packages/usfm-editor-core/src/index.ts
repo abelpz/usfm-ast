@@ -1,0 +1,15 @@
+export type { USFMRef, NodePath } from './types';
+export type { ChapterSlice } from './chapter-chunker';
+export { splitUsjByChapter, ChapterChunker, chapterSliceToUsjDocument } from './chapter-chunker';
+export { usfmRefToVerseSid, findVerseInlineNodes } from './verse-ref';
+export { stripAlignments, stripArray } from './alignment-layer';
+export { reconcileAlignments } from './alignment-reconcile';
+export { rebuildAlignedUsj, rebuildArray, emitAlignmentGroup } from './rebuild-aligned';
+export { tokenizeWords, lcsWordIndices, lcsWordAlignment } from './word-diff';
+export { diffUsjDocuments } from './document-diff';
+export type { Operation, ContentOperation, AlignmentOperation } from './operations';
+export { applyOperation, applyOperations, invertOperation } from './operation-engine';
+export { composeOps, transformOpLists, invertOps } from './ot-transform';
+export { DocumentStore, type UsjDocument, type DocumentChangeListener } from './document-store';
+export type { GitSyncAdapter, MergeResult, Conflict } from './git-sync-adapter';
+export { StubGitSyncAdapter } from './git-sync-adapter';

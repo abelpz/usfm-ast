@@ -3,7 +3,7 @@
  * We assert structural presence, not byte-identical USFM to example.usfm (formatting differs).
  */
 
-import { convertUSJDocumentToUSFM } from '../src/usfm/universal-usfm-visitor';
+import { convertUSJDocumentToUSFM } from '../src/usfm';
 import * as fs from 'fs';
 import * as path from 'path';
 

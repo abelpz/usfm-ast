@@ -96,7 +96,7 @@ describe('USFMVisitor Whitespace Handling', () => {
       const result = visitor.getResult();
 
       // Formatter adds structural space after \f and around caller; paragraph edge trim does not apply inside notes
-      expect(result).toBe('\\f  +  \\fr 1:2  \\ft Note with spaces  \\f*');
+      expect(result).toBe('\\f + \\fr 1:2  \\ft Note with spaces  \\f*');
     });
 
     it('should handle mixed text and character markers correctly', () => {

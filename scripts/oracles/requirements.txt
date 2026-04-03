@@ -1,0 +1,3 @@
+# USFM TC reference implementation for oracle scripts (compare.mjs, compare-parser.mjs).
+# Installed automatically on first run unless ORACLE_SKIP_USFMTC_PIP=1.
+usfmtc>=0.4.0

@@ -36,6 +36,8 @@
     "@usfm-tools/formatter": "workspace:*"
   },
   "devDependencies": {
+    "@usj-tools/core": "workspace:*",
+    "@xmldom/xmldom": "0.8.11",
     "@types/jest": "^29.5.0",
     "@types/xml2js": "^0.4.11",
     "@types/xmldom": "^0.1.31",

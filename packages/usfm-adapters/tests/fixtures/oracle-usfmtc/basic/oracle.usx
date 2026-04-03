@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<usx version="3.0"><book style="id" code="TIT">EN_ULT</book>
+  <para style="h">Titus</para>
+  <para style="mt">Titus</para>
+  <chapter style="c" number="1" />
+  <para style="p"><verse style="v" number="1" /><char style="w" x-occurrence="1" x-occurrences="1">Paul</char>,
+<char style="w" x-occurrence="1" x-occurrences="1">a</char>
+<char style="w" x-occurrence="1" x-occurrences="1">servant</char>
+<char style="w" x-occurrence="1" x-occurrences="5">of</char>
+<char style="w" x-occurrence="1" x-occurrences="2">God</char>
+<char style="w" x-occurrence="1" x-occurrences="2">and</char>
+<char style="w" x-occurrence="1" x-occurrences="1">an</char>
+<char style="w" x-occurrence="1" x-occurrences="1">apostle</char>
+<char style="w" x-occurrence="2" x-occurrences="5">of</char>
+<char style="w" x-occurrence="1" x-occurrences="1">Jesus</char>
+<char style="w" x-occurrence="1" x-occurrences="1">Christ</char>,
+<verse style="v" number="2" />In hope of eternal life, which God promised before time began.
+<verse style="v" number="3" />At the proper time, he revealed his word through the message.</para>
+  <para style="p"><verse style="v" number="4" />To Titus, a true son in our common faith:
+<verse style="v" number="5" />For this purpose I left you in Crete, that you would set in order things unfinished.</para>
+  <chapter style="c" number="2" />
+  <para style="p"><verse style="v" number="1" />An elder must be without blame, the husband of one wife, with faithful children not accused of reckless behavior or rebellion.</para></usx>

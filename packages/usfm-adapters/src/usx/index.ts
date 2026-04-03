@@ -5,7 +5,42 @@ import {
   NoteUSFMNode,
   TextUSFMNode,
   MilestoneUSFMNode,
+  ParsedBookNode,
+  ParsedChapterNode,
+  ParsedVerseNode,
+  ParsedTableNode,
+  ParsedTableRowNode,
+  ParsedTableCellNode,
 } from '@usfm-tools/parser';
+
+/** How verse/chapter milestones are written in USX output. */
+export type USXVerseMilestoneMode = 'explicit' | 'minimal';
+
+export interface USXVisitorOptions {
+  /**
+   * `explicit`: verse `eid` / chapter `eid` milestones, `sid` on chapter and verse (matches typical usfm3 USX).
+   * `minimal`: self-closing verse starts only (closer to usfmtc `outUsx` for oracle parity).
+   */
+  verseMilestones?: USXVerseMilestoneMode;
+  /**
+   * Emit an empty `\\sN` paragraph as `<ms style="sN" x-bare="true"/>` inserted before the most recent `</para>`
+   * (usfmtc-style), instead of `<para style="sN"></para>`.
+   */
+  inlineBareSectionMilestones?: boolean;
+}
+
+function isBareSectionParagraph(node: ParagraphUSFMNode): boolean {
+  const c = node.content;
+  if (!c || c.length === 0) return true;
+  return c.every((ch: unknown) => {
+    if (typeof ch === 'string') return !ch.trim();
+    if (ch && typeof ch === 'object' && (ch as { type?: string }).type === 'text') {
+      const t = (ch as { content?: string }).content;
+      return typeof t !== 'string' || !t.trim();
+    }
+    return false;
+  });
+}
 
 const getMarkerInfo = (marker: string) => {
   //marker categories:
@@ -84,17 +119,98 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
   private inRow: boolean = false;
   private inSidebar: boolean = false;
   private verseSegments: Set<string> = new Set();
+  private readonly verseMilestoneMode: USXVerseMilestoneMode;
+  private readonly inlineBareSectionMilestones: boolean;
+
+  constructor(options: USXVisitorOptions = {}) {
+    this.verseMilestoneMode = options.verseMilestones ?? 'explicit';
+    this.inlineBareSectionMilestones = options.inlineBareSectionMilestones ?? false;
+  }
+
+  private isExplicitMilestones(): boolean {
+    return this.verseMilestoneMode === 'explicit';
+  }
+
+  /** Insert XML immediately before the last `</para>` token (for usfmtc-style inline `\\sN` markers). */
+  private insertXmlBeforeLastClosingParaTag(xml: string): void {
+    for (let i = this.result.length - 1; i >= 0; i--) {
+      if (this.result[i] === '</para>') {
+        this.result.splice(i, 0, xml);
+        return;
+      }
+    }
+    this.result.push(xml);
+  }
+
+  /** `\id` is parsed as {@link ParsedBookNode}, not a paragraph with text children. */
+  visitBook(node: ParsedBookNode): string {
+    this.bookCode = node.code;
+    const inner = node.content.join(' ');
+    const attrs = this.buildAttributes({
+      code: this.bookCode,
+      style: 'id',
+    });
+    this.result.push(`<book${attrs}>${inner}</book>`);
+    return this.result.join('');
+  }
+
+  /** `\c` is parsed as {@link ParsedChapterNode}, not a paragraph with text children. */
+  visitChapter(node: ParsedChapterNode): string {
+    if (this.isExplicitMilestones()) {
+      if (this.currentVerse && this.currentChapter) {
+        const verseEid = `${this.bookCode} ${this.currentChapter}:${this.currentVerse}`;
+        this.result.push(`<verse eid="${verseEid}" />`);
+        this.currentVerse = '';
+      }
+
+      if (this.currentChapter) {
+        const prevEid = `${this.bookCode} ${this.currentChapter}`;
+        const closeAttrs = this.buildAttributes({
+          eid: prevEid,
+        });
+        this.result.push(`<chapter${closeAttrs} />`);
+      }
+    }
+
+    this.currentChapter = node.number;
+    const attrs = this.isExplicitMilestones()
+      ? this.buildAttributes({
+          number: this.currentChapter,
+          style: 'c',
+          sid:
+            (node.sid && node.sid.trim()) || `${this.bookCode.trim()} ${this.currentChapter.trim()}`,
+        })
+      : this.buildAttributes({
+          style: 'c',
+          number: this.currentChapter,
+        });
+    this.result.push(`<chapter${attrs} />`);
+    return this.result.join('');
+  }
 
   visitParagraph(node: ParagraphUSFMNode): string {
-    // Handle special markers
+    if (typeof node.marker !== 'string') {
+      return this.result.join('');
+    }
+
+    if (
+      this.inlineBareSectionMilestones &&
+      /^s\d+$/.test(node.marker) &&
+      isBareSectionParagraph(node)
+    ) {
+      const msXml = `<ms${this.buildAttributes({ style: node.marker })} x-bare="true" />`;
+      this.insertXmlBeforeLastClosingParaTag(msXml);
+      return this.result.join('');
+    }
+
+    // Handle special markers (legacy / non-enhanced paragraph `id` if present)
     if (node.marker === 'id') {
-      // Extract book code and vid from id line
       const idContent = node.content[0] as TextUSFMNode;
-      if (idContent) {
-        const [code, ...rest] = idContent.content.split(' ');
+      const line = typeof idContent?.content === 'string' ? idContent.content : '';
+      if (line) {
+        const [code, ...rest] = line.split(' ');
         this.bookCode = code;
 
-        // Add book element with required and optional attributes
         const attrs = this.buildAttributes({
           code: this.bookCode,
           style: 'id',
@@ -104,33 +220,38 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       }
     }
 
-    // Handle chapter markers
+    // Handle chapter markers (legacy paragraph-shaped `\c` if present)
     if (node.marker === 'c') {
       const chapterContent = node.content[0] as TextUSFMNode;
-      if (chapterContent) {
-        // Close any open verse BEFORE updating chapter
-        if (this.currentVerse && this.currentChapter) {
-          const verseEid = `${this.bookCode} ${this.currentChapter}:${this.currentVerse}`;
-          this.result.push(`<verse eid="${verseEid}" />`);
-          this.currentVerse = '';
+      const num = typeof chapterContent?.content === 'string' ? chapterContent.content : '';
+      if (num) {
+        if (this.isExplicitMilestones()) {
+          if (this.currentVerse && this.currentChapter) {
+            const verseEid = `${this.bookCode} ${this.currentChapter}:${this.currentVerse}`;
+            this.result.push(`<verse eid="${verseEid}" />`);
+            this.currentVerse = '';
+          }
+
+          if (this.currentChapter) {
+            const prevEid = `${this.bookCode} ${this.currentChapter}`;
+            const closeAttrs = this.buildAttributes({
+              eid: prevEid,
+            });
+            this.result.push(`<chapter${closeAttrs} />`);
+          }
         }
 
-        // Close previous chapter if exists
-        if (this.currentChapter) {
-          const prevEid = `${this.bookCode} ${this.currentChapter}`;
-          const closeAttrs = this.buildAttributes({
-            eid: prevEid,
-          });
-          this.result.push(`<chapter${closeAttrs} />`);
-        }
-
-        this.currentChapter = chapterContent.content;
-        const sid = `${this.bookCode.trim()} ${this.currentChapter.trim()}`;
-        const attrs = this.buildAttributes({
-          number: this.currentChapter,
-          style: 'c',
-          sid,
-        });
+        this.currentChapter = num;
+        const attrs = this.isExplicitMilestones()
+          ? this.buildAttributes({
+              number: this.currentChapter,
+              style: 'c',
+              sid: `${this.bookCode.trim()} ${this.currentChapter.trim()}`,
+            })
+          : this.buildAttributes({
+              style: 'c',
+              number: this.currentChapter,
+            });
         this.result.push(`<chapter${attrs} />`);
       }
       return this.result.join('');
@@ -198,7 +319,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     }
 
     // Handle publication data
-    if (node.marker.startsWith('pub')) {
+    if (node.marker?.startsWith('pub')) {
       const attrs = this.buildAttributes({
         style: node.marker,
         'xml:space': 'preserve', // Preserve whitespace in publication data
@@ -227,7 +348,7 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     }
 
     // Close table if starting a new paragraph outside table context
-    if (this.inTable && !['tr', 'tc1', 'tc2', 'tc3', 'tc4'].includes(node.marker)) {
+    if (this.inTable && node.marker && !['tr', 'tc1', 'tc2', 'tc3', 'tc4'].includes(node.marker)) {
       const tableAttrs = this.buildAttributes({
         style: 'table',
       });
@@ -235,10 +356,14 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       this.inTable = false;
     }
 
-    // Check if paragraph starts with a verse marker
-    const startsWithVerse = (node: ParagraphUSFMNode) =>
-      node.content[0] instanceof CharacterUSFMNode &&
-      (node.content[0] as CharacterUSFMNode).marker === 'v';
+    // Check if paragraph starts with a verse marker (enhanced: ParsedVerseNode; legacy: \v char)
+    const startsWithVerse = (node: ParagraphUSFMNode) => {
+      const first = node.content[0];
+      if (first instanceof ParsedVerseNode) return true;
+      return (
+        first instanceof CharacterUSFMNode && (first as CharacterUSFMNode).marker === 'v'
+      );
+    };
 
     // Check if this paragraph should inherit verse context
     const shouldInheritVerse = (node: ParagraphUSFMNode) => {
@@ -280,8 +405,9 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     // Handle regular paragraphs
     const attrs = this.buildAttributes({
       style: node.marker,
-      // Add vid to paragraphs that should inherit verse context
-      ...(this.currentVerse && shouldInheritVerse(node)
+      ...(this.isExplicitMilestones() &&
+      this.currentVerse &&
+      shouldInheritVerse(node)
         ? { vid: `${this.bookCode} ${this.currentChapter}:${this.currentVerse}` }
         : {}),
     });
@@ -292,13 +418,97 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     node.content.forEach((child) => child.accept(this));
 
     // Close verse BEFORE closing paragraph if needed
-    if (shouldCloseVerse) {
+    if (shouldCloseVerse && this.isExplicitMilestones()) {
       const verseEid = `${this.bookCode} ${this.currentChapter}:${this.currentVerse}`;
       this.result.push(`<verse eid="${verseEid}" />`);
       this.currentVerse = '';
     }
 
     this.result.push('</para>');
+    return this.result.join('');
+  }
+
+  /** `\v` is parsed as {@link ParsedVerseNode}, not a character wrapper with text children. */
+  visitVerse(node: ParsedVerseNode): string {
+    if (this.currentVerse && this.isExplicitMilestones()) {
+      const verseEid = `${this.bookCode} ${this.currentChapter}:${this.currentVerse}`;
+      this.result.push(`<verse eid="${verseEid}" />`);
+    }
+
+    const verseNum = node.number.trim();
+    this.currentVerse = verseNum;
+
+    const sid =
+      (node.sid && node.sid.trim()) ||
+      `${this.bookCode} ${this.currentChapter.trim()}:${verseNum}`;
+    const attrs = this.isExplicitMilestones()
+      ? this.buildAttributes({
+          number: verseNum,
+          style: 'v',
+          sid,
+          ...(node.altnumber != null && node.altnumber !== '' ? { altnumber: node.altnumber } : {}),
+          ...(node.pubnumber != null && node.pubnumber !== '' ? { pubnumber: node.pubnumber } : {}),
+        })
+      : this.buildAttributes({
+          style: 'v',
+          number: verseNum,
+        });
+
+    this.result.push(`<verse${attrs} />`);
+    this.verseSegments.add(sid);
+    return this.result.join('');
+  }
+
+  /** Enhanced AST: `\tr` / `\tc*` grouped as table → row → cell. */
+  visitTable(node: ParsedTableNode): string {
+    const tableAttrs = this.buildAttributes({ style: 'table' });
+    this.result.push(`<table${tableAttrs}>`);
+    this.inTable = true;
+    node.content.forEach((row) => row.accept(this));
+    this.result.push('</table>');
+    this.inTable = false;
+    return this.result.join('');
+  }
+
+  visitTableRow(node: ParsedTableRowNode): string {
+    this.inRow = true;
+    this.result.push('<row>');
+    node.content.forEach((cell) => cell.accept(this));
+    this.result.push('</row>');
+    this.inRow = false;
+    return this.result.join('');
+  }
+
+  visitTableCell(node: ParsedTableCellNode): string {
+    const attrs = this.buildAttributes({
+      style: node.marker,
+      align: this.getCellAlignment(node.marker),
+      ...(node.colspan ? { colspan: node.colspan } : {}),
+    });
+    this.result.push(`<cell${attrs}>`);
+    node.content.forEach((child) => child.accept(this));
+    this.result.push('</cell>');
+    return this.result.join('');
+  }
+
+  visitOptbreak(_node: unknown): string {
+    this.result.push('<optbreak/>');
+    return this.result.join('');
+  }
+
+  visitRef(node: { loc?: string; content?: unknown[]; gen?: boolean }): string {
+    const raw = node as { loc?: string; content?: unknown[]; gen?: boolean };
+    const attrs = this.buildAttributes({
+      loc: typeof raw.loc === 'string' ? raw.loc : '',
+      ...(raw.gen !== undefined ? { gen: String(raw.gen) } : {}),
+    });
+    this.result.push(`<ref${attrs}>`);
+    if (Array.isArray(raw.content)) {
+      raw.content.forEach((child: any) => {
+        if (child && typeof child.accept === 'function') child.accept(this);
+      });
+    }
+    this.result.push('</ref>');
     return this.result.join('');
   }
 
@@ -311,27 +521,30 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       return elementNames[marker] || 'char';
     };
 
-    // Handle verse markers
+    // Handle verse markers (legacy character-shaped `\v` if present)
     if (node.marker === 'v') {
-      const verseContent = node.content[0] as TextUSFMNode;
-      if (verseContent) {
-        // Close previous verse if exists
-        if (this.currentVerse) {
+      const verseContent = node.content?.[0] as TextUSFMNode | undefined;
+      const text = typeof verseContent?.content === 'string' ? verseContent.content.trim() : '';
+      if (text) {
+        if (this.currentVerse && this.isExplicitMilestones()) {
           const verseEid = `${this.bookCode} ${this.currentChapter}:${this.currentVerse}`;
           this.result.push(`<verse eid="${verseEid}" />`);
         }
 
-        const verseNum = verseContent.content.trim();
-        this.currentVerse = verseNum;
-
-        const sid = `${this.bookCode} ${this.currentChapter.trim()}:${verseNum.trim()}`;
-        const attrs = this.buildAttributes({
-          number: verseNum,
-          style: 'v',
-          sid,
-          altnumber: this.getStringAttribute(node.attributes, 'altnumber'),
-          pubnumber: this.getStringAttribute(node.attributes, 'pubnumber'),
-        });
+        this.currentVerse = text;
+        const sid = `${this.bookCode} ${this.currentChapter.trim()}:${text}`;
+        const attrs = this.isExplicitMilestones()
+          ? this.buildAttributes({
+              number: text,
+              style: 'v',
+              sid,
+              altnumber: this.getStringAttribute(node.attributes, 'altnumber'),
+              pubnumber: this.getStringAttribute(node.attributes, 'pubnumber'),
+            })
+          : this.buildAttributes({
+              style: 'v',
+              number: text,
+            });
 
         this.result.push(`<verse${attrs} />`);
         this.verseSegments.add(sid);
@@ -393,33 +606,19 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
       return this.result.join('');
     }
 
-    // Handle cross reference markers
-    if (node.getParent()?.marker === 'x' || node.getParent()?.marker === 'f') {
-      const targetAttrs = this.buildAttributes({
-        style: node.marker,
-        ...(node.attributes || {}),
-      });
-      switch (node.marker) {
-        case 'xo': // Cross reference origin
-          this.result.push(`<char${targetAttrs} closed="false">`);
-          break;
-        case 'xt': // Cross reference target
-          this.result.push(`<char${targetAttrs} closed="false">`);
-          break;
-        case 'fr': // Footnote reference
-          this.result.push(`<char${targetAttrs} closed="false">`);
-          break;
-        case 'ft': // Footnote target
-          this.result.push(`<char${targetAttrs} closed="false">`);
-          break;
-        default:
-          this.result.push(`<char${targetAttrs}>`);
+    // Footnote / cross-ref content: match usfmtc-style `<char>` (no `closed` attribute).
+    {
+      const p = node.getParent?.() as { marker?: string; type?: string } | undefined;
+      if (p?.type === 'note' || p?.marker === 'x' || p?.marker === 'f') {
+        const targetAttrs = this.buildAttributes({
+          style: node.marker,
+          ...(node.attributes || {}),
+        });
+        this.result.push(`<char${targetAttrs}>`);
+        node.content.forEach((child) => child.accept(this));
+        this.result.push(`</char>`);
+        return this.result.join('');
       }
-
-      node.content.forEach((child) => child.accept(this));
-      this.result.push(`</char>`);
-
-      return this.result.join('');
     }
 
     // Handle references
@@ -484,8 +683,8 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
 
   visitNote(node: NoteUSFMNode): string {
     const attrs = this.buildAttributes({
-      caller: node.caller || '+',
       style: node.marker,
+      caller: node.caller || '+',
     });
 
     this.result.push(`<note${attrs}>`);
@@ -541,16 +740,16 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
   }
 
   getResult(): string {
-    // Close any open verse
-    if (this.currentVerse) {
-      const verseEid = `${this.bookCode} ${this.currentChapter}:${this.currentVerse}`;
-      this.result.push(`<verse eid="${verseEid}" />`);
-    }
+    if (this.isExplicitMilestones()) {
+      if (this.currentVerse) {
+        const verseEid = `${this.bookCode} ${this.currentChapter}:${this.currentVerse}`;
+        this.result.push(`<verse eid="${verseEid}" />`);
+      }
 
-    // Close current chapter if exists
-    if (this.currentChapter) {
-      const chapterEid = `${this.bookCode} ${this.currentChapter}`;
-      this.result.push(`<chapter eid="${chapterEid}" />`);
+      if (this.currentChapter) {
+        const chapterEid = `${this.bookCode} ${this.currentChapter}`;
+        this.result.push(`<chapter eid="${chapterEid}" />`);
+      }
     }
 
     // Clean up any unclosed elements
@@ -566,7 +765,8 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
 
   getDocument(): string {
     const xmlDecl = '<?xml version="1.0" encoding="utf-8"?>';
-    const usxStart = '<usx version="3.0">';
+    const usxVersion = this.isExplicitMilestones() ? '3.0' : '3.1';
+    const usxStart = `<usx version="${usxVersion}">`;
     const usxEnd = '</usx>';
 
     return `${xmlDecl}\n${usxStart}\n${this.getResult()}\n${usxEnd}`;

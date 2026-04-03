@@ -28,7 +28,12 @@ import {
   TextUSFMNode,
   USFMNodeUnion,
 } from '../nodes';
-import { USFMMarkerRegistry, USFMMarkerInfo, USFMParserOptions } from '../constants';
+import {
+  USFMMarkerRegistry,
+  USFMMarkerInfo,
+  USFMParserOptions,
+  USFMParserLogger,
+} from '../constants';
 import { MarkerType, MarkerTypeEnum } from '@usfm-tools/types';
 
 import {
@@ -61,6 +66,7 @@ import {
   createParsedTableRow,
   createParsedTableCell,
 } from '../nodes/enhanced-usj-nodes';
+import { finalizeParsedTree, propagateSourceSpans, type RootSourceSpanMap } from './parser-metadata';
 
 /**
  * A parser for USFM (Unified Standard Format Markers) text.
@@ -77,6 +83,8 @@ export class USFMParser {
   private readonly trackPositions: boolean;
   private readonly markerRegistry: USFMMarkerRegistry;
   private inferredMarkers: Record<string, USFMMarkerInfo> = {};
+  private readonly emitConsoleWarn: (message: string) => void;
+  private readonly emitConsoleError: (message: string) => void;
 
   // USJ version we support for version comparison
   private static readonly SUPPORTED_USJ_VERSION = '3.1';
@@ -85,16 +93,32 @@ export class USFMParser {
   private currentBookCode: string = '';
   private currentChapter: string = '';
   private currentVerse: string = '';
+  /** Tree-wide spans when `sourcePositions` option is enabled (see {@link propagateSourceSpans}). */
+  private sourceSpans: RootSourceSpanMap = new WeakMap();
+  private readonly recordSourcePositions: boolean;
 
   /**
    * Creates a new instance of the USFMParser.
    * @param {USFMParserOptions} [options] - Configuration options for the parser
    * @param {Record<string, USFMMarkerInfo>} [options.customMarkers] - Custom USFM markers to be recognized by the parser
    * @param {boolean} [options.positionTracking] - Whether to track positions for infinite loop detection
+   * @param {boolean} [options.silentConsole] - When true, omit `console` for warnings/errors (see `getLogs()`)
+   * @param {USFMParserLogger} [options.logger] - Optional custom warn/error sinks
    */
   constructor(options?: USFMParserOptions) {
     this.trackPositions = options?.positionTracking ?? process.env.NODE_ENV !== 'production';
     this.markerRegistry = USFMMarkerRegistry.getInstance(options?.customMarkers);
+    const logger: USFMParserLogger | undefined = options?.logger;
+    const silent = options?.silentConsole ?? false;
+    this.emitConsoleWarn = (message: string) => {
+      if (logger?.warn) logger.warn(message);
+      else if (!silent) console.warn(message);
+    };
+    this.emitConsoleError = (message: string) => {
+      if (logger?.error) logger.error(message);
+      else if (!silent) console.error(message);
+    };
+    this.recordSourcePositions = options?.sourcePositions ?? false;
   }
 
   /**
@@ -136,9 +160,48 @@ export class USFMParser {
     this.currentBookCode = '';
     this.currentChapter = '';
     this.currentVerse = '';
+    this.sourceSpans = new WeakMap();
 
     this.currentMethod = 'parse';
     this.rootNode = this.parseNodes();
+    finalizeParsedTree(
+      this.rootNode,
+      this.recordSourcePositions ? { sourceSpans: this.sourceSpans } : undefined
+    );
+    if (this.recordSourcePositions && this.rootNode) {
+      propagateSourceSpans(this.rootNode);
+    }
+    return this;
+  }
+
+  /**
+   * Parse a USFM fragment with book/chapter context so `sid` and nested structure match a chapter slice.
+   * Does not require `\\id` in the fragment when `bookCode` is provided. After parsing, the AST is
+   * finalized (parent links, stable `_nodeId`) like {@link parse}.
+   *
+   * @param usfm Chapter USFM (often starts with `\\c` or paragraph markers)
+   * @param bookCode Three-letter book code (e.g. `TIT`)
+   * @param chapterNumber Chapter number as in `\\c`
+   */
+  parseChapter(usfm: string, bookCode: string, chapterNumber: number): USFMParser {
+    this.load(usfm);
+    this.setPosition(0);
+    if (this.trackPositions) {
+      this.positionVisits.clear();
+    }
+    this.currentBookCode = bookCode.trim();
+    this.currentChapter = String(chapterNumber);
+    this.currentVerse = '';
+    this.sourceSpans = new WeakMap();
+    this.currentMethod = 'parseChapter';
+    this.rootNode = this.parseNodes();
+    finalizeParsedTree(
+      this.rootNode,
+      this.recordSourcePositions ? { sourceSpans: this.sourceSpans } : undefined
+    );
+    if (this.recordSourcePositions && this.rootNode) {
+      propagateSourceSpans(this.rootNode);
+    }
     return this;
   }
 
@@ -229,7 +292,15 @@ export class USFMParser {
       const char = this.getCurrentCharacter();
 
       if (char === '\\') {
+        const spanStart = this.pos;
         const { marker, isNested, markerInfo } = this.parseMarker();
+
+        const pushRoot = (node: EnhancedUSJNode) => {
+          rootNode.content.push(node);
+          if (this.recordSourcePositions) {
+            this.sourceSpans.set(node, { start: spanStart, end: this.pos });
+          }
+        };
 
         // Skip empty markers (like milestone closing markers)
         if (!marker) {
@@ -256,66 +327,98 @@ export class USFMParser {
           case MarkerTypeEnum.PARAGRAPH:
             // Use styleType-based dispatch instead of hardcoded marker comparisons
             if (styleType === 'book') {
-              rootNode.content.push(this.parseBook(marker, rootNode.content.length));
+              pushRoot(this.parseBook(marker, rootNode.content.length));
             } else if (styleType === 'chapter') {
-              const chapterNode = this.parseChapter(marker, rootNode.content.length);
-              rootNode.content.push(chapterNode);
+              pushRoot(this.parseChapterMarker(marker, rootNode.content.length));
             } else if (styleType === 'table:row') {
               // Handle table parsing - parse consecutive \tr markers as a table
-              rootNode.content.push(this.parseTable(rootNode.content.length));
+              pushRoot(this.parseTable(rootNode.content.length));
             } else if (markerInfo.sectionContainer) {
               // Handle section containers like \esb
-              rootNode.content.push(this.parseSection(marker, rootNode.content.length));
+              pushRoot(this.parseSection(marker, rootNode.content.length));
             } else if (markerInfo.closes) {
               // This is a closing marker like \esbe - skip it as it's handled by parseSection
               continue;
             } else if (markerInfo.role === 'break') {
               // Handle break markers that don't have content
-              rootNode.content.push(this.parseBreakParagraph(marker, rootNode.content.length));
+              pushRoot(this.parseBreakParagraph(marker, rootNode.content.length));
             } else {
-              rootNode.content.push(this.parseEnhancedParagraph(marker, rootNode.content.length));
+              pushRoot(this.parseEnhancedParagraph(marker, rootNode.content.length));
             }
             break;
           case MarkerTypeEnum.CHARACTER:
             if (styleType === 'verse') {
-              rootNode.content.push(this.parseVerse(marker, rootNode.content.length));
+              pushRoot(this.parseVerse(marker, rootNode.content.length));
             } else {
-              rootNode.content.push(
-                this.parseEnhancedCharacter(marker, isNested, rootNode.content.length)
-              );
+              pushRoot(this.parseEnhancedCharacter(marker, isNested, rootNode.content.length));
             }
             break;
           case MarkerTypeEnum.NOTE:
-            rootNode.content.push(this.parseNote(marker, rootNode.content.length));
+            pushRoot(this.parseNote(marker, rootNode.content.length));
             break;
           case MarkerTypeEnum.MILESTONE:
-            rootNode.content.push(this.parseEnhancedMilestone(marker, rootNode.content.length));
+            pushRoot(this.parseEnhancedMilestone(marker, rootNode.content.length));
             break;
         }
       } else if (this.isWhitespace(char)) {
         this.advance(false);
       } else {
-        const { context, pointer } = this.getContextAndPointer(this.pos);
-        this.logWarning(
-          `Unexpected character outside a paragraph: '${char}'\n` +
-            `Context: ${context}\n` +
-            `         ${pointer}`
-        );
-        rootNode.content.push(this.parseEnhancedText(false, rootNode.content.length));
+        const prev =
+          rootNode.content.length > 0 ? rootNode.content[rootNode.content.length - 1] : undefined;
+        if (!this.allowsImplicitRootTextAfter(prev)) {
+          const { context, pointer } = this.getContextAndPointer(this.pos);
+          this.logWarning(
+            `Unexpected character outside a paragraph: '${char}'\n` +
+              `Context: ${context}\n` +
+              `         ${pointer}`
+          );
+        }
+        {
+          const spanStart = this.pos;
+          const t = this.parseEnhancedText(false, rootNode.content.length);
+          if (t) {
+            rootNode.content.push(t);
+            if (this.recordSourcePositions) {
+              this.sourceSpans.set(t, { start: spanStart, end: this.pos });
+            }
+          }
+        }
       }
     }
 
     return rootNode;
   }
 
+  /**
+   * USJ allows bare text at document root after inline-style content (e.g. `\\v 1` then verse text
+   * without `\\p`). That is valid for snippets; only warn for truly unexpected leading/junk text.
+   */
+  private allowsImplicitRootTextAfter(prev: EnhancedUSJNode | undefined): boolean {
+    if (!prev || typeof prev !== 'object') return false;
+    const t = (prev as { type?: string }).type;
+    switch (t) {
+      case 'verse':
+      case 'chapter':
+      case 'note':
+      case 'text':
+      case 'char':
+      case 'ms':
+      case 'optbreak':
+      case 'ref':
+        return true;
+      default:
+        return false;
+    }
+  }
+
   private logWarning(message: string): void {
     this.logs.push({ type: 'warn', message });
-    console.warn(message);
+    this.emitConsoleWarn(message);
   }
 
   private logError(message: string): void {
     this.logs.push({ type: 'error', message });
-    console.error(message);
+    this.emitConsoleError(message);
   }
 
   private isLineBreakingWhitespace(char: string): boolean {
@@ -889,7 +992,7 @@ export class USFMParser {
 
     this.restorePosition(savedPos, false);
 
-    const markerInfo = this.markerRegistry.getMarkerInfo(marker);
+    const markerInfo = marker ? this.markerRegistry.getMarkerInfo(marker) : undefined;
 
     return { marker, cleanMarker: this.cleanMarkerSuffix(marker), markerInfo };
   }
@@ -939,7 +1042,7 @@ export class USFMParser {
     }
 
     // Handle default attribute case
-    const markerInfo = this.markerRegistry.getMarkerInfo(currentMarker);
+    const markerInfo = currentMarker ? this.markerRegistry.getMarkerInfo(currentMarker) : undefined;
     const defaultAttr = markerInfo?.defaultAttribute;
     if (isDefaultAttribute && defaultAttr) {
       let defaultValue = '';
@@ -1101,7 +1204,7 @@ export class USFMParser {
   /**
    * Parses a chapter marker (\c)
    */
-  private parseChapter(marker: string, index: number): ParsedChapterNode {
+  private parseChapterMarker(marker: string, index: number): ParsedChapterNode {
     // Skip whitespace after marker
     while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
       this.advance(false);
@@ -1178,7 +1281,7 @@ export class USFMParser {
   /**
    * Parses a verse marker (\v)
    */
-  private parseVerse(marker: string, index: number): ParsedVerseNode {
+  private parseVerse(marker: string, index: number, spanStart?: number): ParsedVerseNode {
     // Skip whitespace after marker
     while (this.pos < this.input.length && this.isWhitespace(this.getCurrentCharacter())) {
       this.advance(false);
@@ -1257,6 +1360,9 @@ export class USFMParser {
       }
     }
 
+    if (spanStart !== undefined && this.recordSourcePositions) {
+      this.sourceSpans.set(node, { start: spanStart, end: this.pos });
+    }
     return node;
   }
 
@@ -1304,7 +1410,7 @@ export class USFMParser {
             break;
           case MarkerTypeEnum.CHARACTER:
             if (this.getMarkerStyleType(markerInfo) === 'verse') {
-              node.content.push(this.parseVerse(marker, node.content.length));
+              node.content.push(this.parseVerse(marker, node.content.length, savedPos));
             } else {
               node.content.push(this.parseEnhancedCharacter(marker, isNested, node.content.length));
             }
@@ -1312,9 +1418,11 @@ export class USFMParser {
           case MarkerTypeEnum.NOTE:
             node.content.push(this.parseNote(marker, node.content.length));
             break;
-          default:
-            node.content.push(this.parseEnhancedText(true, node.content.length));
+          default: {
+            const t = this.parseEnhancedText(true, node.content.length);
+            if (t) node.content.push(t);
             break;
+          }
         }
       } else if (char === '/' && this.getNextCharacter() === '/') {
         // This is an optbreak marker, create an optbreak node
@@ -1326,7 +1434,8 @@ export class USFMParser {
         const { marker: nextMarker, markerInfo: nextMarkerInfo } = this.getFollowingMarker();
 
         if (!nextMarker) {
-          node.content.push(this.parseEnhancedText(true, node.content.length));
+          const t = this.parseEnhancedText(true, node.content.length);
+          if (t) node.content.push(t);
           continue;
         }
 
@@ -1347,7 +1456,8 @@ export class USFMParser {
         node.content.push(createParsedText(' ', node.content.length));
         continue;
       } else {
-        node.content.push(this.parseEnhancedText(true, node.content.length));
+        const t = this.parseEnhancedText(true, node.content.length);
+        if (t) node.content.push(t);
       }
     }
 
@@ -1495,6 +1605,52 @@ export class USFMParser {
   }
 
   /**
+   * Index of the next line break at or after `from` (Unix `\\n`, old Mac `\\r`, or first of `\\r\\n`).
+   * Used to bound footnote lookahead so we do not match a **different** note’s `\\f*` later in the file.
+   */
+  private nextLineBreakIndex(from: number): number {
+    const n = this.input.indexOf('\n', from);
+    const r = this.input.indexOf('\r', from);
+    if (n === -1 && r === -1) return this.input.length;
+    if (n === -1) return r;
+    if (r === -1) return n;
+    return Math.min(n, r);
+  }
+
+  /**
+   * Whether another `\\f*` / `\\x*` for **this** note appears after `searchFrom` and that second
+   * close belongs to the **same** note (not to a new footnote that starts in between).
+   *
+   * Two conditions must both hold:
+   * 1. A second `\\f*` exists **on the same line** (cross-file false-positive guard).
+   * 2. No new note opener (`\\f ` with a trailing space) appears **between** `searchFrom` and that
+   *    second close — such an opener means the second `\\f*` belongs to a new footnote, so the
+   *    current `\\f*` already ended this note.
+   *
+   * Example patterns:
+   * - `\\fqa dug in\\f* to get back...\\f*`          → one note, two closes → continue ✓
+   * - `\\fqa text\\f* text \\f + ...\\fqa text2\\f*` → two notes on same line → break  ✓
+   * - `\\fqa text\\f* text` (no second `\\f*`)        → single close          → break  ✓
+   */
+  private hasAnotherNoteCloseAhead(noteMarker: string, searchFrom: number): boolean {
+    const needle = `\\${noteMarker}*`;
+    const lineEnd = this.nextLineBreakIndex(searchFrom);
+    const nextCloseIdx = this.input.indexOf(needle, searchFrom);
+
+    // No second close on this line → this \f* ended the note.
+    if (nextCloseIdx === -1 || nextCloseIdx >= lineEnd) return false;
+
+    // If a new note opener (e.g. `\f ` — marker name followed by a space then caller) appears
+    // before the next close, that close belongs to the NEW note — the current \f* already ended
+    // this one.  (`\fr`, `\ft`, `\fqa` etc. follow `\f` with an alphabetic character, not space.)
+    const noteOpener = `\\${noteMarker} `;
+    const openerIdx = this.input.indexOf(noteOpener, searchFrom);
+    if (openerIdx !== -1 && openerIdx < nextCloseIdx) return false;
+
+    return true;
+  }
+
+  /**
    * Parses a note using enhanced USJ nodes
    */
   private parseNote(marker: string, index: number): ParsedNoteNode {
@@ -1566,34 +1722,53 @@ export class USFMParser {
       }
     }
 
-    //Handle Note Content
-
+    // Handle Note Content — stack of open note-character spans (innermost on top).
+    // `\f*` / `\x*` closes the innermost open span first; when the stack is empty it ends the note.
     let textContent = '';
-    let unclosedNoteContentNode: ParsedCharacterNode | null = null;
+    const noteContentStack: ParsedCharacterNode[] = [];
+    const topChar = (): ParsedCharacterNode | null =>
+      noteContentStack.length > 0 ? noteContentStack[noteContentStack.length - 1] : null;
+
+    const flushTextToTopOrNote = () => {
+      if (!textContent) return;
+      const t = topChar();
+      if (t) {
+        t.content.push(createParsedText(textContent, t.content.length, t));
+      } else {
+        noteNode.content.push(createParsedText(textContent, noteNode.content.length, noteNode));
+      }
+      textContent = '';
+    };
+
+    const pushPoppedTopLevelToNote = (popped: ParsedCharacterNode) => {
+      if (noteContentStack.length === 0) {
+        noteNode.content.push(popped);
+      }
+    };
+
     const noteClosingMarker = `\\${marker}*`; // Note closing marker (e.g. \f*, \x*)
 
     while (this.pos < this.input.length) {
-      // Handle case: The note is closing
       if (this.input.startsWith(noteClosingMarker, this.pos)) {
-        // Close any pending content
-        if (textContent) {
-          if (unclosedNoteContentNode) {
-            unclosedNoteContentNode.content.push(
-              createParsedText(
-                textContent,
-                unclosedNoteContentNode.content.length,
-                unclosedNoteContentNode
-              )
-            );
-          } else {
-            noteNode.content.push(createParsedText(textContent, noteNode.content.length, noteNode));
+        flushTextToTopOrNote();
+        if (noteContentStack.length > 0) {
+          const popped = noteContentStack.pop()!;
+          pushPoppedTopLevelToNote(popped);
+          this.pos += noteClosingMarker.length;
+          // When the stack is empty after `\\f*`/`\\x*`, we normally end the note (`\\ft …\\f* more`).
+          // Some NoteContent markers (see registry `context: ['NoteContent']`) may be closed by a
+          // generic star while text continues in the same note before the final `\\f*`/`\\x*`.
+          // Currently: `fqa`, `fdc` (alternate quotations / deuterocanon glosses in footnotes).
+          if (noteContentStack.length === 0) {
+            if (
+              (popped.marker === 'fqa' || popped.marker === 'fdc') &&
+              this.hasAnotherNoteCloseAhead(marker, this.pos)
+            ) {
+              continue;
+            }
+            break;
           }
-          textContent = '';
-        }
-        // Close current note content marker if any
-        if (unclosedNoteContentNode) {
-          noteNode.content.push(unclosedNoteContentNode);
-          unclosedNoteContentNode = null;
+          continue;
         }
         this.pos += noteClosingMarker.length;
         break;
@@ -1602,6 +1777,11 @@ export class USFMParser {
       const char = this.getCurrentCharacter();
 
       if (char === '\\') {
+        const { marker: peekM, markerInfo: peekInfo } = this.peekMarker();
+        if (peekInfo?.type === MarkerTypeEnum.PARAGRAPH || peekM === 'c') {
+          break;
+        }
+
         const {
           marker: innerMarker,
           isNested: isInnerMarkerNested,
@@ -1609,95 +1789,66 @@ export class USFMParser {
           isClosingMarker: isInnerMarkerClosing,
         } = this.parseMarker();
 
-        // Check if this is a note content marker
-        const isNoteContentMarker = (innerMarkerInfo: USFMMarkerInfo) =>
-          innerMarkerInfo?.context?.includes('NoteContent');
+        const isNoteContentMarker = (imi: USFMMarkerInfo) => imi?.context?.includes('NoteContent');
 
-        if (
-          isInnerMarkerClosing &&
-          unclosedNoteContentNode &&
-          unclosedNoteContentNode.marker === innerMarker
-        ) {
-          // This is an explicit closing for the current note content marker
+        const open = topChar();
+        if (isInnerMarkerClosing && open && open.marker === innerMarker) {
           if (textContent) {
-            unclosedNoteContentNode.content.push(
-              createParsedText(textContent, unclosedNoteContentNode.content.length)
-            );
+            open.content.push(createParsedText(textContent, open.content.length));
           }
-          noteNode.content.push(unclosedNoteContentNode);
-          unclosedNoteContentNode = null;
+          const done = noteContentStack.pop()!;
+          pushPoppedTopLevelToNote(done);
           textContent = '';
-          this.advance(false); // Skip the * character
-          const currentChar = this.getCurrentCharacter();
-          const nextChar = this.getNextCharacter();
-
+          this.advance(false);
           continue;
         }
 
         if (innerMarkerInfo && isNoteContentMarker(innerMarkerInfo)) {
-          // Close any pending text content
-          if (textContent) {
-            if (unclosedNoteContentNode) {
-              unclosedNoteContentNode.content.push(
-                createParsedText(textContent, unclosedNoteContentNode.content.length)
-              );
-            } else {
-              noteNode.content.push(createParsedText(textContent, noteNode.content.length));
-            }
-            textContent = '';
+          flushTextToTopOrNote();
+
+          const afterFlush = topChar();
+          // NoteContent markers are siblings (registry `implicit-close-on-same-context`); a new
+          // marker implicitly closes the previous open note-content span — never nest by marker name.
+          if (afterFlush) {
+            const completed = noteContentStack.pop()!;
+            pushPoppedTopLevelToNote(completed);
           }
 
-          // Close current note content marker (implicit closing)
-          if (unclosedNoteContentNode) {
-            noteNode.content.push(unclosedNoteContentNode);
-          }
-
-          // Start new note content marker
-
-          unclosedNoteContentNode = createParsedCharacter(innerMarker, [], {}, 0);
+          noteContentStack.push(createParsedCharacter(innerMarker, [], {}, 0));
         } else {
-          // This is a regular character marker or explicit closing marker
-
-          // Handle explicit closing markers for note content (e.g., \dc*)
           const explicitClosingPattern = `\\${innerMarker}*`;
+          const tc = topChar();
           if (
-            unclosedNoteContentNode &&
-            innerMarker === unclosedNoteContentNode.marker &&
+            tc &&
+            innerMarker === tc.marker &&
             this.input.startsWith(explicitClosingPattern, this.pos - innerMarker.length - 1)
           ) {
-            // This is an explicit closing for the current note content marker
             if (textContent) {
-              unclosedNoteContentNode.content.push(
-                createParsedText(textContent, unclosedNoteContentNode.content.length)
-              );
+              tc.content.push(createParsedText(textContent, tc.content.length));
               textContent = '';
             }
-            noteNode.content.push(unclosedNoteContentNode);
-            unclosedNoteContentNode = null;
-            // Skip the * character
+            const done = noteContentStack.pop()!;
+            pushPoppedTopLevelToNote(done);
             if (this.pos < this.input.length && this.input[this.pos] === '*') {
               this.advance(false);
             }
           } else {
-            // Regular character marker - becomes nested in current note content marker
             if (textContent) {
-              if (unclosedNoteContentNode) {
-                unclosedNoteContentNode.content.push(
-                  createParsedText(textContent, unclosedNoteContentNode.content.length)
-                );
+              if (topChar()) {
+                topChar()!.content.push(createParsedText(textContent, topChar()!.content.length));
               } else {
                 noteNode.content.push(createParsedText(textContent, noteNode.content.length));
               }
               textContent = '';
             }
 
-            if (unclosedNoteContentNode) {
+            if (topChar()) {
               const characterNode = this.parseEnhancedCharacter(
                 innerMarker,
                 isInnerMarkerNested,
-                unclosedNoteContentNode.content.length
+                topChar()!.content.length
               );
-              unclosedNoteContentNode.content.push(characterNode);
+              topChar()!.content.push(characterNode);
             } else {
               const characterNode = this.parseEnhancedCharacter(
                 innerMarker,
@@ -1711,10 +1862,8 @@ export class USFMParser {
       } else if (char === '/' && this.getNextCharacter() === '/') {
         // This is an optbreak marker, create an optbreak node
         if (textContent) {
-          if (unclosedNoteContentNode) {
-            unclosedNoteContentNode.content.push(
-              createParsedText(textContent, unclosedNoteContentNode.content.length)
-            );
+          if (topChar()) {
+            topChar()!.content.push(createParsedText(textContent, topChar()!.content.length));
           } else {
             noteNode.content.push(createParsedText(textContent, noteNode.content.length));
           }
@@ -1724,10 +1873,8 @@ export class USFMParser {
         this.advance(false);
         const { createParsedOptbreak } = require('../nodes/enhanced-usj-nodes');
 
-        if (unclosedNoteContentNode) {
-          unclosedNoteContentNode.content.push(
-            createParsedOptbreak(unclosedNoteContentNode.content.length)
-          );
+        if (topChar()) {
+          topChar()!.content.push(createParsedOptbreak(topChar()!.content.length));
         } else {
           noteNode.content.push(createParsedOptbreak(noteNode.content.length));
         }
@@ -1742,20 +1889,10 @@ export class USFMParser {
       }
     }
 
-    // Handle any remaining content
-    if (textContent) {
-      if (unclosedNoteContentNode) {
-        unclosedNoteContentNode.content.push(
-          createParsedText(textContent, unclosedNoteContentNode.content.length)
-        );
-      } else {
-        noteNode.content.push(createParsedText(textContent, noteNode.content.length));
-      }
-    }
-
-    // Close any remaining note content marker
-    if (unclosedNoteContentNode) {
-      noteNode.content.push(unclosedNoteContentNode);
+    flushTextToTopOrNote();
+    while (noteContentStack.length > 0) {
+      const n = noteContentStack.pop()!;
+      pushPoppedTopLevelToNote(n);
     }
 
     return noteNode;
@@ -1795,7 +1932,8 @@ export class USFMParser {
   /**
    * Parses text content using enhanced USJ nodes
    */
-  private parseEnhancedText(isInsideParagraph: boolean, index: number): ParsedTextNode {
+  private parseEnhancedText(isInsideParagraph: boolean, index: number): ParsedTextNode | null {
+    const spanStart = this.pos;
     let content = '';
 
     while (this.pos < this.input.length) {
@@ -1822,7 +1960,14 @@ export class USFMParser {
       }
     }
 
-    return createParsedText(content, index);
+    if (content === '') {
+      return null;
+    }
+    const textNode = createParsedText(content, index);
+    if (this.recordSourcePositions) {
+      this.sourceSpans.set(textNode, { start: spanStart, end: this.pos });
+    }
+    return textNode;
   }
 
   private parseSection(marker: string, index: number): ParsedSidebarNode {
@@ -1900,16 +2045,25 @@ export class USFMParser {
           // For character markers, we need to parse them as part of paragraph content
           // Reset position and let the paragraph parser handle it
           this.restorePosition(savedPos, false);
-          node.content.push(this.parseEnhancedText(false, node.content.length));
+          {
+            const t = this.parseEnhancedText(false, node.content.length);
+            if (t) node.content.push(t);
+          }
         } else {
           // Handle other marker types within section
           this.restorePosition(savedPos, false);
-          node.content.push(this.parseEnhancedText(false, node.content.length));
+          {
+            const t = this.parseEnhancedText(false, node.content.length);
+            if (t) node.content.push(t);
+          }
         }
       } else if (this.isWhitespace(char)) {
         this.advance(false);
       } else {
-        node.content.push(this.parseEnhancedText(false, node.content.length));
+        {
+          const t = this.parseEnhancedText(false, node.content.length);
+          if (t) node.content.push(t);
+        }
       }
     }
 
@@ -2202,3 +2356,12 @@ export class USFMParser {
     return { align, colspan, baseMarker };
   }
 }
+
+export {
+  finalizeParsedTree,
+  propagateSourceSpans,
+  attachParserNodeMeta,
+  getParserNodeId,
+  getParserSourceSpan,
+} from './parser-metadata';
+export type { SourceSpan, ParserNodeMeta, RootSourceSpanMap, SourceSpanMap } from './parser-metadata';

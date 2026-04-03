@@ -1,5 +1,5 @@
 import { USFMParser } from '@usfm-tools/parser';
-import { USFMVisitor } from '../src';
+import { USFMVisitor, convertUSJDocumentToUSFM } from '../src';
 
 describe('Character and Note Marker Formatting', () => {
   let parser: USFMParser;
@@ -28,11 +28,11 @@ describe('Character and Note Marker Formatting', () => {
     });
 
     it('should handle nested character markers', () => {
-      const input = '\\p \\w Paul \\+nd Lord\\+nd*\\w* went';
+      const input = '\\p \\w Paul \\nd Lord\\nd*\\w* went';
       const result = parser.load(input).parse().visit(visitor);
       const output = visitor.getResult().trim();
 
-      expect(output).toBe('\\p \\w Paul \\+nd Lord\\+nd*\\w* went');
+      expect(output).toBe('\\p \\w Paul \\nd Lord\\nd*\\w* went');
     });
 
     it('should handle multiple character markers in sequence', () => {
@@ -50,7 +50,7 @@ describe('Character and Note Marker Formatting', () => {
       const result = parser.load(input).parse().visit(visitor);
       const output = visitor.getResult().trim();
 
-      expect(output).toBe('\\p Paul\\f  +  \\fr 1:1 \\ft This is a footnote\\f* went');
+      expect(output).toBe('\\p Paul\\f + \\fr 1:1 \\ft This is a footnote\\f* went');
     });
 
     it('should handle cross-reference notes', () => {
@@ -58,7 +58,16 @@ describe('Character and Note Marker Formatting', () => {
       const result = parser.load(input).parse().visit(visitor);
       const output = visitor.getResult().trim();
 
-      expect(output).toBe('\\p Paul\\x  -  \\xo 1:1 \\xt See John 3:16\\x* went');
+      expect(output).toBe('\\p Paul\\x - \\xo 1:1 \\xt See John 3:16\\x* went');
+    });
+
+    it('chains \\fr then \\ft inside a footnote without \\fr* (implicit close before \\ft)', () => {
+      const input =
+        '\\p .\\f + \\fr 3:15 \\ft BYZ and TR include Amen.\\f* ';
+      parser.load(input).parse().visit(visitor);
+      const output = visitor.getResult().trim();
+      expect(output).toContain('\\f + \\fr 3:15 \\ft BYZ');
+      expect(output).not.toContain('\\fr*');
     });
 
     it('should handle note markers with character markers inside', () => {
@@ -66,8 +75,69 @@ describe('Character and Note Marker Formatting', () => {
       const result = parser.load(input).parse().visit(visitor);
       const output = visitor.getResult().trim();
 
-      // Character markers inside footnote text markers (like \ft) should be nested with +
-      expect(output).toBe('\\p Paul\\f  +  \\fr 1:1 \\ft This is \\+w important\\+w* text\\f* went');
+      // Character markers inside footnote text markers (like \ft) close explicitly (no + prefix)
+      expect(output).toBe('\\p Paul\\f + \\fr 1:1 \\ft This is \\w important\\w* text\\f* went');
+    });
+
+    it('chains footnote-content spans (fr, ft, fqa) without inner stars; one \\f* ends the note', () => {
+      const v = new USFMVisitor();
+      v.visitPlainUSJNode({
+        type: 'note',
+        marker: 'f',
+        caller: '+',
+        content: [
+          { type: 'char', marker: 'fr', content: ['1:13 '] },
+          { type: 'char', marker: 'ft', content: ['Hebrew '] },
+          { type: 'char', marker: 'fqa', content: ['the men dug in'] },
+        ],
+      });
+      expect(v.getResult()).toBe('\\f + \\fr 1:13 \\ft Hebrew \\fqa the men dug in\\f*');
+    });
+
+    it('serializes footnotes with type "char" (wrong USJ) via registry: still uses visitNote + caller', () => {
+      const usfm = convertUSJDocumentToUSFM({
+        content: [
+          'Nevertheless, the men rowed hard',
+          {
+            type: 'char',
+            marker: 'f',
+            caller: '+',
+            content: [
+              { type: 'char', marker: 'fr', content: ['1:13 '] },
+              { type: 'char', marker: 'ft', content: ['Hebrew '] },
+              {
+                type: 'char',
+                marker: 'fqa',
+                content: [
+                  'the ',
+                  { type: 'char', marker: 'bd', content: ['men'] },
+                  ' dug in',
+                ],
+              },
+            ],
+          },
+        ],
+      });
+      expect(usfm).toBe(
+        'Nevertheless, the men rowed hard\\f + \\fr 1:13 \\ft Hebrew \\fqa the \\bd men\\bd* dug in\\f*'
+      );
+    });
+
+    it('chains footnote spans when USJ has whitespace-only strings between char siblings', () => {
+      const v = new USFMVisitor();
+      v.visitPlainUSJNode({
+        type: 'note',
+        marker: 'f',
+        caller: '+',
+        content: [
+          { type: 'char', marker: 'fr', content: ['1:13'] },
+          ' ',
+          { type: 'char', marker: 'ft', content: ['Hebrew'] },
+          ' ',
+          { type: 'char', marker: 'fqa', content: ['the men dug in'] },
+        ],
+      });
+      expect(v.getResult()).toBe('\\f + \\fr 1:13 \\ft Hebrew \\fqa the men dug in\\f*');
     });
   });
 

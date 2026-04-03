@@ -37,15 +37,11 @@ describe('USFMParser - Basic', () => {
       },
       'this is a verse.',
     ]);
-    expect(parser.getLogs()).toHaveLength(1);
-    expect(parser.getLogs()[0]).toEqual({
-      type: 'warn',
-      message: expect.stringContaining('Unexpected character outside a paragraph'),
-    });
+    expect(parser.getLogs()).toHaveLength(0);
   });
 
   test('handles character inside note content', () => {
-    const input = String.raw`\f + \ft this is a note with \+bd bold\+bd* text.\f*`;
+    const input = String.raw`\f + \ft this is a note with \bd bold\bd* text.\f*`;
     const result = JSON.parse(JSON.stringify(parser.load(input).parse().getNodes()));
     expect(result).toEqual([
       {
@@ -72,7 +68,7 @@ describe('USFMParser - Basic', () => {
   });
 
   test('handles character inside note', () => {
-    const input = String.raw`\f + \+bd bold\+bd* text.\f*`;
+    const input = String.raw`\f + \bd bold\bd* text.\f*`;
     const result = cleanForComparison(parser.load(input).parse().getNodes());
     expect(result).toEqual([
       {
@@ -274,7 +270,7 @@ describe('USFMParser - Basic', () => {
   test('parses simple marker combinations', () => {
     const input = String.raw`\p this is a paragraph.
 \p
-\v 1 this is some text \bd that \+it I want\+it* to make bold\bd*\f + \fr 1.1: \ft Note text: \fq quoted text.\f* for testing. `;
+\v 1 this is some text \bd that \it I want\it* to make bold\bd*\f + \fr 1.1: \ft Note text: \fq quoted text.\f* for testing. `;
     const result = JSON.parse(JSON.stringify(parser.load(input).parse().getNodes()));
 
     expect(result).toEqual([

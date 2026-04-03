@@ -92,6 +92,8 @@ new USFMParser(options?: USFMParserOptions)
 **Options:**
 - `customMarkers?: Record<string, USFMMarkerInfo>` - Custom USFM markers to register
 - `positionTracking?: boolean` - Enable position tracking for debugging (default: true in development)
+- `silentConsole?: boolean` - When true, omit `console` for parse warnings/errors; use `getLogs()` instead
+- `logger?: { warn?: (m: string) => void; error?: (m: string) => void }` - Custom sinks (per-channel fallback remains `console` unless `silentConsole`)
 
 #### Core Methods
 

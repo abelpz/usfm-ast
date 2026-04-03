@@ -24,6 +24,7 @@ export interface UniversalUSFMVisitor<T = void> {
   visitBook?(node: UniversalNode): T;
   visitChapter?(node: UniversalNode): T;
   visitVerse?(node: UniversalNode): T;
+  visitRef?(node: UniversalNode): T;
 
   // Legacy methods (for backward compatibility)
   visitRoot?(node: UniversalNode): T;
@@ -119,6 +120,9 @@ export class UniversalVisitorDispatcher {
 
       case 'text':
         return visitor.visitText(node);
+
+      case 'ref':
+        return visitor.visitRef?.(node) ?? visitor.visitCharacter(node);
 
       default:
         // Fallback based on structure

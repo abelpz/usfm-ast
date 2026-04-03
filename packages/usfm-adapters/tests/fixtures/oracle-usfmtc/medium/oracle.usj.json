@@ -1,0 +1,203 @@
+{
+  "type": "USJ",
+  "version": "3.1",
+  "content": [
+    {
+      "type": "book",
+      "marker": "id",
+      "code": "TIT",
+      "content": [
+        "EN_ULT"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "h",
+      "content": [
+        "Titus"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt1",
+      "content": [
+        "The Letter of Paul to"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "mt2",
+      "content": [
+        "Titus"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "is",
+      "content": [
+        "Introduction"
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "ip",
+      "content": [
+        "This is a letter from Paul to Titus."
+      ]
+    },
+    {
+      "type": "chapter",
+      "marker": "c",
+      "number": "1"
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "1"
+        },
+        "Paul, a ",
+        {
+          "type": "char",
+          "marker": "bd",
+          "content": [
+            "servant"
+          ]
+        },
+        " of God and an ",
+        {
+          "type": "char",
+          "marker": "bd",
+          "content": [
+            "apostle"
+          ]
+        },
+        " of Jesus Christ, for the faith of God's chosen people and the knowledge of the truth.\n",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "2"
+        },
+        "These are in hope of eternal life that God, who does not lie, ",
+        {
+          "type": "char",
+          "marker": "add",
+          "content": [
+            "promised"
+          ]
+        },
+        " before all the ages of time.\n",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "3"
+        },
+        "At the right time, he revealed his word by the message that he trusted me to deliver by the command of God our Savior."
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "4"
+        },
+        "To Titus, a true son in our common faith. ",
+        {
+          "type": "note",
+          "marker": "f",
+          "caller": "+",
+          "content": [
+            {
+              "type": "char",
+              "marker": "fr",
+              "content": [
+                "1:4 "
+              ]
+            },
+            {
+              "type": "char",
+              "marker": "fq",
+              "content": [
+                "true son "
+              ]
+            },
+            {
+              "type": "char",
+              "marker": "ft",
+              "content": [
+                "This is a metaphor that means Titus became a Christian through Paul's ministry."
+              ]
+            }
+          ]
+        },
+        "\nGrace and peace from God ",
+        {
+          "type": "note",
+          "marker": "f",
+          "caller": "+",
+          "content": [
+            {
+              "type": "char",
+              "marker": "fr",
+              "content": [
+                "1:4 "
+              ]
+            },
+            {
+              "type": "char",
+              "marker": "fq",
+              "content": [
+                "God "
+              ]
+            },
+            {
+              "type": "char",
+              "marker": "ft",
+              "content": [
+                "Some versions add "
+              ]
+            },
+            {
+              "type": "char",
+              "marker": "fqa",
+              "content": [
+                "the Father"
+              ]
+            },
+            " ."
+          ]
+        },
+        " and Christ Jesus our Savior.\n\n",
+        {
+          "type": "ms",
+          "marker": "s5",
+          "x-bare": "true"
+        }
+      ]
+    },
+    {
+      "type": "para",
+      "marker": "p",
+      "content": [
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "5"
+        },
+        "For this purpose I left you in Crete, that you might set in order things not yet complete and ordain elders in every city as I directed you.\n",
+        {
+          "type": "verse",
+          "marker": "v",
+          "number": "6"
+        },
+        "An elder must be without blame, the husband of one wife, with faithful children not accused of reckless behavior or rebellion."
+      ]
+    }
+  ]
+}

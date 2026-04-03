@@ -1,0 +1,68 @@
+# Oracle diff: `examples/usfm-markers/char-litl/litl-example-1/example.usfm`
+
+## Scores
+
+| Metric | Value |
+|---|---|
+| **USJ text similarity** | 100.0% |
+| **USJ structure similarity** | 100.0% |
+| **USJ combined score** | 100.0% |
+| **USX structure similarity** | 100.0% |
+| **USX attribute similarity** | 100.0% |
+| **USX tag-histogram similarity** | 100.0% |
+| **USX combined score** | 100.0% |
+| **Overall** | ✅ PASS |
+
+## USFM diff (1 hunk)
+
+```diff
+--- examples/usfm-markers/char-litl/litl-example-1/example.usfm (original)
++++ examples/usfm-markers/char-litl/litl-example-1/example.usfm (roundtripped)
+@@ -1 +1 @@
++ \id NEH
++ \c 7
++ \pm
++ \v 6 These are the people of the province who came up from the captivity of the exiles whom Nebuchadnezzar king of Babylon had taken captive (they returned to Jerusalem and Judah, each to his own town, 
++ \v 7 in company with Zerubbabel, Jeshua, Nehemiah, Azariah, Raamiah, Nahamani, Mordecai, Bilshan, Mispereth, Bigvai, Nehum and Baanah):
++ \b
++ \pm The list of the men of Israel:
++ \b
++ \lim1
++ \v 8 the descendants of Parosh - \litl 2,172\litl*
++ \lim1
++ \v 9 of Shephatiah - \litl 372\litl*
++ \lim1
++ \v 10 of Arah - \litl 652\litl*
++ \lim1
++ \v 11 of Pahath-Moab (through the line of Jeshua and Joab) - \litl 2,818\litl*
++ \lim1
++ \v 12 of Elam - \litl 1,254\litl*
++ \lim1
++ \v 13 of Zattu - \litl 845\litl*
++ \lim1
+- \id NEH
+- \c 7
+- \pm
+- \v 6 These are the people of the province who came up from the captivity of 
+- the exiles whom Nebuchadnezzar king of Babylon had taken captive (they returned 
+- to Jerusalem and Judah, each to his own town, 
+- \v 7 in company with Zerubbabel, Jeshua, Nehemiah, Azariah, Raamiah, Nahamani, 
+- Mordecai, Bilshan, Mispereth, Bigvai, Nehum and Baanah):
+- \b
+- \pm The list of the men of Israel:
+- \b
+- \lim1
+- \v 8 the descendants of Parosh - \litl 2,172\litl*
+- \lim1
+- \v 9 of Shephatiah - \litl 372\litl*
+- \lim1
+- \v 10 of Arah - \litl 652\litl*
+- \lim1
+- \v 11 of Pahath-Moab (through the line of Jeshua and Joab) - \litl 2,818\litl*
+- \lim1
+- \v 12 of Elam - \litl 1,254\litl*
+- \lim1
+- \v 13 of Zattu - \litl 845\litl*
+- \lim1
+  \v 14 of Zaccai - \litl 760\litl*
+```

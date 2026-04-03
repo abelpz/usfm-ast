@@ -443,7 +443,27 @@ export interface CustomMarkerRule {
   isMilestone?: boolean;
 }
 
+/** Optional sinks for parse-time messages. `getLogs()` always records regardless. */
+export interface USFMParserLogger {
+  warn?: (message: string) => void;
+  error?: (message: string) => void;
+}
+
 export interface USFMParserOptions {
   customMarkers?: Record<string, USFMMarkerInfo>;
+  /**
+   * When true, record non-enumerable `_sourceSpan` `{ start, end }` on AST nodes (UTF-16 indices
+   * into the input string). Root nodes and parsed leaves (e.g. text) get spans during parse;
+   * containers may receive a span from {@link propagateSourceSpans}. Off by default.
+   */
+  sourcePositions?: boolean;
   positionTracking?: boolean;
+  /**
+   * When `true`, do not call `console.warn` / `console.error` for parse messages.
+   * Use `getLogs()` for programmatic access. If `logger` supplies a handler for a channel,
+   * that handler is still called.
+   */
+  silentConsole?: boolean;
+  /** Custom logging; per-channel fallback is `console` unless `silentConsole` is set. */
+  logger?: USFMParserLogger;
 }

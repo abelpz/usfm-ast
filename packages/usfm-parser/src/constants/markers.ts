@@ -121,6 +121,7 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
         contentType: 'word',
       },
     },
+    /** Root parse path `parseBook`; adapters treat lines with `styleType: 'book'` like `\\id` for newline before non-paragraph markers (USFM document structure). */
     styleType: 'book',
     syntax: {
       pattern: ['special-content', 'content'],
@@ -1266,6 +1267,8 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
     },
     styleType: 'note',
   },
+  // Footnote / cross-reference character content inside `\f` / `\x` … `\f*` / `\x*`.
+  // Canonical list: https://docs.usfm.bible/usfm/3.1/char/notes/index.html
   fr: {
     displayName: 'The origin reference for the footnote (basic)',
     type: 'character',
@@ -1326,6 +1329,7 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   fv: {
     displayName: 'A verse number within the footnote text',
     type: 'character',
+    context: ['NoteContent'],
     styleType: 'char',
   },
   fdc: {
@@ -1337,6 +1341,7 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
   fm: {
     displayName: 'An additional footnote marker location for a previous footnote',
     type: 'character',
+    context: ['NoteContent'],
     styleType: 'char',
   },
   x: {
@@ -1716,6 +1721,14 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
       },
       title: {
         description: 'The title of the linked resource',
+        type: 'string',
+      },
+      'link-href': {
+        description: 'USJ/USX-style link URI (same role as href in some USFM sources)',
+        type: 'string',
+      },
+      'link-title': {
+        description: 'USJ/USX-style link title (same role as title in some USFM sources)',
         type: 'string',
       },
       id: {
@@ -2145,6 +2158,10 @@ export const defaultMarkers: { [key: string]: USFMMarkerInfo } = {
     styleType: 'ms',
     allowsAttributes: true,
     attributes: {
+      who: {
+        description: 'Optional metadata (e.g. speaker) carried on the alignment start milestone',
+        type: 'string',
+      },
       'x-strong': {
         description: 'Strong number reference',
         type: 'string',

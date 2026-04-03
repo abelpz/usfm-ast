@@ -48,6 +48,64 @@ export interface BuildNodeInput {
   ctx?: { previousMarker?: string };
 }
 
+/** Bound backward scans so very large documents do not make each marker append O(n). */
+const MAX_TRAILING_WS_SCAN = 8192;
+const MAX_LINEBREAK_LOOKBACK = 8192;
+
+/**
+ * Incremental USFM output: append-only string parts with bounded trailing context for formatter
+ * backward scans (avoids repeated full-string copies in visitors during large serializations).
+ */
+export class USFMOutputBuffer {
+  private readonly parts: string[] = [];
+
+  append(fragment: string): void {
+    if (fragment.length > 0) {
+      this.parts.push(fragment);
+    }
+  }
+
+  /** Last `maxChars` of the built output without materializing the full string when possible. */
+  getTrailingContext(maxChars: number): string {
+    if (maxChars <= 0) {
+      return '';
+    }
+    let need = maxChars;
+    const chunks: string[] = [];
+    for (let i = this.parts.length - 1; i >= 0 && need > 0; i--) {
+      const p = this.parts[i]!;
+      if (p.length <= need) {
+        chunks.unshift(p);
+        need -= p.length;
+      } else {
+        chunks.unshift(p.slice(p.length - need));
+        need = 0;
+      }
+    }
+    return chunks.join('');
+  }
+
+  build(): string {
+    return this.parts.join('');
+  }
+
+  get length(): number {
+    return this.parts.reduce((a, p) => a + p.length, 0);
+  }
+
+  /** Drop all chunks (reuse buffer for a new document). */
+  clear(): void {
+    this.parts.length = 0;
+  }
+
+  /** Trim trailing Unicode whitespace on the full logical output (rare; e.g. empty `\\mt1`). */
+  trimEnd(): void {
+    const s = this.build().trimEnd();
+    this.clear();
+    this.append(s);
+  }
+}
+
 export class USFMFormatter {
   private options: Required<
     Omit<USFMFormatterOptions, 'customMarkers' | 'markersOnNewLine' | 'markersInline'>
@@ -195,7 +253,8 @@ export class USFMFormatter {
 
     // Analyze the current output to understand the whitespace situation (linear scan; avoid /(\s*)$/ ReDoS)
     let twStart = currentOutput.length;
-    while (twStart > 0 && /\s/.test(currentOutput[twStart - 1])) {
+    const twBound = Math.max(0, currentOutput.length - MAX_TRAILING_WS_SCAN);
+    while (twStart > twBound && /\s/.test(currentOutput[twStart - 1])) {
       twStart--;
     }
     const trailingWhitespace = currentOutput.slice(twStart);
@@ -493,8 +552,9 @@ export class USFMFormatter {
       return true; // Beginning of document counts as having a line break
     }
 
-    // Look backwards from the end for the first non-whitespace character
-    for (let i = currentOutput.length - 1; i >= 0; i--) {
+    // Look backwards from the end for the first non-whitespace character (bounded)
+    const lb = Math.max(0, currentOutput.length - MAX_LINEBREAK_LOOKBACK);
+    for (let i = currentOutput.length - 1; i >= lb; i--) {
       const char = currentOutput[i];
       if (char === '\n' || char === '\r') {
         return true;
@@ -504,7 +564,7 @@ export class USFMFormatter {
       }
     }
 
-    return true; // Only whitespace found, treat as line break
+    return true; // Only whitespace in window or empty — treat as line break
   }
 
   /**
@@ -1143,5 +1203,50 @@ export class USFMFormatter {
     result += '\\*';
 
     return { normalizedOutput: result };
+  }
+
+  /**
+   * Append formatted text using the same rules as {@link addTextContent} without allocating
+   * `prefix + suffix` for the full document; only the new fragment is appended.
+   */
+  appendTextContentToBuffer(buf: USFMOutputBuffer, textContent: string): void {
+    if (!textContent) return;
+    const current = buf.build();
+    const { normalizedOutput } = this.addTextContent(current, textContent);
+    buf.append(normalizedOutput.slice(current.length));
+  }
+
+  /** Append `|key="val"…` after the current output (same as {@link addAttributes}). */
+  appendAttributesToBuffer(buf: USFMOutputBuffer, attributes: Record<string, string>): void {
+    if (!attributes || Object.keys(attributes).length === 0) return;
+    const current = buf.build();
+    const { normalizedOutput } = this.addAttributes(current, attributes);
+    buf.append(normalizedOutput.slice(current.length));
+  }
+
+  /**
+   * Apply {@link addMarker} to the buffer. Closing markers use a fast append-only path.
+   */
+  mergeMarkerIntoBuffer(buf: USFMOutputBuffer, marker: string, isClosing: boolean = false): void {
+    if (isClosing) {
+      buf.append(`\\${marker}*`);
+      return;
+    }
+    const current = buf.build();
+    const { normalizedOutput } = this.addMarker(current, marker, false);
+    buf.clear();
+    buf.append(normalizedOutput);
+  }
+
+  /** Apply {@link addMilestone} and replace buffer contents with the result. */
+  mergeMilestoneIntoBuffer(
+    buf: USFMOutputBuffer,
+    marker: string,
+    attributes?: Record<string, string>
+  ): void {
+    const current = buf.build();
+    const { normalizedOutput } = this.addMilestone(current, marker, attributes);
+    buf.clear();
+    buf.append(normalizedOutput);
   }
 }

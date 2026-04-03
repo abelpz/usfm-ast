@@ -1,6 +1,6 @@
 import { USFMParser } from '@usfm-tools/parser';
 import { USFMVisitor } from '../src';
-import { USFMFormatterOptions } from '@usfm-tools/formatter';
+import type { USFMFormatterOptions } from '@usfm-tools/formatter';
 
 describe('USFM Normalization Rules', () => {
   let parser: USFMParser;

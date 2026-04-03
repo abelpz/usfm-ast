@@ -32,11 +32,22 @@
     "examples:create-usj": "bun tools/example-manager.js create-usj",
     "regenerate:example-usj": "bunx turbo run build --filter=@usfm-tools/parser && bun tools/regenerate-example-usj.ts",
     "oracles:compare": "node scripts/oracles/compare.mjs",
+    "oracles:report": "node scripts/oracles/generate-report.mjs",
+    "oracles:batch": "node scripts/oracles/oracle-batch.mjs",
+    "oracles:batch-examples": "node scripts/oracles/oracle-batch.mjs --examples --batch-root ./oracle-out/batch-examples",
+    "oracles:batch-examples-all": "node scripts/oracles/oracle-batch.mjs --examples-all --batch-root ./oracle-out/batch-examples-all",
+    "oracles:summarize": "node scripts/oracles/summarize-batch-metrics.mjs",
+    "oracles:parity": "node scripts/oracles/compare-parser.mjs packages/usfm-parser/tests/fixtures/usfm/basic.usfm",
     "usfm:parse": "node packages/usfm-cli/dist/cli.js parse",
     "usfm:validate": "node packages/usfm-validator/dist/cli.js validate",
-    "usj:pretty": "node packages/usj-cli/dist/cli.js pretty"
+    "usj:pretty": "node packages/usj-cli/dist/cli.js pretty",
+    "usj:validate": "node packages/usj-cli/dist/cli.js validate",
+    "roundtrip-diff": "node scripts/roundtrip-diff.mjs",
+    "roundtrip-diff:fixtures-usfm": "node scripts/roundtrip-diff-batch-fixtures-usfm.mjs",
+    "playground": "turbo run dev --filter=@usfm-tools/playground"
   },
   "devDependencies": {
+    "diff": "^7.0.0",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",

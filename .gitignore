@@ -53,6 +53,10 @@ test-*.cjs
 oracle-out/
 oracle-out-test/
 
+# Round-trip diff output (scripts/roundtrip-diff.mjs)
+roundtrip-out/
+roundtrip-analysis/
+
 # Turborepo local cache
 .turbo/
 
