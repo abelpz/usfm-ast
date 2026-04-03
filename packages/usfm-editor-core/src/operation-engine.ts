@@ -4,6 +4,9 @@
 
 import type { Operation } from './operations';
 
+/** Block dynamic keys that would touch `Object.prototype` via assignment/delete. */
+const UNSAFE_ATTR_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function getAt(parent: unknown, path: number[]): unknown {
   let cur: unknown = parent;
   for (const idx of path) {
@@ -81,6 +84,7 @@ export function applyOperation(content: unknown[], op: Operation): void {
     return;
   }
   if (op.type === 'setAttr') {
+    if (UNSAFE_ATTR_KEYS.has(op.key)) return;
     const o = getAt(content, op.path.indices);
     if (o && typeof o === 'object') {
       const ob = o as Record<string, unknown>;

@@ -32,12 +32,26 @@ export type CompareUsxResult = {
   messages: string[];
 };
 
-/** Strip tags; collapse whitespace — legacy helper (not used for pass/fail). */
+/** Strip tags; collapse whitespace — legacy helper (not used for pass/fail). Linear-time scan (no tag-regex ReDoS). */
 export function extractXmlTextContent(xml: string): string {
-  return xml
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  let out = '';
+  let i = 0;
+  while (i < xml.length) {
+    const ch = xml[i];
+    if (ch === '<') {
+      const gt = xml.indexOf('>', i + 1);
+      if (gt === -1) {
+        out += xml.slice(i);
+        break;
+      }
+      out += ' ';
+      i = gt + 1;
+    } else {
+      out += ch;
+      i++;
+    }
+  }
+  return out.replace(/\s+/g, ' ').trim();
 }
 
 /** Count opening/local tag names in a string — legacy helper. */

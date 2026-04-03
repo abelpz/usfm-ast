@@ -134,6 +134,16 @@ describe('applyOperation extended', () => {
     });
     expect((withObj[0] as { code?: string }).code).toBe('GEN');
 
+    const noProto: unknown[] = [{ type: 'char', marker: 'w' }];
+    // Malicious runtime shape (not representable in ContentOperation's string-only value type).
+    applyOperation(noProto, {
+      type: 'setAttr',
+      path: { chapter: 1, indices: [0] },
+      key: '__proto__',
+      value: { polluted: true },
+    } as unknown as Operation);
+    expect(({} as { polluted?: unknown }).polluted).toBeUndefined();
+
     const mov: unknown[] = [{ a: 1 }, { b: 2 }];
     applyOperation(mov, {
       type: 'moveNode',

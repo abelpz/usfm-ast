@@ -37,3 +37,4 @@ After intentional **`USFMParser` / `toJSON()`** output changes, run `bun run reg
 ### Fixed
 
 - **`rebuildAlignedUsj` / `rebuildArray`:** nested verse `content` now receives the verse `sid` so `rebuildVerseInlineContent` runs for string siblings (partial alignment rebuild).
+- **CodeQL / hygiene:** `applyOperation` ignores `setAttr` on `__proto__` / `constructor` / `prototype`; `extractXmlTextContent` uses a linear tag scan; oracle `mdTable` escapes backslashes before pipes.

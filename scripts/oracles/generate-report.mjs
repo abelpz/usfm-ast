@@ -73,7 +73,7 @@ function countSidKeys(value) {
 }
 
 function mdTable(headers, rows) {
-  const esc = (s) => String(s).replace(/\|/g, '\\|');
+  const esc = (s) => String(s).replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
   const line = (cells) => `| ${cells.map(esc).join(' | ')} |`;
   const h = line(headers);
   const sep = line(headers.map(() => '---'));
