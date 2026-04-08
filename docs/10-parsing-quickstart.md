@@ -66,4 +66,5 @@ To compare **`USFMParser` USJ** and **`USXVisitor` USX** with **usfmtc** (tolera
 ## Editor core, metadata, serialization
 
 - **Chapter slicing, alignment strip/rebuild, `DocumentStore`, structured ops:** see [`18-editor-core.md`](./18-editor-core.md) (with runnable-style examples).
+- **ProseMirror USJ editor (`@usfm-tools/editor`)** and alignment reference: [`../packages/usfm-editor/README.md`](../packages/usfm-editor/README.md), [`20-alignment-layer.md`](./20-alignment-layer.md).
 - **Parse-time node ids / source spans (`sourcePositions`), `USFMOutputBuffer` / visitor serialization:** see [`19-parser-metadata-and-usfm-buffer.md`](./19-parser-metadata-and-usfm-buffer.md).

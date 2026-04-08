@@ -1,0 +1,38 @@
+{
+  "name": "@usfm-tools/editor-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Test app for @usfm-tools/editor (ProseMirror USFM WYSIWYG + alignment)",
+  "scripts": {
+    "dev": "vite",
+    "build": "esbuild src/main.ts --bundle --outdir=dist --format=esm --platform=browser --sourcemap && node ./scripts/copy-html.mjs",
+    "preview": "serve dist -p 4180",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "check-types": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "1.7.6",
+    "@usfm-tools/adapters": "workspace:*",
+    "@usfm-tools/editor": "workspace:*",
+    "@usfm-tools/editor-core": "workspace:*",
+    "@usfm-tools/parser": "workspace:*",
+    "@usfm-tools/types": "workspace:*",
+    "lucide": "1.7.0",
+    "prosemirror-commands": "^1.6.0",
+    "prosemirror-history": "^1.4.0",
+    "prosemirror-inputrules": "^1.4.0",
+    "prosemirror-keymap": "^1.2.2",
+    "prosemirror-model": "^1.24.0",
+    "prosemirror-state": "^1.4.3",
+    "prosemirror-transform": "^1.12.0",
+    "prosemirror-view": "^1.38.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "serve": "^14.2.4",
+    "typescript": "5.9.3",
+    "vite": "^6.0.0"
+  }
+}

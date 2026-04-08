@@ -1,0 +1,71 @@
+{
+  "name": "@usfm-tools/editor",
+  "version": "0.1.0",
+  "description": "Headless ProseMirror integration for USJ/USFM editing",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./chrome.css": "./chrome.css",
+    "./usfm-markers.css": "./usfm-markers.css"
+  },
+  "files": [
+    "dist",
+    "chrome.css",
+    "usfm-markers.css",
+    "data",
+    "README.md"
+  ],
+  "scripts": {
+    "generate:marker-css": "node ../../scripts/generate-marker-css.mjs",
+    "build": "bun run generate:marker-css && tsup",
+    "dev": "tsup --watch",
+    "test": "cd ../usfm-editor-core && bun run build && cd ../usfm-editor && bun run build && jest",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "clean": "rimraf dist",
+    "check-types": "tsc --noEmit -p tsconfig.json"
+  },
+  "keywords": [
+    "usfm",
+    "usj",
+    "prosemirror",
+    "editor"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abelpz/usfm-ast.git",
+    "directory": "packages/usfm-editor"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@usfm-tools/adapters": "workspace:*",
+    "@usfm-tools/editor-core": "workspace:*",
+    "@usfm-tools/types": "workspace:*",
+    "prosemirror-commands": "^1.6.0",
+    "prosemirror-history": "^1.4.0",
+    "prosemirror-inputrules": "^1.4.0",
+    "prosemirror-keymap": "^1.2.2",
+    "prosemirror-model": "^1.24.0",
+    "prosemirror-state": "^1.4.3",
+    "prosemirror-transform": "^1.12.0",
+    "prosemirror-view": "^1.38.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@usfm-tools/parser": "workspace:*",
+    "jest": "^29.5.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.1.0",
+    "tsup": "^8.3.5",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@usfm-tools/relay-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloudflare Workers WebSocket relay for USFM real-time collaboration",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "check-types": "tsc --noEmit",
+    "clean": "rimraf dist .wrangler",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "lint": "eslint src tests --ext .ts",
+    "lint:fix": "eslint src tests --ext .ts --fix",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.0",
+    "@cloudflare/workers-types": "^4.20250424.0",
+    "eslint": "^8.0.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "~3.0.0",
+    "wrangler": "^4.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abelpz/usfm-ast.git",
+    "directory": "packages/usfm-relay-server"
+  }
+}

@@ -1,4 +1,4 @@
-import { composeOps, invertOps, transformOpLists } from '../dist';
+import { applyOperations, composeOps, invertOps, transformOpLists } from '../dist';
 import type { Operation } from '../dist';
 
 describe('composeOps', () => {
@@ -43,6 +43,53 @@ describe('transformOpLists', () => {
   it('leaves different-chapter ops unchanged', () => {
     const a: Operation[] = [{ type: 'insertNode', path: { chapter: 1, indices: [0] }, node: 1 }];
     const b: Operation[] = [{ type: 'insertNode', path: { chapter: 2, indices: [0] }, node: 2 }];
-    expect(transformOpLists(a, b)).toEqual({ clientPrime: a, serverPrime: b });
+    const { clientPrime, serverPrime } = transformOpLists(a, b);
+    expect(clientPrime).toEqual(a);
+    expect(serverPrime).toEqual(b);
+  });
+
+  it('rebases concurrent setText at same path (remote applied first)', () => {
+    const server: Operation[] = [
+      { type: 'setText', path: { chapter: 1, indices: [0, 0] }, text: 'world', oldText: 'hello' },
+    ];
+    const client: Operation[] = [
+      { type: 'setText', path: { chapter: 1, indices: [0, 0] }, text: 'both', oldText: 'hello' },
+    ];
+    const { clientPrime, serverPrime } = transformOpLists(client, server);
+    expect(serverPrime[0]).toMatchObject({ text: 'world' });
+    expect(clientPrime[0]).toMatchObject({ text: 'both', oldText: 'world' });
+  });
+
+  it('drops client replaceNode when server replaceNode wins at same path', () => {
+    const server: Operation[] = [
+      { type: 'replaceNode', path: { chapter: 1, indices: [0] }, node: { tag: 'p', x: 1 } },
+    ];
+    const client: Operation[] = [
+      { type: 'replaceNode', path: { chapter: 1, indices: [0] }, node: { tag: 'p', x: 2 } },
+    ];
+    const { clientPrime } = transformOpLists(client, server);
+    expect(clientPrime.length).toBe(0);
+  });
+
+  it('convergence: server then clientPrime vs client then serverPrime yields same document', () => {
+    // Minimal tree: root array → one row array → two leaf strings (indices [0,0] and [0,1])
+    const base: unknown[] = [['hello', 'bye']];
+    const server: Operation[] = [
+      { type: 'setText', path: { chapter: 1, indices: [0, 0] }, text: 'S', oldText: 'hello' },
+    ];
+    const client: Operation[] = [
+      { type: 'setText', path: { chapter: 1, indices: [0, 1] }, text: 'C', oldText: 'bye' },
+    ];
+    const { clientPrime, serverPrime } = transformOpLists(client, server);
+
+    const docA = JSON.parse(JSON.stringify(base)) as unknown[];
+    applyOperations(docA as unknown[], server);
+    applyOperations(docA as unknown[], clientPrime);
+
+    const docB = JSON.parse(JSON.stringify(base)) as unknown[];
+    applyOperations(docB as unknown[], client);
+    applyOperations(docB as unknown[], serverPrime);
+
+    expect(docA).toEqual(docB);
   });
 });

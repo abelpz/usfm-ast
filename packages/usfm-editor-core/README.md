@@ -29,7 +29,9 @@ console.log(store.toUSFM());
 
 ## Exports
 
-See [`src/index.ts`](./src/index.ts) for the full surface: `splitUsjByChapter`, `ChapterChunker`, `stripAlignments`, `rebuildAlignedUsj`, `reconcileAlignments`, `DocumentStore`, `applyOperation`, `transformOpLists`, `diffUsjDocuments`, verse helpers, word-diff utilities, and `StubGitSyncAdapter`.
+See [`src/index.ts`](./src/index.ts) for the browser-safe surface: `splitUsjByChapter`, `ChapterChunker`, `stripAlignments`, `rebuildAlignedUsj`, `reconcileAlignments`, `DocumentStore`, `applyOperation`, `transformOpLists`, `diffUsjDocuments`, verse helpers, word-diff utilities, `StubGitSyncAdapter`, persistence (`MemoryPersistenceAdapter`, `IndexedDBPersistenceAdapter`), sync/journal helpers, etc.
+
+**Node / Electron only:** `FileSystemPersistenceAdapter` and `GitLocalPersistenceAdapter` are exported from **`@usfm-tools/editor-core/node`** so web bundles do not resolve Node built-ins (`fs`, `path`).
 
 ## License
 

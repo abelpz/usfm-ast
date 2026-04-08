@@ -34,6 +34,8 @@ A comprehensive toolkit for working with **USFM** (Unified Standard Format Marke
 | `packages/usfm-validator` | `@usfm-tools/validator` | USFM linting CLI (`usfm-validate`) |
 | `packages/usfm-cli` | `@usfm-tools/cli` | `usfm parse` CLI — parse to USJ |
 | `packages/usfm-editor-core` | `@usfm-tools/editor-core` | Document store, alignment layer, chapter slices, structured editing |
+| `packages/usfm-editor` | `@usfm-tools/editor` | ProseMirror USJ editor (headless): schema, USJ ↔ PM, alignment helpers |
+| `packages/usfm-editor-app` | `@usfm-tools/editor-app` (private) | Browser test app for the editor + alignment tool (`bun run editor-app`) |
 | `packages/usj-core` | `@usj-tools/core` | `validateUsjStructure` — structural USJ validation |
 | `packages/usj-validator` | `@usj-tools/validator` | Re-exports `validateUsjStructure` |
 | `packages/usj-cli` | `@usj-tools/cli` | `usj pretty` / `usj validate` CLIs |
@@ -531,23 +533,26 @@ bunx turbo run test  --filter=@usfm-tools/adapters
 
 ```
 packages/
-  usfm-parser/      @usfm-tools/parser    — parser core + oracle
-  usfm-adapters/    @usfm-tools/adapters  — USFMVisitor, USXVisitor, USJVisitor
-  usfm-formatter/   @usfm-tools/formatter — USFMFormatter (formatting rules)
-  shared-types/     @usfm-tools/types     — shared interfaces + visitor base
-  usfm-validator/   @usfm-tools/validator — validator CLI
-  usfm-cli/         @usfm-tools/cli       — usfm parse CLI
+  usfm-parser/      @usfm-tools/parser      — parser core + oracle
+  usfm-adapters/    @usfm-tools/adapters    — USFMVisitor, USXVisitor, USJVisitor
+  usfm-formatter/   @usfm-tools/formatter   — USFMFormatter (formatting rules)
+  shared-types/     @usfm-tools/types       — shared interfaces + visitor base
+  usfm-validator/   @usfm-tools/validator   — validator CLI
+  usfm-cli/         @usfm-tools/cli         — usfm parse CLI
   usfm-editor-core/ @usfm-tools/editor-core — document store + alignment editing
-  usj-core/         @usj-tools/core       — validateUsjStructure
-  usj-validator/    @usj-tools/validator  — re-exports usj-core
-  usj-cli/          @usj-tools/cli        — usj pretty / validate CLIs
-  usfm-playground/  —                     — browser playground (private app)
+  usfm-editor/      @usfm-tools/editor      — ProseMirror USJ editor (headless)
+  usfm-editor-app/  @usfm-tools/editor-app  — browser test app (private)
+  usj-core/         @usj-tools/core         — validateUsjStructure
+  usj-validator/    @usj-tools/validator    — re-exports usj-core
+  usj-cli/          @usj-tools/cli          — usj pretty / validate CLIs
+  usfm-playground/  —                       — browser playground (private app)
 ```
 
 ### Further documentation
 
 - [Parsing quickstart](./docs/10-parsing-quickstart.md)
 - [Editor core (chapter slices, alignment, `DocumentStore`, ops)](./docs/18-editor-core.md)
+- [Alignment layer (unfoldingWord ↔ `editor-core`)](./docs/20-alignment-layer.md)
 - [Parser metadata & USFM output buffer](./docs/19-parser-metadata-and-usfm-buffer.md)
 - [Oracle comparison guide](./docs/17-oracle-comparison.md)
 - [CI and branch protection](./docs/09-ci-and-branch-protection.md)
@@ -556,6 +561,7 @@ packages/
 - [Oracle diff reports](./docs/oracle-diffs/SUMMARY.md)
 - [Package: @usfm-tools/parser](./packages/usfm-parser/README.md)
 - [Package: @usfm-tools/editor-core](./packages/usfm-editor-core/README.md)
+- [Package: @usfm-tools/editor (ProseMirror)](./packages/usfm-editor/README.md)
 
 ---
 

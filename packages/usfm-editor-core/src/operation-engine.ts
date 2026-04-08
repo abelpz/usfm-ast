@@ -7,55 +7,80 @@ import type { Operation } from './operations';
 /** Block dynamic keys that would touch `Object.prototype` via assignment/delete. */
 const UNSAFE_ATTR_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
-function getAt(parent: unknown, path: number[]): unknown {
-  let cur: unknown = parent;
-  for (const idx of path) {
-    if (!Array.isArray(cur)) return undefined;
-    cur = cur[idx];
+function isObjectWithContentArray(v: unknown): v is Record<string, unknown> & {
+  content: unknown[];
+} {
+  if (!v || typeof v !== 'object') return false;
+  const o = v as Record<string, unknown>;
+  return Array.isArray(o.content);
+}
+
+/**
+ * Resolve a path against a chapter slice root `content` array.
+ * After the first index, each step follows either a nested **array** (legacy / test fixtures) or a
+ * USJ node's `.content` array (paths from {@link document-diff}).
+ */
+function getAtPath(root: unknown[], path: number[]): unknown {
+  if (path.length === 0) return undefined;
+  let cur: unknown = root[path[0]!];
+  for (let d = 1; d < path.length; d++) {
+    const idx = path[d]!;
+    if (Array.isArray(cur)) {
+      cur = cur[idx];
+      continue;
+    }
+    if (isObjectWithContentArray(cur)) {
+      cur = cur.content[idx];
+      continue;
+    }
+    return undefined;
   }
   return cur;
 }
 
-function setAt(parent: unknown[], path: number[], value: unknown): void {
-  if (path.length === 0) return;
-  let cur: unknown = parent;
-  for (let i = 0; i < path.length - 1; i++) {
-    const idx = path[i];
-    if (!Array.isArray(cur)) return;
-    cur = (cur as unknown[])[idx];
+/** Parent array + index for setText / insert / remove / replace at `path`. */
+function resolveContentSlot(root: unknown[], path: number[]): { parent: unknown[]; index: number } | null {
+  if (path.length === 0) return null;
+  if (path.length === 1) {
+    return { parent: root, index: path[0]! };
   }
-  const last = path[path.length - 1];
+  let cur: unknown = root[path[0]!];
+  for (let d = 1; d < path.length - 1; d++) {
+    const idx = path[d]!;
+    if (Array.isArray(cur)) {
+      cur = cur[idx];
+    } else if (isObjectWithContentArray(cur)) {
+      cur = cur.content[idx];
+    } else {
+      return null;
+    }
+  }
+  const last = path[path.length - 1]!;
   if (Array.isArray(cur)) {
-    (cur as unknown[])[last] = value;
+    return { parent: cur, index: last };
   }
+  if (isObjectWithContentArray(cur)) {
+    return { parent: cur.content, index: last };
+  }
+  return null;
 }
 
-function removeAt(parent: unknown[], path: number[]): void {
-  if (path.length === 0) return;
-  let cur: unknown = parent;
-  for (let i = 0; i < path.length - 1; i++) {
-    const idx = path[i];
-    if (!Array.isArray(cur)) return;
-    cur = (cur as unknown[])[idx];
-  }
-  const last = path[path.length - 1];
-  if (Array.isArray(cur)) {
-    (cur as unknown[]).splice(last, 1);
-  }
+function setAt(root: unknown[], path: number[], value: unknown): void {
+  const slot = resolveContentSlot(root, path);
+  if (!slot) return;
+  slot.parent[slot.index] = value;
 }
 
-function insertAt(parent: unknown[], path: number[], node: unknown): void {
-  if (path.length === 0) return;
-  let cur: unknown = parent;
-  for (let i = 0; i < path.length - 1; i++) {
-    const idx = path[i];
-    if (!Array.isArray(cur)) return;
-    cur = (cur as unknown[])[idx];
-  }
-  const last = path[path.length - 1];
-  if (Array.isArray(cur)) {
-    (cur as unknown[]).splice(last, 0, node);
-  }
+function removeAt(root: unknown[], path: number[]): void {
+  const slot = resolveContentSlot(root, path);
+  if (!slot) return;
+  slot.parent.splice(slot.index, 1);
+}
+
+function insertAt(root: unknown[], path: number[], node: unknown): void {
+  const slot = resolveContentSlot(root, path);
+  if (!slot) return;
+  slot.parent.splice(slot.index, 0, node);
 }
 
 /**
@@ -85,7 +110,7 @@ export function applyOperation(content: unknown[], op: Operation): void {
   }
   if (op.type === 'setAttr') {
     if (UNSAFE_ATTR_KEYS.has(op.key)) return;
-    const o = getAt(content, op.path.indices);
+    const o = getAtPath(content, op.path.indices);
     if (o && typeof o === 'object') {
       const ob = o as Record<string, unknown>;
       if (op.value === undefined) delete ob[op.key];
@@ -94,7 +119,7 @@ export function applyOperation(content: unknown[], op: Operation): void {
     return;
   }
   if (op.type === 'moveNode') {
-    const from = getAt(content, op.from.indices);
+    const from = getAtPath(content, op.from.indices);
     removeAt(content, op.from.indices);
     insertAt(content, op.to.indices, from);
   }

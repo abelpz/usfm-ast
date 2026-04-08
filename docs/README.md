@@ -9,5 +9,6 @@
 | [`14-github-bootstrap.md`](./14-github-bootstrap.md)                 | One-time labels + bootstrap commands                                            |
 | [`16-production-readiness.md`](./16-production-readiness.md)         | Semver, logging, releases, compatibility, runtimes                            |
 | [`17-oracle-comparison.md`](./17-oracle-comparison.md)               | usfmtc / usfm3 oracle batches, PYTHON, interpreting metrics & gaps          |
+| [`21-collab-relay-server.md`](./21-collab-relay-server.md)           | Cloudflare WebSocket relay for real-time collaboration                     |
 
 Upstream scripture format references: [unfoldingWord/uW-Tools-Collab](https://github.com/unfoldingWord/uW-Tools-Collab).

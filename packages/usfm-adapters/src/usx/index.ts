@@ -1,5 +1,5 @@
-import { BaseUSFMVisitor, MilestoneAttributes, LinkAttributes } from '@usfm-tools/types';
 import {
+  USFMParser,
   ParagraphUSFMNode,
   CharacterUSFMNode,
   NoteUSFMNode,
@@ -12,6 +12,9 @@ import {
   ParsedTableRowNode,
   ParsedTableCellNode,
 } from '@usfm-tools/parser';
+import { BaseUSFMVisitor, MilestoneAttributes, LinkAttributes } from '@usfm-tools/types';
+import { convertUSJDocumentToUSFM } from '../usfm';
+import { usxXmlToUsfm } from './usx-to-usfm';
 
 /** How verse/chapter milestones are written in USX output. */
 export type USXVerseMilestoneMode = 'explicit' | 'minimal';
@@ -865,4 +868,33 @@ export class USXVisitor implements BaseUSFMVisitor<string> {
     // true until we find a case for false
     return true;
   }
+}
+
+export { usxXmlToUsfm };
+
+export type UsjDocumentRoot = { type: 'USJ'; version: string; content: unknown[] };
+
+/**
+ * Parse USX XML into a USJ-shaped document ({@link USFMParser#toJSON}).
+ */
+export function parseUsxToUsjDocument(usxXml: string): UsjDocumentRoot {
+  const usfm = usxXmlToUsfm(usxXml);
+  const parser = new USFMParser();
+  parser.parse(usfm);
+  return parser.toJSON() as UsjDocumentRoot;
+}
+
+/**
+ * Serialize a USJ document (or content array) to USX XML via USFM round-trip.
+ */
+export function usjDocumentToUsx(
+  usj: Parameters<typeof convertUSJDocumentToUSFM>[0],
+  options?: USXVisitorOptions
+): string {
+  const usfm = convertUSJDocumentToUSFM(usj);
+  const parser = new USFMParser();
+  parser.parse(usfm);
+  const visitor = new USXVisitor(options);
+  parser.visit(visitor);
+  return visitor.getDocument();
 }

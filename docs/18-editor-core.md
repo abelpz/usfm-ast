@@ -12,14 +12,16 @@ npm install @usfm-tools/parser @usfm-tools/adapters @usfm-tools/types @usfm-tool
 
 Workspace: add the dependency and run `bun run build` at the repo root so workspace packages resolve.
 
+**Node-only persistence:** import `FileSystemPersistenceAdapter` and `GitLocalPersistenceAdapter` from **`@usfm-tools/editor-core/node`** (they use `fs` / `path`; the default package entry stays browser-safe).
+
 ## Concepts
 
-| Concept | Role |
-| ------- | ---- |
-| **Chapter slice** | Header + nodes for one `\c` (or book header before chapter 1). |
-| **Editable USJ** | USJ with `zaln-*` / `\w` alignment stripped to plain text; alignments live in a separate **`AlignmentMap`**. |
-| **`NodePath`** | `{ chapter: number; indices: number[] }` — indices into the chapter slice’s `content` array (nested for verse/paragraph children). |
-| **`Operation`** | Content ops (`insertNode`, `setText`, …) or alignment ops (`alignWord`, …). `DocumentStore.applyOperations` applies **content** ops only; alignment updates use **`updateAlignments`**. |
+| Concept           | Role                                                                                                                                                                                    |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Chapter slice** | Header + nodes for one `\c` (or book header before chapter 1).                                                                                                                          |
+| **Editable USJ**  | USJ with `zaln-*` / `\w` alignment stripped to plain text; alignments live in a separate **`AlignmentMap`**.                                                                            |
+| **`NodePath`**    | `{ chapter: number; indices: number[] }` — indices into the chapter slice’s `content` array (nested for verse/paragraph children).                                                      |
+| **`Operation`**   | Content ops (`insertNode`, `setText`, …) or alignment ops (`alignWord`, …). `DocumentStore.applyOperations` applies **content** ops only; alignment updates use **`updateAlignments`**. |
 
 ## Chapter slicing
 
@@ -112,9 +114,15 @@ Use **`reconcileAlignments`** when gateway text changes but you want to preserve
 ```typescript
 import { applyOperations, invertOps, transformOpLists, composeOps } from '@usfm-tools/editor-core';
 
-const content: unknown[] = [/* chapter slice nodes */];
+const content: unknown[] = [
+  /* chapter slice nodes */
+];
 const batch = [
-  { type: 'insertNode', path: { chapter: 1, indices: [0] }, node: { type: 'para', marker: 'p', content: [] } },
+  {
+    type: 'insertNode',
+    path: { chapter: 1, indices: [0] },
+    node: { type: 'para', marker: 'p', content: [] },
+  },
 ];
 applyOperations(content, batch);
 const undo = invertOps(batch);
@@ -139,7 +147,9 @@ const nodes = findVerseInlineNodes(usj.content, sid!);
 
 ## Related
 
-- [Parsing quickstart](./10-parsing-quickstart.md) — `USFMParser`, CLIs  
-- [Production readiness](./16-production-readiness.md) — logging, semver  
-- [Parser metadata & USFM buffer](./19-parser-metadata-and-usfm-buffer.md) — source spans, visitor output buffer  
+- [Parsing quickstart](./10-parsing-quickstart.md) — `USFMParser`, CLIs
+- [Alignment layer](./20-alignment-layer.md) — `\zaln` / `\w` ↔ `AlignmentMap`
+- [Production readiness](./16-production-readiness.md) — logging, semver
+- [Parser metadata & USFM buffer](./19-parser-metadata-and-usfm-buffer.md) — source spans, visitor output buffer
 - Package README: [`packages/usfm-editor-core/README.md`](../packages/usfm-editor-core/README.md)
+- ProseMirror UI adapter: [`packages/usfm-editor/README.md`](../packages/usfm-editor/README.md) (`@usfm-tools/editor`)

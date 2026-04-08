@@ -33,6 +33,8 @@ jobs:
         run: bun run check-types
 
       - name: Test
+        env:
+          RUN_RELAY_POOL_TESTS: '1'
         run: bun run test
 
       - name: Example USJ coverage

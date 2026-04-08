@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.tsup.json",
+  "compilerOptions": {
+    "lib": ["ES2020", "DOM"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@usfm-tools/editor-core": ["../usfm-editor-core/src/index.ts"],
+      "@usfm-tools/types": ["../shared-types/src/index.ts"],
+      "@usfm-tools/parser": ["../usfm-parser/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}
