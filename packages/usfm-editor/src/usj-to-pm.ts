@@ -4,7 +4,8 @@
 
 import type { Mark, Node as PMNode, Schema } from 'prosemirror-model';
 import { Fragment } from 'prosemirror-model';
-import type { DocumentStore } from '@usfm-tools/editor-core';
+import type { DocumentStore, UsjDocument } from '@usfm-tools/editor-core';
+import { stripAlignments } from '@usfm-tools/editor-core';
 import {
   isBookTitleParaMarker,
   isIntroductionParaMarker,
@@ -418,7 +419,11 @@ function bookTitlesToPm(schema: Schema, nodes: unknown[], state: TsState): PMNod
   return schema.nodes.book_titles!.create({}, Fragment.from(blocks));
 }
 
-/** Empty introduction: section heading (`\\is1`) plus body paragraph (`\\ip`). */
+/**
+ * Empty introduction template: intro section heading (`\\is1`) plus body (`\\ip`).
+ * Shown expanded so translators can type immediately; USJ omits both until there is text
+ * ({@link isBookIntroductionPmEmpty}).
+ */
 function defaultEmptyBookIntroductionBlocks(schema: Schema): PMNode[] {
   return [
     schema.nodes.paragraph!.create({ marker: 'is1', sid: null }),
@@ -436,10 +441,7 @@ function bookIntroductionToPm(schema: Schema, nodes: unknown[], state: TsState):
   if (!hasUsjContent) {
     blocks.push(...defaultEmptyBookIntroductionBlocks(schema));
   }
-  return schema.nodes.book_introduction!.create(
-    { collapsed: !hasUsjContent },
-    Fragment.from(blocks)
-  );
+  return schema.nodes.book_introduction!.create({ collapsed: false }, Fragment.from(blocks));
 }
 
 export function chapterToPm(
@@ -509,6 +511,15 @@ export type WindowSectionId =
   | { type: 'introduction' }
   | { type: 'chapter'; chapter: number };
 
+/**
+ * Single-screen "page" in paginated scripture editing: book header, introduction, or one chapter.
+ * @see {@link ChapterSubsetToPmOptions.contentPage}
+ */
+export type EditorContentPage =
+  | { kind: 'identification' }
+  | { kind: 'introduction' }
+  | { kind: 'chapter'; chapter: number };
+
 export interface ChapterSubsetToPmOptions {
   /** Editable chapter numbers (user selection). */
   visibleChapters: number[];
@@ -516,6 +527,23 @@ export interface ChapterSubsetToPmOptions {
   showIntroduction?: boolean;
   /** Extra chapters before/after each selected chapter (read-only context). Default 1. */
   contextChapters?: number;
+  /**
+   * When set, the editor shows only this page (no stacked header + chapters). Omit for the legacy
+   * windowed layout driven by `visibleChapters` / `showIntroduction`.
+   */
+  contentPage?: EditorContentPage;
+}
+
+/** Advance translator-section state through identification, titles, and introduction in order. */
+export function advanceTsStateThroughPreChapterContent(
+  state: TsState,
+  identification: unknown[],
+  bookTitles: unknown[],
+  introduction: unknown[],
+): void {
+  advanceTsStateForNormalizedBlocks(state, identification);
+  advanceTsStateForNormalizedBlocks(state, bookTitles);
+  advanceTsStateForNormalizedBlocks(state, introduction);
 }
 
 export function expandChaptersWithContext(
@@ -548,18 +576,85 @@ export function chapterSubsetToPm(
   options: ChapterSubsetToPmOptions,
   schema: Schema = usfmSchema
 ): PMNode {
-  const maxChapter = store.getChapterCount();
+  const maxChapter = store.getMaxChapterNumber();
+  const raw = store.getFullUSJ() as UsjDocument;
+  const { editable } = stripAlignments(raw);
+  const content = Array.isArray(editable.content) ? editable.content : [];
+  const { header, chapters } = partitionContent(content);
+  const { identification, bookTitles, introduction } = classifyPreChapterNodes(header);
+
+  const page = options.contentPage;
+  if (page) {
+    const tsState: TsState = { section: 1, openSection: null };
+    if (page.kind === 'identification') {
+      const parts: PMNode[] = [];
+      if (identification.length > 0) parts.push(headerToPm(schema, identification, tsState));
+      if (bookTitles.length > 0) parts.push(bookTitlesToPm(schema, bookTitles, tsState));
+      if (parts.length === 0) {
+        const p = schema.nodes.paragraph!.create({ marker: 'p', sid: null });
+        parts.push(schema.nodes.header!.create({}, Fragment.from([p])));
+      }
+      return schema.nodes.doc!.create({}, Fragment.from(parts));
+    }
+    if (page.kind === 'introduction') {
+      advanceTsStateThroughPreChapterContent(tsState, identification, bookTitles, []);
+      const introParts: PMNode[] = [bookIntroductionToPm(schema, introduction, tsState)];
+      return schema.nodes.doc!.create({}, Fragment.from(introParts));
+    }
+    // page.kind === 'chapter'
+    const chNum = page.chapter;
+    const contextN = options.contextChapters ?? 0;
+    const selected = chNum >= 1 && chNum <= maxChapter ? [chNum] : maxChapter >= 1 ? [1] : [];
+    const expanded =
+      selected.length > 0 ? expandChaptersWithContext(selected, contextN, maxChapter) : [];
+    advanceTsStateThroughPreChapterContent(tsState, identification, bookTitles, introduction);
+    if (expanded.length > 0) {
+      advanceTsStateForSkippedChapterBodies(tsState, chapters, expanded[0]!.chapter);
+    }
+    const parts: PMNode[] = [];
+    if (chapters.length === 0) {
+      const label = schema.nodes.chapter_label!.create({}, schema.text('1'));
+      const emptyPara = schema.nodes.paragraph!.create({ marker: 'p', sid: null });
+      parts.push(
+        schema.nodes.chapter!.create(
+          { sid: null, altnumber: null, pubnumber: null, readonly: false },
+          Fragment.from([label, emptyPara])
+        )
+      );
+      return schema.nodes.doc!.create({}, Fragment.from(parts));
+    }
+    const byNum = new Map<number, { chapter: Record<string, unknown>; body: unknown[] }>();
+    for (const c of chapters) {
+      const num = parseInt(String(c.chapter.number ?? '1'), 10);
+      if (Number.isFinite(num) && num > 0) {
+        byNum.set(num, c);
+      }
+    }
+    for (const { chapter: n, readonly } of expanded) {
+      const pair = byNum.get(n);
+      if (pair) {
+        parts.push(chapterToPm(schema, pair.chapter, pair.body, { readonly }, tsState));
+      }
+    }
+    if (!parts.some((p) => p.type.name === 'chapter')) {
+      const label = schema.nodes.chapter_label!.create({}, schema.text('1'));
+      const emptyPara = schema.nodes.paragraph!.create({ marker: 'p', sid: null });
+      parts.push(
+        schema.nodes.chapter!.create(
+          { sid: null, altnumber: null, pubnumber: null, readonly: false },
+          Fragment.from([label, emptyPara])
+        )
+      );
+    }
+    return schema.nodes.doc!.create({}, Fragment.from(parts));
+  }
+
   const contextN = options.contextChapters ?? 1;
   let selected = [...options.visibleChapters].filter((c) => c >= 1 && c <= maxChapter);
   if (selected.length === 0 && maxChapter >= 1) {
     selected = [1];
   }
   const expanded = expandChaptersWithContext(selected, contextN, maxChapter);
-
-  const usj = store.getFullUSJ();
-  const content = Array.isArray(usj.content) ? usj.content : [];
-  const { header, chapters } = partitionContent(content);
-  const { identification, bookTitles, introduction } = classifyPreChapterNodes(header);
 
   const tsState: TsState = { section: 1, openSection: null };
 

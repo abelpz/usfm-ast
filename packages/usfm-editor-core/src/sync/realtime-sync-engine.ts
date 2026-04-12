@@ -4,9 +4,13 @@
 
 import type { DocumentStore } from '../document-store';
 
-import { JournalMergeSyncEngine, type JournalRemoteTransport } from './merge-sync-engine';
+import {
+  JournalMergeSyncEngine,
+  type JournalRemoteTransport,
+} from './merge-sync-engine';
+import type { MergeStrategy } from './merge-strategy';
 import { OperationJournal } from './operation-journal';
-import type { JournalEntry } from './types';
+import type { ChapterConflict, JournalEntry } from './types';
 import type { RealtimeMessage, RealtimeTransport, PeerPresence } from './realtime-transport';
 
 function hashColor(userId: string): string {
@@ -23,6 +27,8 @@ export interface RealtimeSyncEngineOptions {
   getLocalPending?: (chapter: number) => import('../operations').Operation[];
   /** Called after a remote journal entry is merged so pending buffers can be replaced with OT `clientPrime`. */
   onRemoteEntryApplied?: (chapter: number, clientPrime: import('../operations').Operation[]) => void;
+  mergeStrategy?: MergeStrategy;
+  onConflict?: (conflict: ChapterConflict) => 'accept-local' | 'accept-remote' | 'manual';
   realtimeTransport?: RealtimeTransport;
   userId: string;
   displayName?: string;
@@ -45,6 +51,8 @@ export class RealtimeSyncEngine extends JournalMergeSyncEngine {
       store: opts.store,
       transport: opts.remoteTransport,
       getLocalPending: opts.getLocalPending,
+      mergeStrategy: opts.mergeStrategy,
+      onConflict: opts.onConflict,
     });
     this.rt = opts.realtimeTransport;
     this.uid = opts.userId;

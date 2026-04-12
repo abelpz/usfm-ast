@@ -1,4 +1,4 @@
-import { reconcileAlignments } from '../dist';
+import { reconcileAlignments } from '../src/alignment-reconcile';
 import type { AlignmentGroup } from '@usfm-tools/types';
 
 describe('reconcileAlignments', () => {
@@ -78,5 +78,18 @@ describe('reconcileAlignments', () => {
     ];
     const out = reconcileAlignments('a b', 'b a', groups);
     expect(out.length).toBe(0);
+  });
+
+  it('matches stored target word to old verse token when punctuation differs (comma)', () => {
+    const groups: AlignmentGroup[] = [
+      {
+        sources: [{ strong: 'G1', lemma: 'x', content: 'x', occurrence: 1, occurrences: 1 }],
+        targets: [{ word: 'Pablo', occurrence: 1, occurrences: 1 }],
+      },
+    ];
+    const out = reconcileAlignments('Pablo, sigue', 'Pablo sigue', groups);
+    expect(out.length).toBe(1);
+    expect(out[0].targets[0].word).toBe('Pablo');
+    expect(out[0].targets[0].occurrence).toBe(1);
   });
 });

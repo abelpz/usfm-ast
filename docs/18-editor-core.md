@@ -12,6 +12,8 @@ npm install @usfm-tools/parser @usfm-tools/adapters @usfm-tools/types @usfm-tool
 
 Workspace: add the dependency and run `bun run build` at the repo root so workspace packages resolve.
 
+Apps on `@usfm-tools/editor` often add [`@usfm-tools/editor-adapters`](./27-editor-adapters.md) for the USJ/USFM/USX helpers sessions use, while keeping `@usfm-tools/adapters` for full visitors when needed.
+
 **Node-only persistence:** import `FileSystemPersistenceAdapter` and `GitLocalPersistenceAdapter` from **`@usfm-tools/editor-core/node`** (they use `fs` / `path`; the default package entry stays browser-safe).
 
 ## Concepts

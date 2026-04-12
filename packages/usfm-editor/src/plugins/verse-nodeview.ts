@@ -16,16 +16,34 @@ export function createVerseNodeView(): (
     const dom = document.createElement('span');
     dom.className = 'usfm-verse';
     dom.setAttribute('data-verse', String(node.attrs.number ?? ''));
+    // Mark the outer element as non-editable so the browser treats it as an opaque
+    // atom (like an image) and keeps the text cursor outside it.  The nested `num`
+    // element re-enables editing locally for verse-number changes.
+    dom.contentEditable = 'false';
 
     const num = document.createElement('span');
     num.className = 'usfm-verse-num';
-    num.contentEditable = 'true';
+    // Start non-editable so the browser never snaps a nearby text cursor into
+    // this span.  We flip to contentEditable="true" only in selectNode() when
+    // the user explicitly targets the verse atom, and flip back in deselectNode()
+    // / blur.  This prevents the PM cursor from appearing small (verse font-size)
+    // when it is simply placed after the verse in normal text editing.
+    num.contentEditable = 'false';
     num.spellcheck = false;
-    num.setAttribute('role', 'textbox');
+    num.setAttribute('role', 'button');
     num.setAttribute('aria-label', 'Verse number');
     num.textContent = String(node.attrs.number ?? '');
 
     dom.appendChild(num);
+
+    const activateEditing = () => {
+      num.contentEditable = 'true';
+      num.setAttribute('role', 'textbox');
+    };
+    const deactivateEditing = () => {
+      num.contentEditable = 'false';
+      num.setAttribute('role', 'button');
+    };
 
     const syncNumberToDoc = () => {
       const pos = getPos();
@@ -45,6 +63,7 @@ export function createVerseNodeView(): (
 
     num.addEventListener('blur', () => {
       syncNumberToDoc();
+      deactivateEditing();
     });
 
     num.addEventListener('keydown', (e) => {
@@ -94,6 +113,7 @@ export function createVerseNodeView(): (
       },
       selectNode() {
         dom.classList.add('ProseMirror-selectednode');
+        activateEditing();
         num.focus();
         const range = document.createRange();
         range.selectNodeContents(num);
@@ -104,6 +124,7 @@ export function createVerseNodeView(): (
       deselectNode() {
         dom.classList.remove('ProseMirror-selectednode');
         if (document.activeElement === num) num.blur();
+        deactivateEditing();
       },
       stopEvent(e) {
         if (!num.contains(e.target as Node)) return false;
@@ -111,6 +132,11 @@ export function createVerseNodeView(): (
         // contenteditable keeps typing without PM stealing keystrokes.
         if (e.type === 'mousedown' || e.type === 'click' || e.type === 'dblclick') return false;
         return true;
+      },
+      ignoreMutation(mutation) {
+        // Ignore all mutations inside our DOM — the verse number contenteditable
+        // manages its own DOM and syncs to the PM doc via syncNumberToDoc on blur.
+        return dom.contains(mutation.target as Node);
       },
     };
   };

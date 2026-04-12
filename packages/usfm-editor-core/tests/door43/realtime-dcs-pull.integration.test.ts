@@ -3,11 +3,8 @@
  * Optional: set `RELAY_URL` + run a relay to swap in `WebSocketRelayTransport` (skipped here by default).
  */
 
-import {
-  createDcsJournalTransport,
-  HeadlessCollabSession,
-  InProcessRelay,
-} from '../../dist';
+import { createDcsJournalTransport } from '@usfm-tools/editor-adapters';
+import { HeadlessCollabSession, InProcessRelay } from '../../dist';
 import { getDoor43Config, shouldRunDoor43ReadTests } from '../helpers/door43-env';
 
 const SAMPLE = String.raw`\id TIT EN_ULT

@@ -1,4 +1,4 @@
-import type { DocumentStore } from '../document-store';
+import type { DocumentStore, UsjDocument } from '../document-store';
 import type { GitSyncAdapter } from '../git-sync-adapter';
 import type { OperationJournal } from './operation-journal';
 import { DefaultSyncEngine } from './sync-engine';
@@ -10,6 +10,8 @@ export interface DcsSyncOptions {
   store?: DocumentStore;
   /** When set, {@link push} includes journal operations in the Git commit payload. */
   journal?: OperationJournal;
+  /** When set, passed to {@link GitSyncAdapter.commit} as `snapshotUsj` (e.g. merge session alignments). */
+  getSnapshotUsj?: () => UsjDocument;
 }
 
 /**
@@ -23,7 +25,7 @@ export class DcsSyncEngine extends DefaultSyncEngine {
 
   override async push(): Promise<SyncResult> {
     const base = await super.push();
-    const { adapter, store, journal } = this._options;
+    const { adapter, store, journal, getSnapshotUsj } = this._options;
     if (!adapter || !store) return base;
     if (!this.isOnline) {
       return { ...base, status: 'offline' };
@@ -35,7 +37,8 @@ export class DcsSyncEngine extends DefaultSyncEngine {
         ? `USFM-AST sync: ${entries.length} journal entr${entries.length === 1 ? 'y' : 'ies'}`
         : 'USFM-AST sync (snapshot)';
     try {
-      await adapter.commit(store, message, ops);
+      const snapshotUsj = getSnapshotUsj?.();
+      await adapter.commit(store, message, ops, snapshotUsj);
       return {
         ...base,
         pushed: entries.length > 0 ? entries.length : 1,

@@ -1,5 +1,21 @@
 /**
- * Merge EditableUSJ plain text + AlignmentMap back into USJ-shaped nodes (zaln / \\w).
+ * Merge EditableUSJ plain text + AlignmentMap back into USJ-shaped nodes (zaln / \w).
+ *
+ * Key rules (see docs/29-alignment-patterns-english-spanish.md):
+ *
+ * 1. Target position lookup uses the stored `AlignedWord.occurrence` — the 1-based index into all
+ *    occurrences of that surface form in the verse (including unaligned words). This correctly
+ *    handles repeated surface words and inverted clause order (Sec 6 & 7 of the patterns doc).
+ *
+ * 2. `\w` x-occurrence / x-occurrences come from the stored `AlignedWord` fields, which the strip
+ *    layer reads from the original USFM. They are NOT recomputed from the aligned-only subset.
+ *
+ * 3. `\zaln-s` markers open at a group's FIRST target position and close at the LAST. This means
+ *    non-contiguous groups (Sec 5) stay open while other groups' tokens are emitted between their
+ *    targets, producing the correct nested USFM milestone structure.
+ *
+ * 4. When a raw token has punctuation attached (e.g. "Pablo,"), the word core ("Pablo") is matched
+ *    and wrapped in `\w`, and the punctuation suffix is emitted as a plain string after it.
  */
 
 import type {
@@ -33,6 +49,7 @@ function msZalnE(): Record<string, unknown> {
   return { type: 'ms', marker: 'zaln-e' };
 }
 
+/** Emit a `\w` node using the occurrence data already stored on the AlignedWord. */
 function wNode(t: AlignedWord): Record<string, unknown> {
   return {
     type: 'char',
@@ -43,14 +60,7 @@ function wNode(t: AlignedWord): Record<string, unknown> {
   };
 }
 
-function occurrenceAt(words: string[], index: number): { occurrence: number; occurrences: number } {
-  const w = words[index];
-  const occurrences = words.filter((x) => x === w).length;
-  const occurrence = words.slice(0, index + 1).filter((x) => x === w).length;
-  return { occurrence, occurrences };
-}
-
-/** Emit one alignment group in USJ shape. */
+/** Emit one alignment group in USJ shape (contiguous targets, stacked sources). */
 export function emitAlignmentGroup(g: { sources: OriginalWord[]; targets: AlignedWord[] }): unknown[] {
   const out: unknown[] = [];
   for (const s of g.sources) {
@@ -66,10 +76,16 @@ export function emitAlignmentGroup(g: { sources: OriginalWord[]; targets: Aligne
 }
 
 /**
- * Gateway words after {@link stripArray}: one or more `\\w` texts per fragment; whitespace-only
- * fragments are glue. Do **not** concatenate fragments (adjacent `\\w` strings may omit a space
- * character in the array, but they are still separate words).
+ * Strip non-word characters from the start and end of a whitespace-delimited token so that a raw
+ * token like "Pablo," can be matched against an AlignedWord whose word field is "Pablo".
+ *
+ * Keeps letters (Unicode \p{L}), digits (\p{N}), ASCII apostrophe, and right single quotation
+ * mark (U+2019) — the usual components of an actual word.
  */
+function normalizeToken(tok: string): string {
+  return tok.replace(/^[^\p{L}\p{N}'\u2019]+|[^\p{L}\p{N}'\u2019]+$/gu, '');
+}
+
 function wordsFromStrippedFragments(buf: unknown[]): string[] {
   const words: string[] = [];
   for (const x of buf) {
@@ -81,122 +97,204 @@ function wordsFromStrippedFragments(buf: unknown[]): string[] {
   return words;
 }
 
-/**
- * Alignment targets omit punctuation that appears as separate string siblings (e.g. `", "` after
- * `\\w`). Match `expected` in order as a subsequence of `raw` tokens.
- */
-function pickWordsForAlignment(raw: string[], expected: string[]): string[] | null {
-  let j = 0;
-  const picked: string[] = [];
-  for (let i = 0; i < raw.length && j < expected.length; i++) {
-    if (raw[i] === expected[j]) {
-      picked.push(raw[i]!);
-      j++;
-    }
-  }
-  if (j !== expected.length) return null;
-  return picked;
-}
-
-/** Groups with at least one target (empty groups do not consume expected words). */
+/** Groups with at least one target. */
 function activeAlignmentGroups(groups: AlignmentGroup[]): AlignmentGroup[] {
   return groups.filter((g) => g.targets.length > 0);
 }
 
+// ---------------------------------------------------------------------------
+// Occurrence-based target position resolution
+// ---------------------------------------------------------------------------
+
+interface ResolvedGroup {
+  sources: OriginalWord[];
+  targets: AlignedWord[];
+  /** Position in the full verse raw-token stream for each target (parallel to `targets`). */
+  positions: number[];
+  /** Raw position of the group's first target (where zaln-s opens). */
+  firstPos: number;
+  /** Raw position of the group's last target (where zaln-e closes). */
+  lastPos: number;
+}
+
 /**
- * Rebuild inline content for one verse: preserves unaligned words, punctuation-only fragments, and
- * non-string nodes (footnotes, character spans) while re-inserting `zaln` / `\\w` milestones for
- * aligned runs.
+ * For every AlignmentGroup, locate each target word in the full verse token stream using the
+ * stored `AlignedWord.occurrence` (1-based; counts ALL occurrences including unaligned words).
+ *
+ * Returns null if any target cannot be resolved (triggers rebuild fallback).
+ */
+function resolveTargetPositions(
+  groups: AlignmentGroup[],
+  raw: string[],
+): ResolvedGroup[] | null {
+  // Build per-normalized-word position list so we can pick the occurrence-th slot.
+  const positionsOf = new Map<string, number[]>();
+  for (let i = 0; i < raw.length; i++) {
+    const norm = normalizeToken(raw[i]!);
+    if (!norm) continue;
+    if (!positionsOf.has(norm)) positionsOf.set(norm, []);
+    positionsOf.get(norm)!.push(i);
+  }
+
+  const resolved: ResolvedGroup[] = [];
+  for (const g of groups) {
+    const positions: number[] = [];
+    for (const t of g.targets) {
+      const key = normalizeToken(t.word);
+      const slots = positionsOf.get(key) ?? [];
+      // occurrence is 1-based; slots is sorted ascending by raw position
+      const pos = slots[t.occurrence - 1];
+      if (pos === undefined) return null; // target missing from verse text
+      positions.push(pos);
+    }
+    if (positions.length === 0) return null;
+    resolved.push({
+      sources: g.sources,
+      targets: g.targets,
+      positions,
+      firstPos: Math.min(...positions),
+      lastPos: Math.max(...positions),
+    });
+  }
+  return resolved;
+}
+
+// ---------------------------------------------------------------------------
+// Verse inline content rebuild
+// ---------------------------------------------------------------------------
+
+/**
+ * Rebuild inline content for one verse using span-based zaln placement:
+ *
+ * - Each group's `\zaln-s` markers open at the group's FIRST target position.
+ * - Each group's `\zaln-e` markers close at the group's LAST target position.
+ * - Groups whose last target is beyond another group's first target stay open across that other
+ *   group's tokens (non-contiguous pattern, Sec 5).
+ * - When multiple groups open at the same position the outermost (largest span) opens first, so
+ *   the innermost closes first — preserving well-nested milestones.
+ * - `\w` occurrence data is taken from the stored AlignedWord, which was read from the original
+ *   USFM and already counts ALL verse tokens (including unaligned).
+ * - If a raw token has punctuation attached (e.g. "Pablo,"), the word core is matched for the
+ *   `\w` node and the punctuation suffix is emitted as a plain string immediately after.
  */
 function rebuildVerseInlineContent(
   versePieces: unknown[],
   verseRef: string,
-  alignments: AlignmentMap
+  alignments: AlignmentMap,
 ): unknown[] {
+  const groups = activeAlignmentGroups(alignments[verseRef] ?? []);
+  if (groups.length === 0) return versePieces;
+
   const stringParts = versePieces.filter((x): x is string => typeof x === 'string');
   const raw = wordsFromStrippedFragments(stringParts);
-  const groupsAll = alignments[verseRef] ?? [];
-  const groups = activeAlignmentGroups(groupsAll);
-  const expected = groups.flatMap((g) => g.targets.map((t) => t.word));
-  if (expected.length === 0) {
-    return versePieces;
+
+  const resolved = resolveTargetPositions(groups, raw);
+  if (!resolved) return versePieces;
+
+  // Build targetAt: rawPos → { resolvedGroup, targetIndex }.
+  // Two groups may not claim the same raw position (would be a data error).
+  const targetAt = new Map<number, { rg: ResolvedGroup; ti: number }>();
+  for (const rg of resolved) {
+    for (let ti = 0; ti < rg.positions.length; ti++) {
+      const pos = rg.positions[ti]!;
+      if (targetAt.has(pos)) return versePieces; // collision → bail
+      targetAt.set(pos, { rg, ti });
+    }
   }
-  const picked = pickWordsForAlignment(raw, expected);
-  if (!picked) {
-    return versePieces;
+
+  // Build opensAt / closesAt keyed by raw position.
+  const opensAt = new Map<number, ResolvedGroup[]>();
+  const closesAt = new Map<number, ResolvedGroup[]>();
+  for (const rg of resolved) {
+    if (!opensAt.has(rg.firstPos)) opensAt.set(rg.firstPos, []);
+    opensAt.get(rg.firstPos)!.push(rg);
+    if (!closesAt.has(rg.lastPos)) closesAt.set(rg.lastPos, []);
+    closesAt.get(rg.lastPos)!.push(rg);
+  }
+  // Outermost (largest span) opens first so inner groups are nested inside.
+  for (const arr of opensAt.values()) {
+    arr.sort((a, b) => b.lastPos - b.firstPos - (a.lastPos - a.firstPos));
+  }
+  // Innermost (smallest span) closes first (mirror of open order).
+  for (const arr of closesAt.values()) {
+    arr.sort((a, b) => a.lastPos - a.firstPos - (b.lastPos - b.firstPos));
   }
 
   const out: unknown[] = [];
-  let r = 0;
-  let expPtr = 0;
-  let gi = 0;
-  let tInG = 0;
-  let baseFlat = 0;
-
-  const emitGroup = (gIdx: number) => {
-    const g = groups[gIdx];
-    for (const s of g.sources) {
-      out.push(msZalnS(s));
-    }
-    for (let ti = 0; ti < g.targets.length; ti++) {
-      const idx = baseFlat + ti;
-      const occ = occurrenceAt(picked, idx);
-      out.push(
-        wNode({
-          ...g.targets[ti],
-          word: picked[idx],
-          occurrence: occ.occurrence,
-          occurrences: occ.occurrences,
-        })
-      );
-    }
-    for (let i = g.sources.length - 1; i >= 0; i--) {
-      out.push(msZalnE());
-    }
-    baseFlat += g.targets.length;
-  };
+  let rawIdx = 0;
 
   for (const item of versePieces) {
     if (typeof item !== 'string') {
       out.push(item);
       continue;
     }
-    const frag = item;
-    if (!frag.trim()) {
-      out.push(frag);
+    if (!item.trim()) {
+      // Whitespace-only fragment — preserve as-is (spaces between verses, etc.)
+      out.push(item);
       continue;
     }
-    for (const tok of tokenizeWords(frag)) {
-      if (r >= raw.length || tok !== raw[r]) {
-        return versePieces;
+
+    // Walk the string with a non-whitespace regex so that spaces and trailing
+    // characters (newlines, punctuation between tokens, etc.) are preserved
+    // as plain strings in the output rather than stripped by tokenizeWords.
+    let pos = 0;
+    const tokenRe = /\S+/g;
+    let match: RegExpExecArray | null;
+    while ((match = tokenRe.exec(item)) !== null) {
+      // Preserve any leading whitespace before this token.
+      if (match.index > pos) out.push(item.slice(pos, match.index));
+      pos = match.index + match[0].length;
+      const tok = match[0];
+
+      // 1. Open groups whose first target is at this position (outermost first).
+      for (const rg of opensAt.get(rawIdx) ?? []) {
+        for (const s of rg.sources) out.push(msZalnS(s));
       }
-      if (expPtr < expected.length && tok === expected[expPtr]) {
-        tInG++;
-        expPtr++;
-        r++;
-        if (gi < groups.length && tInG === groups[gi].targets.length) {
-          emitGroup(gi);
-          gi++;
-          tInG = 0;
-        }
+
+      // 2. Emit the token — either as a \w node (aligned) or plain string (unaligned).
+      const entry = targetAt.get(rawIdx);
+      if (entry) {
+        const { rg, ti } = entry;
+        const norm = normalizeToken(tok);
+        // Split attached punctuation so the \w node contains only the word core.
+        const wordStart = tok.indexOf(norm);
+        const prefix = wordStart > 0 ? tok.slice(0, wordStart) : '';
+        const suffix = tok.slice(wordStart + norm.length);
+        if (prefix) out.push(prefix);
+        // Use stored occurrence / occurrences (relative to full verse, not aligned-only subset).
+        out.push(wNode(rg.targets[ti]!));
+        if (suffix) out.push(suffix);
       } else {
         out.push(tok);
-        r++;
       }
+
+      // 3. Close groups whose last target was this position (innermost first).
+      for (const rg of closesAt.get(rawIdx) ?? []) {
+        for (let i = rg.sources.length - 1; i >= 0; i--) {
+          out.push(msZalnE());
+        }
+      }
+
+      rawIdx++;
     }
+    // Preserve any trailing whitespace / characters after the last token.
+    if (pos < item.length) out.push(item.slice(pos));
   }
 
-  if (expPtr !== expected.length || gi !== groups.length || tInG !== 0 || r !== raw.length) {
-    return versePieces;
-  }
+  // If we didn't consume every raw token the mapping is inconsistent — return original.
+  if (rawIdx !== raw.length) return versePieces;
 
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Tree traversal (unchanged public API)
+// ---------------------------------------------------------------------------
+
 function transformSubtree(
   node: unknown,
   ctx: { verseRef: string },
-  alignments: AlignmentMap
+  alignments: AlignmentMap,
 ): unknown {
   if (!isRecord(node)) return node;
   const o = node as Record<string, unknown>;
@@ -214,15 +312,12 @@ function transformSubtree(
   return { ...o };
 }
 
-/**
- * Re-insert alignment milestones and `\\w` (inverse of {@link stripArray}).
- */
+/** Re-insert alignment milestones and `\w` (inverse of stripArray). */
 export function rebuildArray(
   nodes: unknown[],
   ctx: { verseRef: string },
   alignments: AlignmentMap,
-  /** When recursing into a verse node's `content`, pass its `sid` so inline strings rebuild alignments. */
-  verseInlineSid?: string
+  verseInlineSid?: string,
 ): unknown[] {
   const out: unknown[] = [];
   let buf: unknown[] = [];
@@ -257,7 +352,7 @@ export function rebuildArray(
 
 export function rebuildAlignedUsj(
   editable: EditableUSJ,
-  alignments: AlignmentMap
+  alignments: AlignmentMap,
 ): { type: 'USJ'; version: string; content: unknown[] } {
   const ctx = { verseRef: '' };
   const content = rebuildArray(editable.content ?? [], ctx, alignments);

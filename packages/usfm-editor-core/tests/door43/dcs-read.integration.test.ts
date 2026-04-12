@@ -2,10 +2,7 @@
  * Live Door43 / Gitea API read tests. Requires `.env.door43` (see repo `.env.door43.example`).
  */
 
-import {
-  createDcsJournalTransport,
-  DcsGitSyncAdapter,
-} from '../../dist';
+import { createDcsJournalTransport, DcsGitSyncAdapter } from '@usfm-tools/editor-adapters';
 import { getDoor43Config, shouldRunDoor43ReadTests } from '../helpers/door43-env';
 
 const describeDoor43 = shouldRunDoor43ReadTests() ? describe : describe.skip;

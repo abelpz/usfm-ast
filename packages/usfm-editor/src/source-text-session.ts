@@ -7,7 +7,7 @@
  * through the book together.
  */
 
-import { parseUsxToUsjDocument } from '@usfm-tools/adapters';
+import { parseUsxToUsjDocument } from '@usfm-tools/editor-adapters';
 import {
   DocumentStore,
   type SourceTextProvider,
@@ -16,10 +16,14 @@ import {
 import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 
-import { createUSFMPlugins } from './editor';
+import { createUSFMPlugins, usfmChromeDomAttributes } from './editor';
 import { resolveUSFMChrome, type USFMEditorChrome } from './chrome';
 import { usfmSchema } from './schema';
-import { chapterSubsetToPm } from './usj-to-pm';
+import {
+  chapterSubsetToPm,
+  type ChapterSubsetToPmOptions,
+  type EditorContentPage,
+} from './usj-to-pm';
 
 export interface SourceTextSessionOptions {
   /**
@@ -35,6 +39,18 @@ export interface SourceTextSessionOptions {
 }
 
 /**
+ * Minimal surface read from {@link import('./scripture-session').ScriptureSession}
+ * to mirror the main editor window (paginated pages or legacy multi-chapter layout).
+ */
+export type ScriptureEditorWindowTarget = {
+  isPaginatedEditor(): boolean;
+  getContentPage(): EditorContentPage;
+  getVisibleChapterNumbers(): number[];
+  getContextChapterRadius(): number;
+  isIntroductionVisible(): boolean;
+};
+
+/**
  * Wraps a non-editable ProseMirror view for displaying a source/reference text.
  * Accepts content from any {@link SourceTextProvider} or directly via
  * `loadUSFM` / `loadUSJ` / `loadUSX`.
@@ -43,7 +59,7 @@ export class SourceTextSession {
   readonly store: DocumentStore;
   readonly contentView: EditorView;
 
-  private visibleChapters: number[] = [1];
+  private subsetOptions: ChapterSubsetToPmOptions;
   private contextChapters: number;
   private provider: SourceTextProvider | null = null;
   private loaded = false;
@@ -54,6 +70,12 @@ export class SourceTextSession {
     options: SourceTextSessionOptions = {}
   ) {
     this.contextChapters = options.contextChapters ?? 1;
+    this.subsetOptions = {
+      visibleChapters: [1],
+      showIntroduction: false,
+      contextChapters: this.contextChapters,
+    };
+
     this.store = new DocumentStore({ silentConsole: true });
 
     const chrome = resolveUSFMChrome(options.chrome ?? { preset: 'minimal' });
@@ -61,14 +83,11 @@ export class SourceTextSession {
 
     this.contentView = new EditorView(place, {
       state: EditorState.create({
-        doc: chapterSubsetToPm(this.store, {
-          visibleChapters: [1],
-          showIntroduction: false,
-          contextChapters: 1,
-        }),
+        doc: chapterSubsetToPm(this.store, this.subsetOptions),
         schema: usfmSchema,
         plugins,
       }),
+      attributes: usfmChromeDomAttributes(options.chrome ?? { preset: 'minimal' }),
       editable: () => false,
     });
   }
@@ -106,13 +125,44 @@ export class SourceTextSession {
   // ── Window control ────────────────────────────────────────────────────────
 
   /**
-   * Synchronise the visible chapter window.
-   * Typically called automatically when the paired target session changes its
-   * window (via `onVisibleSectionsChange`).
+   * Synchronise the visible chapter window (legacy layout without `contentPage`).
+   * Prefer {@link syncSubsetFromTarget} when pairing with a {@link ScriptureSession}.
    */
   setVisibleChapters(chapters: number[], contextRadius?: number): void {
     if (contextRadius !== undefined) this.contextChapters = contextRadius;
-    this.visibleChapters = chapters;
+    this.subsetOptions = {
+      visibleChapters: [...chapters],
+      showIntroduction: false,
+      contextChapters: this.contextChapters,
+    };
+    this.rebuildDoc();
+  }
+
+  /**
+   * Match the main editor’s visible window: paginated identification / introduction /
+   * chapter pages, or the legacy introduction + multi-chapter view.
+   */
+  syncSubsetFromTarget(target: ScriptureEditorWindowTarget): void {
+    if (target.isPaginatedEditor()) {
+      const page = target.getContentPage();
+      this.contextChapters = target.getContextChapterRadius();
+      this.subsetOptions = {
+        visibleChapters: page.kind === 'chapter' ? [page.chapter] : [],
+        showIntroduction: false,
+        contextChapters: page.kind === 'chapter' ? this.contextChapters : 0,
+        contentPage: page,
+      };
+      this.rebuildDoc();
+      return;
+    }
+    this.contextChapters = target.getContextChapterRadius();
+    const vis = target.getVisibleChapterNumbers();
+    const next: ChapterSubsetToPmOptions = {
+      visibleChapters: vis.length ? [...vis] : [1],
+      showIntroduction: target.isIntroductionVisible(),
+      contextChapters: this.contextChapters,
+    };
+    this.subsetOptions = next;
     this.rebuildDoc();
   }
 
@@ -120,6 +170,15 @@ export class SourceTextSession {
 
   getChapterCount(): number {
     return this.store.getChapterCount();
+  }
+
+  /**
+   * Largest `\\c` chapter number present in the reference text.
+   * Use this to determine the navigation range when the reference has more chapters
+   * than the file being translated.
+   */
+  getMaxChapterNumber(): number {
+    return this.store.getMaxChapterNumber();
   }
 
   isLoaded(): boolean {
@@ -152,20 +211,36 @@ export class SourceTextSession {
 
   private _finishLoad(): void {
     this.loaded = true;
-    const n = this.store.getChapterCount();
-    const first = this.visibleChapters[0] ?? 1;
-    if (first > n) this.visibleChapters = [1];
     this.rebuildDoc();
   }
 
   private rebuildDoc(): void {
-    const max = this.store.getChapterCount();
-    const vis = this.visibleChapters.filter((c) => c >= 1 && c <= Math.max(max, 1));
-    const doc = chapterSubsetToPm(this.store, {
-      visibleChapters: vis.length ? vis : [1],
-      showIntroduction: false,
-      contextChapters: this.contextChapters,
-    });
+    const max = this.store.getMaxChapterNumber();
+    const base: ChapterSubsetToPmOptions = { ...this.subsetOptions };
+    let opts: ChapterSubsetToPmOptions;
+
+    if (base.contentPage) {
+      if (base.contentPage.kind === 'chapter') {
+        const ch = base.contentPage.chapter;
+        const hi = Math.max(max, 1);
+        const clamped = ch >= 1 && ch <= hi ? ch : hi >= 1 ? hi : 1;
+        opts = {
+          ...base,
+          contentPage: { kind: 'chapter', chapter: clamped },
+          visibleChapters: [clamped],
+        };
+      } else {
+        opts = { ...base };
+      }
+    } else {
+      const vis = (base.visibleChapters ?? []).filter((c) => c >= 1 && c <= Math.max(max, 1));
+      opts = {
+        ...base,
+        visibleChapters: vis.length ? vis : [1],
+      };
+    }
+
+    const doc = chapterSubsetToPm(this.store, opts);
     const state = EditorState.create({
       doc,
       schema: usfmSchema,

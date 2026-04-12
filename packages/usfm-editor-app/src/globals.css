@@ -1,0 +1,137 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* sRGB hex only: `oklch()` in custom properties is invalid in older engines and breaks Tailwind `bg-*` / `text-*` (blank “white screen”). */
+:root {
+  --radius: 0.75rem;
+  --background: #fafafa;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --popover: #ffffff;
+  --popover-foreground: #18181b;
+  --primary: #4f46e5;
+  --primary-foreground: #fafafa;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #27272a;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #eef2ff;
+  --accent-foreground: #27272a;
+  --destructive: #dc2626;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #6366f1;
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #18181b;
+  --card-foreground: #fafafa;
+  --popover: #18181b;
+  --popover-foreground: #fafafa;
+  --primary: #6366f1;
+  --primary-foreground: #18181b;
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+  --destructive: #ef4444;
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #6366f1;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    min-height: 100%;
+    margin: 0;
+    font-family:
+      'Inter',
+      ui-sans-serif,
+      system-ui,
+      sans-serif;
+  }
+  #root {
+    min-height: 100%;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* ProseMirror requires white-space (prosemirror-view console check); mount uses `.pm` not `.pm-host`. */
+.ProseMirror {
+  white-space: pre-wrap;
+}
+
+/*
+ * Tailwind's preflight resets ALL <img> elements to `display: block`.
+ * ProseMirror inserts <img class="ProseMirror-separator"> as a zero-width INLINE
+ * element after atom nodes at the end of a paragraph so the browser has a valid
+ * DOM cursor position adjacent to the atom.  When this img is block-displayed it
+ * breaks the inline flow and creates a new block line — the cursor then lands on
+ * that new line instead of next to the verse number.
+ * Restore inline display with zero dimensions so it acts purely as a DOM anchor.
+ */
+img.ProseMirror-separator {
+  display: inline !important;
+  vertical-align: baseline;
+  width: 0;
+  height: 0;
+  /*
+   * Browsers size the caret at a DOM-boundary position (between sibling elements,
+   * not inside a text node) using the enclosing block's line-height × font-size
+   * strut.  For our paragraphs that is 1.75 × 16 px ≈ 28 px — visibly taller than
+   * the ~16 px caret inside text nodes.  Setting line-height: 1 on the separator
+   * gives the cursor position its own inline-box strut of exactly 1 × font-size,
+   * matching the height of a normal text caret.
+   */
+  line-height: 1;
+}
+
+.pm .ProseMirror {
+  outline: none;
+  min-height: 240px;
+  line-height: 1.6;
+  /* Gutter strip (~⋮ + +) + same inset on the right so the column feels balanced */
+  box-sizing: border-box;
+  padding: 0.25rem 3rem 1.5rem;
+}

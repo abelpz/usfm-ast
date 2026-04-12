@@ -81,4 +81,41 @@ describe('DocumentStore', () => {
     expect(usfm).not.toMatch(/\\c 2/);
     expect(usfm).not.toContain('Two');
   });
+
+  it('relocateChapterNumber moves slice and updates marker', () => {
+    const store = new DocumentStore();
+    store.loadUSFM(
+      '\\id TIT Titus\n\\c 1\n\\p\n\\v 1 One.\n\\c 2\n\\p\n\\v 1 Two.\n\\c 3\n\\p\n\\v 1 Three.\n'
+    );
+    expect(store.relocateChapterNumber(3, 12)).toBe(true);
+    const usfm = store.toUSFM();
+    expect(usfm.indexOf('\\c 12')).toBeGreaterThan(usfm.indexOf('\\c 2'));
+    expect(store.getChapter(12)).toBeDefined();
+    expect(store.getChapter(3)).toBeUndefined();
+  });
+
+  it('relocateChapterNumber returns false on collision', () => {
+    const store = new DocumentStore();
+    store.loadUSFM('\\id TIT Titus\n\\c 1\n\\p\n\\v 1 One.\n\\c 2\n\\p\n\\v 1 Two.\n');
+    expect(store.relocateChapterNumber(2, 1)).toBe(false);
+    expect(store.getChapter(2)).toBeDefined();
+  });
+
+  it('mergeChapterIntoPrevious appends body and removes chapter', () => {
+    const store = new DocumentStore();
+    store.loadUSFM('\\id TIT Titus\n\\c 1\n\\p\n\\v 1 One.\n\\c 2\n\\p\n\\v 1 Two.\n');
+    expect(store.mergeChapterIntoPrevious(2)).toBe(true);
+    expect(store.getChapter(2)).toBeUndefined();
+    const usfm = store.toUSFM(1);
+    expect(usfm).toContain('Two');
+    expect(usfm).not.toMatch(/\\c 2/);
+  });
+
+  it('getMaxChapterNumber is the highest \\c number, not the slice count', () => {
+    const store = new DocumentStore();
+    store.loadUSFM('\\id TIT Titus\n\\c 21\n\\p\n\\v 1 Hi.\n');
+    expect(store.getChapterCount()).toBe(1);
+    expect(store.getMaxChapterNumber()).toBe(21);
+    expect(store.getFirstChapterNumber()).toBe(21);
+  });
 });

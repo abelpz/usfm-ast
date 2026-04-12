@@ -15,7 +15,7 @@
     "check-types": "turbo run check-types",
     "test": "turbo run test",
     "test:usfm-parser-local": "cd packages/usfm-parser && bun run build && bunx jest --testPathIgnorePatterns=performance",
-    "test:integration": "bunx jest tests/integration",
+    "test:integration": "turbo run build --filter=@usfm-tools/editor-adapters && bunx jest tests/integration",
     "test:performance": "bunx jest tests/performance",
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,js,json,md}\"",
@@ -50,6 +50,8 @@
     "relay:deploy": "turbo run deploy --filter=@usfm-tools/relay-server"
   },
   "devDependencies": {
+    "@usfm-tools/editor-adapters": "workspace:*",
+    "@usfm-tools/parser": "workspace:*",
     "diff": "^7.0.0",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",

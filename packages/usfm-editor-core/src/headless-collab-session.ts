@@ -11,6 +11,10 @@ import { OperationJournal } from './sync/operation-journal';
 import { RealtimeSyncEngine } from './sync/realtime-sync-engine';
 import type { JournalRemoteTransport } from './sync/merge-sync-engine';
 import type { RealtimeTransport } from './sync/realtime-transport';
+import type { MergeStrategy } from './sync/merge-strategy';
+import type { JournalStore } from './sync/journal-store';
+import type { ChapterConflict } from './sync/types';
+import type { SyncEngine } from './sync/types';
 
 function deepClone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
@@ -88,10 +92,16 @@ function groupContentOpsByChapter(ops: Operation[]): Map<number, Operation[]> {
 export interface HeadlessCollabSessionOptions {
   userId: string;
   persistence?: PersistenceAdapter;
+  /** When set, takes precedence over {@link persistence} for {@link OperationJournal} backing. */
+  journalStore?: JournalStore;
   remoteTransport?: JournalRemoteTransport;
   realtimeTransport?: RealtimeTransport;
   roomId?: string;
   displayName?: string;
+  /** Bypass {@link RealtimeSyncEngine}; you supply push/pull/realtime wiring. */
+  syncEngine?: SyncEngine;
+  mergeStrategy?: MergeStrategy;
+  onConflict?: (conflict: ChapterConflict) => 'accept-local' | 'accept-remote' | 'manual';
 }
 
 /**
@@ -100,7 +110,7 @@ export interface HeadlessCollabSessionOptions {
 export class HeadlessCollabSession {
   readonly store: DocumentStore;
   readonly journal: OperationJournal;
-  readonly sync: RealtimeSyncEngine;
+  readonly sync: SyncEngine;
 
   private readonly changeListeners = new Set<(ops: Operation[]) => void>();
   private readonly pendingByChapter = new Map<number, Operation[]>();
@@ -108,19 +118,23 @@ export class HeadlessCollabSession {
 
   constructor(private readonly opts: HeadlessCollabSessionOptions) {
     this.store = new DocumentStore({ silentConsole: true });
-    this.journal = new OperationJournal(opts.persistence, opts.userId);
-    this.sync = new RealtimeSyncEngine({
-      journal: this.journal,
-      store: this.store,
-      remoteTransport: opts.remoteTransport,
-      realtimeTransport: opts.realtimeTransport,
-      userId: opts.userId,
-      displayName: opts.displayName,
-      getLocalPending: (chapter) => this.pendingByChapter.get(chapter) ?? [],
-      onRemoteEntryApplied: (chapter, clientPrime) => {
-        this.pendingByChapter.set(chapter, clientPrime);
-      },
-    });
+    this.journal = new OperationJournal(opts.journalStore ?? opts.persistence, opts.userId);
+    this.sync =
+      opts.syncEngine ??
+      new RealtimeSyncEngine({
+        journal: this.journal,
+        store: this.store,
+        remoteTransport: opts.remoteTransport,
+        realtimeTransport: opts.realtimeTransport,
+        userId: opts.userId,
+        displayName: opts.displayName,
+        getLocalPending: (chapter) => this.pendingByChapter.get(chapter) ?? [],
+        onRemoteEntryApplied: (chapter, clientPrime) => {
+          this.pendingByChapter.set(chapter, clientPrime);
+        },
+        mergeStrategy: opts.mergeStrategy,
+        onConflict: opts.onConflict,
+      });
   }
 
   loadUSFM(usfm: string): void {
@@ -178,11 +192,15 @@ export class HeadlessCollabSession {
   async connect(roomId?: string): Promise<void> {
     const id = roomId ?? this.opts.roomId ?? this.store.getBookCode();
     this.room = id;
-    await this.sync.connectRealtime(id);
+    if (this.sync instanceof RealtimeSyncEngine) {
+      await this.sync.connectRealtime(id);
+    }
   }
 
   disconnect(): void {
-    this.sync.disconnectRealtime();
+    if (this.sync instanceof RealtimeSyncEngine) {
+      this.sync.disconnectRealtime();
+    }
     this.room = null;
   }
 

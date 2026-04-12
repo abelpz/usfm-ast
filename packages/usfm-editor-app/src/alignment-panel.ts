@@ -1,4 +1,4 @@
-import { convertUSJDocumentToUSFM } from '@usfm-tools/adapters';
+import { convertUSJDocumentToUSFM } from '@usfm-tools/editor-adapters';
 import type {
   AlignmentGroup,
   AlignmentMap,

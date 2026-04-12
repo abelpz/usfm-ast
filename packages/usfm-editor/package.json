@@ -18,14 +18,12 @@
     "dist",
     "chrome.css",
     "usfm-markers.css",
-    "data",
     "README.md"
   ],
   "scripts": {
-    "generate:marker-css": "node ../../scripts/generate-marker-css.mjs",
-    "build": "bun run generate:marker-css && tsup",
+    "build": "tsup",
     "dev": "tsup --watch",
-    "test": "cd ../usfm-editor-core && bun run build && cd ../usfm-editor && bun run build && jest",
+    "test": "jest",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "clean": "rimraf dist",
@@ -48,6 +46,9 @@
   },
   "dependencies": {
     "@usfm-tools/adapters": "workspace:*",
+    "@usfm-tools/parser": "workspace:*",
+    "@usfm-tools/editor-adapters": "workspace:*",
+    "@usfm-tools/editor-themes": "workspace:*",
     "@usfm-tools/editor-core": "workspace:*",
     "@usfm-tools/types": "workspace:*",
     "prosemirror-commands": "^1.6.0",
@@ -61,8 +62,8 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
-    "@usfm-tools/parser": "workspace:*",
     "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.7.0",
     "rimraf": "^5.0.0",
     "ts-jest": "^29.1.0",
     "tsup": "^8.3.5",

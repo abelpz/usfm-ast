@@ -27,7 +27,7 @@
     "build": "bun run clean && tsc --build",
     "build:watch": "tsc --build --watch",
     "playground": "bun __playground.js",
-    "test": "bun run build && jest --testPathIgnorePatterns=performance",
+    "test": "jest --testPathIgnorePatterns=performance",
     "test:performance": "bun run build && jest --testPathPattern=performance",
     "test:watch": "jest --watch",
     "test:clean": "bun run clean && bun run test",

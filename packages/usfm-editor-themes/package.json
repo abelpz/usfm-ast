@@ -1,0 +1,46 @@
+{
+  "name": "@usfm-tools/editor-themes",
+  "version": "0.1.0",
+  "description": "USFM editor chrome: CSS design tokens, Paratext-style marker typography, chrome preset types",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./base.css": "./base.css",
+    "./markers.css": "./markers.css"
+  },
+  "files": ["dist", "base.css", "markers.css", "data", "TOKENS.md", "README.md"],
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "build": "bun run generate && tsup",
+    "dev": "tsup --watch",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "clean": "rimraf dist",
+    "check-types": "tsc --noEmit -p tsconfig.json"
+  },
+  "keywords": ["usfm", "usj", "prosemirror", "theme", "css"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abelpz/usfm-ast.git",
+    "directory": "packages/usfm-editor-themes"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "jest": "^29.5.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.1.0",
+    "tsup": "^8.3.5",
+    "typescript": "5.9.3"
+  }
+}

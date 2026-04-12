@@ -4,13 +4,14 @@ module.exports = {
   testMatch: ['<rootDir>/tests/**/*.test.ts'],
   collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
-  },
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        module: 'commonjs',
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          module: 'commonjs',
+          esModuleInterop: true,
+        },
       },
-    },
+    ],
   },
 };

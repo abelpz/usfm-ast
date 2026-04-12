@@ -7,7 +7,12 @@ import { Fragment } from 'prosemirror-model';
 import type { Command } from 'prosemirror-state';
 import { TextSelection } from 'prosemirror-state';
 
-import { getStructuralInsertions } from './marker-context';
+import {
+  getEditorSectionAtPos,
+  getStructuralInsertions,
+  isMarkerAllowedForSection,
+  type EditorMode,
+} from './marker-context';
 
 /**
  * Paragraph markers that should NOT be continued on Enter — instead a plain `\p` is created.
@@ -122,12 +127,20 @@ export function insertNextVerse(): Command {
 }
 
 /** Change the paragraph marker for the paragraph containing the selection. */
-export function changeParagraphMarker(marker: string): Command {
+export function changeParagraphMarker(
+  marker: string,
+  options?: { editorMode?: EditorMode }
+): Command {
   return (state, dispatch) => {
     const found = findParentParagraph(state);
     if (!found) return false;
     const { depth } = found;
     const { $from } = state.selection;
+    const mode = options?.editorMode;
+    if (mode !== undefined) {
+      const section = getEditorSectionAtPos(state, $from.pos);
+      if (!isMarkerAllowedForSection(marker, section, mode)) return false;
+    }
     const tr = state.tr.setNodeMarkup($from.before(depth), undefined, {
       ...$from.node(depth).attrs,
       marker,
@@ -389,7 +402,11 @@ export function insertBookIntroductionSection(): Command {
  * (the document position before that node, i.e. `$pos.before(depth)` for that block).
  * Supported block types: `paragraph`, `book`.
  */
-export function insertParagraphAfterBlock(blockStartPos: number, marker = 'p'): Command {
+export function insertParagraphAfterBlock(
+  blockStartPos: number,
+  marker = 'p',
+  options?: { editorMode?: EditorMode }
+): Command {
   return (state, dispatch) => {
     const pType = state.schema.nodes.paragraph;
     if (!pType) return false;
@@ -397,6 +414,12 @@ export function insertParagraphAfterBlock(blockStartPos: number, marker = 'p'): 
     const node = $r.nodeAfter;
     if (!node) return false;
     if (node.type.name !== 'paragraph' && node.type.name !== 'book') return false;
+    const mode = options?.editorMode;
+    if (mode !== undefined) {
+      const probe = Math.min(blockStartPos + 1, state.doc.content.size);
+      const section = getEditorSectionAtPos(state, probe);
+      if (!isMarkerAllowedForSection(marker, section, mode)) return false;
+    }
     const insertAt = blockStartPos + node.nodeSize;
     const newP = pType.create({ marker, sid: null });
     const tr = state.tr.insert(insertAt, newP);
@@ -414,7 +437,7 @@ export function insertParagraphAfterBlock(blockStartPos: number, marker = 'p'): 
  * Content after the cursor moves into the new paragraph (marks are re-opened).
  * When the caret is at a block boundary the behaviour is unchanged (empty new block).
  */
-export function insertParagraph(marker = 'p'): Command {
+export function insertParagraph(marker = 'p', options?: { editorMode?: EditorMode }): Command {
   return (state, dispatch) => {
     const p = state.schema.nodes.paragraph;
     if (!p) return false;
@@ -424,6 +447,12 @@ export function insertParagraph(marker = 'p'): Command {
       depth--;
     }
     if (depth === 0) return false;
+
+    const mode = options?.editorMode;
+    if (mode !== undefined) {
+      const section = getEditorSectionAtPos(state, $from.pos);
+      if (!isMarkerAllowedForSection(marker, section, mode)) return false;
+    }
 
     const cursorPos = $from.pos;
     const paraEndContent = $from.after(depth) - 1;

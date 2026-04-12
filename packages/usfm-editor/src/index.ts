@@ -17,6 +17,7 @@ export {
   normalizeStandaloneTranslatorMilestones,
   nextTsSection,
   type ChapterSubsetToPmOptions,
+  type EditorContentPage,
   type TsState,
   type WindowSectionId,
 } from './usj-to-pm';
@@ -28,15 +29,29 @@ export {
 } from './pm-to-usj';
 export * from './commands';
 export {
+  resolveChapterLabelAction,
+  type ChapterLabelAction,
+  type ChapterLabelInput,
+} from './chapter-label-policy';
+export {
   createUSFMEditorState,
   createUSFMEditorView,
   createUSFMPlugins,
   serializeToUSJ,
+  usfmChromeDomAttributes,
+  type ChapterLabelCommitContext,
+  type ChapterLabelHooks,
   type USFMEditorOptions,
   type USFMEditorViewOptions,
 } from './editor';
-export type { USFMEditorChrome, ResolvedUSFMChrome, USFMHeaderTitleMode } from './chrome';
-export { resolveUSFMChrome } from './chrome';
+export type {
+  BuiltinTheme,
+  ResolvedUSFMChrome,
+  USFMChromeCssVariable,
+  USFMEditorChrome,
+  USFMHeaderTitleMode,
+} from './chrome';
+export { resolveUSFMChrome, USFM_CHROME_CSS_VARIABLES } from './chrome';
 export * from './alignment';
 export { usfmKeymap } from './plugins/keymap';
 export { usfmInputRules } from './plugins/input-rules';
@@ -55,8 +70,16 @@ export {
   chapterNumberFromPmChapter,
   type MappedSection,
 } from './chapter-position-map';
-export { ScriptureSession, type ScriptureSessionOptions } from './scripture-session';
-export { SourceTextSession, type SourceTextSessionOptions } from './source-text-session';
+export {
+  ScriptureSession,
+  type ScriptureSessionOptions,
+  type ToUsfmAlignmentOptions,
+} from './scripture-session';
+export {
+  SourceTextSession,
+  type SourceTextSessionOptions,
+  type ScriptureEditorWindowTarget,
+} from './source-text-session';
 export type { SectionId } from './scripture-plugin';
 export type { ScripturePlugin } from './scripture-plugin';
 export type { SourceTextProvider } from '@usfm-tools/editor-core';
@@ -68,13 +91,29 @@ export {
   getSimplifiedMarkerChoices,
   getValidParagraphMarkers,
   getStructuralInsertions,
+  isMarkerAllowedForSection,
   canInsertChapterMarkerInSection,
   canInsertVerseInSection,
   type ContextAwareMarkerDef,
+  type BuiltinEditorMode,
   type EditorMode,
   type EditorSection,
   type MarkerChoice,
   type StructuralInsertionOptions,
 } from './marker-context';
+export type { MarkerRegistry } from './marker-registry';
+export { DefaultMarkerRegistry } from './marker-registry';
+export type {
+  MergeStrategy,
+  JournalStore,
+  JournalRemoteTransport,
+} from '@usfm-tools/editor-core';
+export { OTMergeStrategy, DefaultJournalStore } from '@usfm-tools/editor-core';
 export { nextChapterNumberForSelection } from './chapter-number';
 export { nextVerseNumberForSelection, parseVerseNumberAttr } from './verse-number';
+export {
+  USFM_BOOK_CODES,
+  USFM_BOOK_CODES_APOCRYPHA,
+  KNOWN_BOOK_CODES,
+  filterBookCodes,
+} from './plugins/book-codes';

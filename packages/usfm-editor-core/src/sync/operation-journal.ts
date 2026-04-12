@@ -1,11 +1,13 @@
 import type { DocumentStore, UsjDocument } from '../document-store';
 import type { PersistenceAdapter } from '../persistence/persistence-adapter';
 import type { Operation } from '../operations';
+import {
+  DefaultJournalStore,
+  MemoryJournalStore,
+  isJournalStore,
+  type JournalStore,
+} from './journal-store';
 import type { JournalEntry, JournalLayer } from './types';
-
-const KEY_PREFIX = 'journal/';
-const SNAPSHOT_PREFIX = 'snapshots/';
-const META_KEY = `${KEY_PREFIX}meta.json`;
 
 function randomId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -29,6 +31,8 @@ interface JournalMeta {
 
 /**
  * Append-only operation journal with optional persistence, vector-clock merge, and compaction.
+ * Pass a {@link PersistenceAdapter} (wrapped in {@link DefaultJournalStore}), a custom {@link JournalStore},
+ * or `undefined` for in-memory-only journal (no disk I/O).
  */
 export class OperationJournal {
   private entries: JournalEntry[] = [];
@@ -38,11 +42,20 @@ export class OperationJournal {
   /** Set when {@link maybeCompactAfterPush} folds the log into a USJ snapshot. */
   private baseSnapshotId: string | null = null;
   private readonly appendListeners = new Set<(entry: JournalEntry) => void>();
+  private readonly store: JournalStore;
 
   constructor(
-    private readonly persistence: PersistenceAdapter | undefined,
+    storeOrAdapter: JournalStore | PersistenceAdapter | undefined,
     private readonly userId: string
-  ) {}
+  ) {
+    if (storeOrAdapter === undefined) {
+      this.store = new MemoryJournalStore();
+    } else if (isJournalStore(storeOrAdapter)) {
+      this.store = storeOrAdapter;
+    } else {
+      this.store = new DefaultJournalStore(storeOrAdapter);
+    }
+  }
 
   /** Fired after each local {@link append} (not {@link ingestRemote}). */
   onAppend(listener: (entry: JournalEntry) => void): () => void {
@@ -123,15 +136,15 @@ export class OperationJournal {
    * Saves full USJ, clears in-memory entries (vector clock preserved), and records {@link baseSnapshotId}.
    */
   async maybeCompactAfterPush(
-    store: DocumentStore,
+    docStore: DocumentStore,
     options?: { maxEntries?: number }
   ): Promise<void> {
     const maxEntries = options?.maxEntries ?? 200;
-    if (this.entries.length <= maxEntries || !this.persistence?.ready) return;
-    const snapshotJson = JSON.stringify(store.getFullUSJ());
+    if (this.entries.length <= maxEntries || this.store.ready === false) return;
+    const snapshotJson = JSON.stringify(docStore.getFullUSJ());
     const snapshotId = randomId();
     try {
-      await this.persistence.save(`${SNAPSHOT_PREFIX}${snapshotId}.json`, snapshotJson);
+      await this.store.saveSnapshot(snapshotId, JSON.parse(snapshotJson) as unknown);
     } catch {
       return;
     }
@@ -149,15 +162,10 @@ export class OperationJournal {
   async compact(options: { maxEntries: number; snapshotJson: string }): Promise<string | null> {
     if (this.entries.length <= options.maxEntries) return null;
     const snapshotId = randomId();
-    if (this.persistence?.ready) {
-      try {
-        await this.persistence.save(
-          `${SNAPSHOT_PREFIX}${snapshotId}.json`,
-          options.snapshotJson
-        );
-      } catch {
-        return null;
-      }
+    try {
+      await this.store.saveSnapshot(snapshotId, JSON.parse(options.snapshotJson) as unknown);
+    } catch {
+      return null;
     }
     const keep = Math.max(1, Math.floor(options.maxEntries / 2));
     this.entries = this.entries.slice(-keep);
@@ -169,90 +177,67 @@ export class OperationJournal {
    * Load folded USJ snapshot if the journal was compacted to a snapshot (entries may be empty).
    */
   async loadFoldedSnapshotUsj(): Promise<UsjDocument | null> {
-    if (!this.baseSnapshotId || !this.persistence?.ready) return null;
-    const raw = await this.persistence.load(`${SNAPSHOT_PREFIX}${this.baseSnapshotId}.json`);
-    if (typeof raw !== 'string') return null;
-    try {
-      return JSON.parse(raw) as UsjDocument;
-    } catch {
-      return null;
+    if (!this.baseSnapshotId) return null;
+    const data = await this.store.loadSnapshot(this.baseSnapshotId);
+    if (data === null || data === undefined) return null;
+    if (typeof data === 'object' && data !== null && (data as UsjDocument).type === 'USJ') {
+      return data as UsjDocument;
     }
+    return null;
   }
 
   /**
    * After {@link loadFromDisk}, if a folded snapshot exists and you need a single USJ base:
    * load snapshot, then replay {@link getAll} in sequence order (content ops).
    */
-  async hydrateDocumentStore(store: DocumentStore): Promise<void> {
+  async hydrateDocumentStore(docStore: DocumentStore): Promise<void> {
     const folded = await this.loadFoldedSnapshotUsj();
     if (folded) {
-      store.loadUSJ(folded);
+      docStore.loadUSJ(folded);
     }
     const ordered = [...this.entries].sort((a, b) => a.sequence - b.sequence);
     for (const e of ordered) {
       if (e.layer === 'content' && e.operations.length > 0) {
-        store.applyOperations(e.operations);
+        docStore.applyOperations(e.operations);
       }
     }
   }
 
   private async persistMeta(): Promise<void> {
-    if (!this.persistence?.ready) return;
     try {
       const meta: JournalMeta = {};
       if (this.baseSnapshotId) meta.baseSnapshotId = this.baseSnapshotId;
-      await this.persistence.save(META_KEY, JSON.stringify(meta));
+      await this.store.saveMeta(meta);
     } catch {
       /* ignore */
     }
   }
 
   private async persist(): Promise<void> {
-    if (!this.persistence?.ready) return;
     try {
-      await this.persistence.save(
-        `${KEY_PREFIX}entries.json`,
-        JSON.stringify(this.entries)
-      );
-      await this.persistence.save(
-        `${KEY_PREFIX}vector.json`,
-        JSON.stringify(this.vectorClock)
-      );
+      await this.store.saveEntries(this.entries);
+      await this.store.saveVectorClock(this.vectorClock);
     } catch {
       /* ignore */
     }
   }
 
   async loadFromDisk(): Promise<void> {
-    if (!this.persistence?.ready) return;
-    const metaRaw = await this.persistence.load(META_KEY);
-    if (typeof metaRaw === 'string') {
-      try {
-        const meta = JSON.parse(metaRaw) as JournalMeta;
-        if (meta.baseSnapshotId) this.baseSnapshotId = meta.baseSnapshotId;
-      } catch {
-        /* ignore */
+    const meta = await this.store.loadMeta();
+    if (meta?.baseSnapshotId) this.baseSnapshotId = meta.baseSnapshotId;
+
+    const loadedEntries = await this.store.loadEntries();
+    if (loadedEntries.length > 0) {
+      this.entries = loadedEntries;
+      for (const e of this.entries) {
+        this.vectorClock = mergeClocks(this.vectorClock, e.vectorClock);
+        this.seq = Math.max(this.seq, e.sequence);
       }
     }
-    const raw = await this.persistence.load(`${KEY_PREFIX}entries.json`);
-    if (typeof raw === 'string') {
-      try {
-        this.entries = JSON.parse(raw) as JournalEntry[];
-        for (const e of this.entries) {
-          this.vectorClock = mergeClocks(this.vectorClock, e.vectorClock);
-          this.seq = Math.max(this.seq, e.sequence);
-        }
-      } catch {
-        this.entries = [];
-      }
-    }
-    const vraw = await this.persistence.load(`${KEY_PREFIX}vector.json`);
-    if (typeof vraw === 'string') {
-      try {
-        this.vectorClock = mergeClocks(this.vectorClock, JSON.parse(vraw) as Record<string, number>);
-      } catch {
-        /* ignore */
-      }
+
+    const fromStore = await this.store.loadVectorClock();
+    if (Object.keys(fromStore).length > 0) {
+      this.vectorClock = mergeClocks(this.vectorClock, fromStore);
     }
   }
 }

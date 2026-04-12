@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.tsup.json",
+  "compilerOptions": {
+    "lib": ["ES2020", "DOM"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "baseUrl": "."
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}

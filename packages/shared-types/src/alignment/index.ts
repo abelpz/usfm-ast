@@ -32,6 +32,34 @@ export interface AlignmentGroup {
 /** Alignment groups keyed by verse reference, e.g. `"TIT 3:1"` */
 export type AlignmentMap = Record<string, AlignmentGroup[]>;
 
+/** Canonical external alignment file discriminator */
+export type AlignmentDocumentFormat = 'usfm-alignment';
+
+/** Schema version for {@link AlignmentDocument} JSON files */
+export type AlignmentDocumentSchemaVersion = '1.0';
+
+/** Book/document identity line (typically from `\\id`) for translation or source */
+export interface AlignmentDocumentParty {
+  id: string;
+  version?: string;
+  hash?: string;
+}
+
+/**
+ * Standalone alignment artifact: one translation aligned to one source.
+ * `verses` matches {@link AlignmentMap}; use with `rebuildAlignedUsj` / `stripAlignments`.
+ */
+export interface AlignmentDocument {
+  format: AlignmentDocumentFormat;
+  version: AlignmentDocumentSchemaVersion;
+  translation: AlignmentDocumentParty;
+  source: AlignmentDocumentParty;
+  /** ISO 8601 timestamps */
+  created: string;
+  updated: string;
+  verses: AlignmentMap;
+}
+
 /**
  * Document shape for content editing: same as USJ but alignment milestones stripped
  * and `\\w` wrappers merged into plain text strings.

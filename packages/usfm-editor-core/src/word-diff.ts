@@ -8,6 +8,19 @@ export function tokenizeWords(line: string): string[] {
 }
 
 /**
+ * Strip leading/trailing characters that are not letters, numbers, or apostrophe (incl. curly apostrophe).
+ * Same rule as word cores in `rebuild-aligned.ts` so "Pablo," ↔ "Pablo" and "Παῦλος," ↔ "Παῦλος" align.
+ */
+export function normalizeWordForAlignmentMatch(s: string): string {
+  return s.replace(/^[^\p{L}\p{N}'\u2019]+|[^\p{L}\p{N}'\u2019]+$/gu, '');
+}
+
+/** Compare gateway / reference word surfaces for alignment (ignores attached punctuation). */
+export function alignmentWordSurfacesEqual(a: string, b: string): boolean {
+  return normalizeWordForAlignmentMatch(a) === normalizeWordForAlignmentMatch(b);
+}
+
+/**
  * Longest common subsequence on word arrays: which old/new indices participate in one LCS, and
  * old-index → new-index for matched words.
  */

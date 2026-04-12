@@ -9,7 +9,11 @@ On **push** to `main` and **pull requests** targeting `main`:
 1. Checkout on Ubuntu
 2. **Bun** `1.3.3` (see root `packageManager`) + **Node** `>=18` for tooling where required (`engines`)
 3. `bun install --frozen-lockfile`
-4. `bun run lint` → `bun run check-types` → `bun run test` → `bun run examples:check` → `bun run build` (orchestrated by **Turborepo** — [`turbo.json`](../turbo.json))
+4. `bun run lint` → `bun run check-types` → `bun run test` → `bun run examples:check` → `bun run build` → **`bunx jest tests/integration`** (cross-package checks; see [`tests/README.md`](../tests/README.md))
+
+Local-only: `bun run test:integration` runs a filtered build for `@usfm-tools/editor-adapters` then the same Jest command.
+
+**Turborepo `test`:** `dependsOn: ["^build"]` runs **dependency** `build` tasks before each package’s tests. Package `test` scripts no longer chain redundant `bun run build` / `cd ../other-package && build`, so parallel test tasks do not compete to `clean` the same `dist/` folders.
 
 The **Test** step sets `RUN_RELAY_POOL_TESTS=1` so `@usfm-tools/relay-server` Vitest integration tests run on Linux (`vitest-pool-workers` + Durable Objects). See [`docs/21-collab-relay-server.md`](./21-collab-relay-server.md).
 

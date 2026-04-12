@@ -1,8 +1,8 @@
 import type { DocumentStore } from '../document-store';
 import type { Operation } from '../operations';
-import { transformOpLists } from '../ot-transform';
 
 import { OperationJournal } from './operation-journal';
+import { OTMergeStrategy, type MergeStrategy } from './merge-strategy';
 import { DefaultSyncEngine } from './sync-engine';
 import type { ChapterConflict, JournalEntry, SyncResult } from './types';
 
@@ -26,19 +26,23 @@ export function contentOnly(ops: Operation[]): Operation[] {
  * {@link transformOpLists}. Alignment entries are recorded locally but not auto-merged (conflicts
  * surface via {@link ChapterConflict} when detection is added).
  */
+export interface JournalMergeSyncEngineContext {
+  journal: OperationJournal;
+  store: DocumentStore;
+  transport?: JournalRemoteTransport;
+  /** Uncommitted content ops per chapter (OT against remote). */
+  getLocalPending?: (chapter: number) => Operation[];
+  mergeStrategy?: MergeStrategy;
+  onConflict?: (conflict: ChapterConflict) => 'accept-local' | 'accept-remote' | 'manual';
+}
+
 export class JournalMergeSyncEngine extends DefaultSyncEngine {
   private lastPushFailed = false;
+  private readonly mergeStrategy: MergeStrategy;
 
-  constructor(
-    private readonly ctx: {
-      journal: OperationJournal;
-      store: DocumentStore;
-      transport?: JournalRemoteTransport;
-      /** Uncommitted content ops per chapter (OT against remote). */
-      getLocalPending?: (chapter: number) => Operation[];
-    }
-  ) {
+  constructor(private readonly ctx: JournalMergeSyncEngineContext) {
     super();
+    this.mergeStrategy = ctx.mergeStrategy ?? new OTMergeStrategy();
     this.onConnectivityChange((online) => {
       if (online && this.lastPushFailed) {
         void this.push();
@@ -65,20 +69,33 @@ export class JournalMergeSyncEngine extends DefaultSyncEngine {
 
     const localPending = contentOnly(this.ctx.getLocalPending?.(entry.chapter) ?? []);
     const remoteOps = contentOnly(entry.operations);
-    const { serverPrime, clientPrime } = transformOpLists(localPending, remoteOps);
+    const { serverPrime, clientPrime } = this.mergeStrategy.merge(localPending, remoteOps);
 
     try {
       this.ctx.store.applyOperations(serverPrime);
     } catch {
-      return {
-        conflict: {
-          chapter: entry.chapter,
-          layer: 'content',
-          localOps: localPending,
-          remoteOps,
-        },
-        clientPrime,
+      const conflict: ChapterConflict = {
+        chapter: entry.chapter,
+        layer: 'content',
+        localOps: localPending,
+        remoteOps,
       };
+      const onConflict = this.ctx.onConflict;
+      if (onConflict) {
+        const decision = onConflict(conflict);
+        if (decision === 'accept-local') {
+          return { conflict: null, clientPrime: localPending };
+        }
+        if (decision === 'accept-remote') {
+          try {
+            this.ctx.store.applyOperations(remoteOps);
+            return { conflict: null, clientPrime: [] };
+          } catch {
+            return { conflict, clientPrime };
+          }
+        }
+      }
+      return { conflict, clientPrime };
     }
     return { conflict: null, clientPrime };
   }

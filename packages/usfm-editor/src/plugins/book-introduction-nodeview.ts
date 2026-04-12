@@ -30,7 +30,7 @@ export function createBookIntroductionNodeView(
     expandBtn.type = 'button';
     expandBtn.className = 'usfm-book-introduction-expand';
     expandBtn.setAttribute('aria-expanded', 'false');
-    expandBtn.textContent = 'Book introduction';
+    expandBtn.setAttribute('aria-label', chrome.bookIntroduction.titleText);
     expandBtn.hidden = true;
 
     const bi = chrome.bookIntroduction;

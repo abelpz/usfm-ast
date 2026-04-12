@@ -16,5 +16,6 @@ export interface ScripturePlugin {
 
 /** @see {@link ScriptureSession.getVisibleSections} */
 export type SectionId =
+  | { type: 'identification' }
   | { type: 'introduction' }
   | { type: 'chapter'; chapter: number };

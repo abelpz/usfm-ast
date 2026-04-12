@@ -3,7 +3,12 @@
  */
 
 import type { AlignmentGroup, AlignedWord } from '@usfm-tools/types';
-import { lcsWordAlignment, tokenizeWords } from './word-diff';
+import {
+  alignmentWordSurfacesEqual,
+  lcsWordAlignment,
+  normalizeWordForAlignmentMatch,
+  tokenizeWords,
+} from './word-diff';
 
 function occurrenceAt(words: string[], index: number): { occurrence: number; occurrences: number } {
   const w = words[index];
@@ -23,7 +28,9 @@ export function reconcileAlignments(
 ): AlignmentGroup[] {
   const ow = tokenizeWords(oldVerseText);
   const nw = tokenizeWords(newVerseText);
-  const { oldKept, pairing } = lcsWordAlignment(ow, nw);
+  const owNorm = ow.map((t) => normalizeWordForAlignmentMatch(t));
+  const nwNorm = nw.map((t) => normalizeWordForAlignmentMatch(t));
+  const { oldKept, pairing } = lcsWordAlignment(owNorm, nwNorm);
 
   if (ow.length === 0) {
     return groups.map((g) => ({
@@ -44,7 +51,7 @@ export function reconcileAlignments(
       const w = groups[gi].targets[ti].word;
       let oi = -1;
       for (let j = searchStart; j < ow.length; j++) {
-        if (ow[j] === w) {
+        if (alignmentWordSurfacesEqual(ow[j]!, w)) {
           oi = j;
           break;
         }

@@ -1,6 +1,7 @@
 /**
- * Keeps `book_introduction` collapsed when empty and the selection is outside;
- * expands when there is content or when the caret moves into a collapsed intro.
+ * Expands `book_introduction` when it gains content or when the caret enters a collapsed intro.
+ * Empty intros stay visible (no auto-collapse when the caret leaves) so paginated navigation
+ * always shows the title/body template.
  */
 
 import type { EditorState } from 'prosemirror-state';
@@ -44,11 +45,6 @@ export function bookIntroductionCollapsePlugin(): Plugin {
 
         if (!empty && node.attrs.collapsed) {
           tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: false });
-          changed = true;
-          return false;
-        }
-        if (empty && !node.attrs.collapsed && !inIntro) {
-          tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: true });
           changed = true;
           return false;
         }

@@ -11,9 +11,15 @@ import type { EditorState } from 'prosemirror-state';
 export type EditorSection = 'header' | 'book_titles' | 'book_introduction' | 'chapter';
 
 /**
- * Marker palette depth: **basic** (draft / minimal), **medium** (friendly labels), **advanced** (all USFM).
+ * Built-in marker palette depths: **basic** (draft / minimal), **medium** (friendly labels), **advanced** (all USFM).
  */
-export type EditorMode = 'basic' | 'medium' | 'advanced';
+export type BuiltinEditorMode = 'basic' | 'medium' | 'advanced';
+
+/**
+ * Marker palette mode id (built-in or custom). Unknown strings fall back to medium-style choices in
+ * {@link getMarkerChoicesForMode}.
+ */
+export type EditorMode = string;
 
 export interface MarkerChoice {
   marker: string;
@@ -46,6 +52,16 @@ export const BASIC_MARKERS: ContextAwareMarkerDef[] = [
       book_titles: 'mt',
       book_introduction: 'ip',
       chapter: 'p',
+    },
+  },
+  {
+    label: 'Heading',
+    category: 'Basic',
+    bySection: {
+      header: 'toc1',
+      book_titles: 'mt1',
+      book_introduction: 'is1',
+      chapter: 's1',
     },
   },
 ];
@@ -309,7 +325,7 @@ export function getSimplifiedMarkerChoices(section: EditorSection): MarkerChoice
 /**
  * Paragraph markers for the given UI mode and document section.
  */
-export function getMarkerChoicesForMode(section: EditorSection, mode: EditorMode): MarkerChoice[] {
+export function getMarkerChoicesForMode(section: EditorSection, mode: string): MarkerChoice[] {
   switch (mode) {
     case 'basic':
       return markerChoicesFromContextAware(BASIC_MARKERS, section);
@@ -320,6 +336,15 @@ export function getMarkerChoicesForMode(section: EditorSection, mode: EditorMode
     default:
       return getSimplifiedMarkerChoices(section);
   }
+}
+
+/** True if `marker` is allowed in `section` for the marker palette / validation tier `mode`. */
+export function isMarkerAllowedForSection(
+  marker: string,
+  section: EditorSection,
+  mode: EditorMode
+): boolean {
+  return getMarkerChoicesForMode(section, mode).some((c) => c.marker === marker);
 }
 
 /**

@@ -85,6 +85,27 @@ export class DocumentStore {
     return splitUsjByChapter(this.usj).filter((s) => s.chapter > 0).length;
   }
 
+  /**
+   * Largest `\\c` chapter number present (e.g. a lone chapter `\\c 21` yields 21).
+   * Use this for navigation / windowing bounds — not {@link getChapterCount}, which is how many
+   * chapter slices exist (often much smaller than the highest number).
+   */
+  getMaxChapterNumber(): number {
+    let max = 0;
+    for (const s of splitUsjByChapter(this.usj)) {
+      if (s.chapter > 0 && s.chapter > max) max = s.chapter;
+    }
+    return max;
+  }
+
+  /** First positive `\\c` chapter in document order, or `1` if none. */
+  getFirstChapterNumber(): number {
+    for (const s of splitUsjByChapter(this.usj)) {
+      if (s.chapter > 0) return s.chapter;
+    }
+    return 1;
+  }
+
   getChapter(chapter: number): ChapterSlice | undefined {
     return splitUsjByChapter(this.usj).find((s) => s.chapter === chapter);
   }
@@ -153,6 +174,144 @@ export class DocumentStore {
     const end = next ? this.usj.content.indexOf(next.nodes[0] as object) : this.usj.content.length;
     if (start < 0) return;
     this.usj.content.splice(start, Math.max(0, end - start), ...newNodes);
+  }
+
+  /**
+   * Replace an existing chapter slice, or insert `newNodes` in chapter order when the slice
+   * is new (e.g. after inserting `\\c` in the editor).
+   */
+  /**
+   * Remove a chapter slice and append its body (everything after the `\\c` node) to the end of
+   * the previous slice (chapter 0 intro or the prior chapter). Does nothing if the chapter is
+   * missing, is chapter 0, or has no previous slice.
+   */
+  mergeChapterIntoPrevious(chapter: number): boolean {
+    if (chapter <= 0) return false;
+    const slices = splitUsjByChapter(this.usj);
+    const idx = slices.findIndex((s) => s.chapter === chapter);
+    if (idx <= 0) return false;
+    const cur = slices[idx]!;
+    if (cur.chapter !== chapter) return false;
+    const prev = slices[idx - 1]!;
+    const body = cur.nodes.slice(1);
+    const nextSlice = slices[idx + 1];
+    const startCur = this.usj.content.indexOf(cur.nodes[0] as object);
+    if (startCur < 0) return false;
+    const endCur = nextSlice
+      ? this.usj.content.indexOf(nextSlice.nodes[0] as object)
+      : this.usj.content.length;
+    const lastPrev = prev.nodes[prev.nodes.length - 1] as object;
+    const insertBase = this.usj.content.indexOf(lastPrev);
+    if (insertBase < 0) return false;
+    this.usj.content.splice(startCur, Math.max(0, endCur - startCur));
+    const insertAt = this.usj.content.indexOf(lastPrev) + 1;
+    if (body.length > 0) {
+      this.usj.content.splice(insertAt, 0, ...body);
+    }
+    this.emitChange([], undefined);
+    return true;
+  }
+
+  /**
+   * Remove a chapter slice and all its body nodes entirely (no merge into previous).
+   * Returns false when the chapter is not found.
+   */
+  deleteChapterSlice(chapter: number): boolean {
+    const slices = splitUsjByChapter(this.usj);
+    const idx = slices.findIndex((s) => s.chapter === chapter);
+    if (idx < 0) return false;
+    const cur = slices[idx]!;
+    const start = this.usj.content.indexOf(cur.nodes[0] as object);
+    if (start < 0) return false;
+    const next = slices[idx + 1];
+    const end = next ? this.usj.content.indexOf(next.nodes[0] as object) : this.usj.content.length;
+    this.usj.content.splice(start, Math.max(0, end - start));
+    this.emitChange([], undefined);
+    return true;
+  }
+
+  /**
+   * Change a chapter's marker number and move its slice to canonical chapter order.
+   * Fails when `oldChapter` is missing, `newChapter` is not a finite integer ≥ 1, or a different
+   * chapter already uses `newChapter`.
+   */
+  relocateChapterNumber(oldChapter: number, newChapter: number): boolean {
+    if (!Number.isFinite(newChapter) || newChapter < 1 || oldChapter < 1) return false;
+    if (oldChapter === newChapter) return true;
+    if (!this.getChapter(oldChapter)) return false;
+    if (this.getChapter(newChapter)) return false;
+    const slices = splitUsjByChapter(this.usj);
+    const idx = slices.findIndex((s) => s.chapter === oldChapter);
+    if (idx < 0) return false;
+    const cur = slices[idx]!;
+    const newNodes = deepClone(cur.nodes) as unknown[];
+    const first = newNodes[0];
+    if (!first || typeof first !== 'object' || (first as { type?: string }).type !== 'chapter') {
+      return false;
+    }
+    (first as { number: string | number }).number = String(newChapter);
+    const nextAfterOld = slices[idx + 1];
+    const startOld = this.usj.content.indexOf(cur.nodes[0] as object);
+    if (startOld < 0) return false;
+    const endOld = nextAfterOld
+      ? this.usj.content.indexOf(nextAfterOld.nodes[0] as object)
+      : this.usj.content.length;
+    this.usj.content.splice(startOld, Math.max(0, endOld - startOld));
+    const slicesAfter = splitUsjByChapter(this.usj);
+    const insertBefore = slicesAfter.find((s) => s.chapter > newChapter);
+    if (insertBefore) {
+      const pos = this.usj.content.indexOf(insertBefore.nodes[0] as object);
+      if (pos >= 0) {
+        this.usj.content.splice(pos, 0, ...newNodes);
+      } else {
+        this.usj.content.push(...newNodes);
+      }
+    } else {
+      const positive = slicesAfter.filter((s) => s.chapter > 0);
+      if (positive.length === 0) {
+        this.usj.content.push(...newNodes);
+      } else {
+        const last = positive[positive.length - 1]!;
+        const lastNode = last.nodes[last.nodes.length - 1] as object;
+        const posAfter = this.usj.content.indexOf(lastNode);
+        if (posAfter < 0) {
+          this.usj.content.push(...newNodes);
+        } else {
+          this.usj.content.splice(posAfter + 1, 0, ...newNodes);
+        }
+      }
+    }
+    this.emitChange([], undefined);
+    return true;
+  }
+
+  upsertChapterNodes(chapter: number, newNodes: unknown[]): void {
+    const slices = splitUsjByChapter(this.usj);
+    if (slices.some((s) => s.chapter === chapter)) {
+      this.replaceChapterNodes(chapter, newNodes);
+      return;
+    }
+    const insertBefore = slices.find((s) => s.chapter > chapter);
+    if (insertBefore) {
+      const pos = this.usj.content.indexOf(insertBefore.nodes[0] as object);
+      if (pos >= 0) {
+        this.usj.content.splice(pos, 0, ...newNodes);
+        return;
+      }
+    }
+    const positive = slices.filter((s) => s.chapter > 0);
+    if (positive.length === 0) {
+      this.usj.content.push(...newNodes);
+      return;
+    }
+    const last = positive[positive.length - 1]!;
+    const lastNode = last.nodes[last.nodes.length - 1] as object;
+    const posAfter = this.usj.content.indexOf(lastNode);
+    if (posAfter < 0) {
+      this.usj.content.push(...newNodes);
+      return;
+    }
+    this.usj.content.splice(posAfter + 1, 0, ...newNodes);
   }
 
   /** Plan name for {@link replaceChapterNodes}. */

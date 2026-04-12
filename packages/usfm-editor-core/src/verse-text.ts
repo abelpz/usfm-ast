@@ -2,17 +2,20 @@
  * Collect verse `sid` → plain text for alignment reconciliation after content edits.
  */
 
+import { appendGatewayText } from './gateway-text-spacing';
 import { findVerseInlineNodes } from './verse-ref';
 
 function flattenInlineToText(nodes: unknown[]): string {
   let s = '';
   for (const n of nodes) {
-    if (typeof n === 'string') s += n;
-    else if (n && typeof n === 'object') {
+    if (typeof n === 'string') {
+      s = s.length === 0 ? n : appendGatewayText(s, n);
+    } else if (n && typeof n === 'object') {
       const o = n as Record<string, unknown>;
       const t = o.type;
       if ((t === 'char' || t === 'note') && Array.isArray(o.content)) {
-        s += flattenInlineToText(o.content as unknown[]);
+        const inner = flattenInlineToText(o.content as unknown[]);
+        s = s.length === 0 ? inner : appendGatewayText(s, inner);
       }
     }
   }

@@ -13,7 +13,11 @@ import { createBookNodeView } from './plugins/book-nodeview';
 import { bookIntroductionCollapsePlugin } from './plugins/book-introduction-collapse';
 import { createBookIntroductionNodeView } from './plugins/book-introduction-nodeview';
 import { createBookTitlesNodeView } from './plugins/book-titles-nodeview';
-import { createChapterNodeView, createChapterLabelNodeView } from './plugins/chapter-nodeview';
+import {
+  createChapterNodeView,
+  createChapterLabelNodeView,
+  type ChapterLabelHooks,
+} from './plugins/chapter-nodeview';
 import { createHeaderNodeView } from './plugins/header-nodeview';
 import { usfmHistory } from './plugins/history';
 import { usfmInputRules } from './plugins/input-rules';
@@ -45,13 +49,16 @@ export interface USFMEditorViewOptions
   attributes?: ConstructorParameters<typeof EditorView>[1]['attributes'];
 }
 
-function createNodeViewsPlugin(chrome: ResolvedUSFMChrome): Plugin {
+function createNodeViewsPlugin(
+  chrome: ResolvedUSFMChrome,
+  chapterLabelHooks?: ChapterLabelHooks
+): Plugin {
   return new Plugin({
     props: {
       nodeViews: {
         verse: createVerseNodeView(),
         chapter: createChapterNodeView(chrome),
-        chapter_label: createChapterLabelNodeView(),
+        chapter_label: createChapterLabelNodeView(chapterLabelHooks),
         header: createHeaderNodeView(chrome),
         book_titles: createBookTitlesNodeView(chrome),
         book_introduction: createBookIntroductionNodeView(chrome),
@@ -66,7 +73,12 @@ function createNodeViewsPlugin(chrome: ResolvedUSFMChrome): Plugin {
  */
 export function createUSFMPlugins(
   schema: typeof usfmSchema = usfmSchema,
-  options?: { extra?: Plugin[]; chrome?: ResolvedUSFMChrome; omitHistory?: boolean }
+  options?: {
+    extra?: Plugin[];
+    chrome?: ResolvedUSFMChrome;
+    omitHistory?: boolean;
+    chapterLabelHooks?: ChapterLabelHooks;
+  }
 ): Plugin[] {
   const chrome = options?.chrome ?? resolveUSFMChrome();
   const base = [
@@ -76,7 +88,7 @@ export function createUSFMPlugins(
     usfmInputRules(schema),
     verseNavKeymap(),
     usfmKeymap(),
-    createNodeViewsPlugin(chrome),
+    createNodeViewsPlugin(chrome, options?.chapterLabelHooks),
   ];
   return options?.extra ? base.concat(options.extra) : base;
 }
@@ -99,16 +111,29 @@ export function serializeToUSJ(state: EditorState, version = '3.1'): UsjDocument
   return pmDocumentToUsj(state.doc, version);
 }
 
-function mergeViewAttributes(
-  chrome: ResolvedUSFMChrome,
-  user?: USFMEditorViewOptions['attributes']
-): ConstructorParameters<typeof EditorView>[1]['attributes'] {
-  const base: Record<string, string> = {
-    class: 'ProseMirror',
+function resolvedChromeDomAttrs(chrome: ResolvedUSFMChrome): Record<string, string> {
+  return {
+    class: 'ProseMirror pm',
     'data-usfm-chrome': chrome.preset,
     'data-usfm-glyphs': chrome.markers.showGlyph ? 'true' : 'false',
     'data-usfm-theme': chrome.theme,
   };
+}
+
+/**
+ * Attributes for the ProseMirror root so theme tokens and sty-derived marker rules
+ * (`markers.css` under `.ProseMirror[data-usfm-theme]`) apply. Apps may set
+ * `data-usfm-theme` / `data-usfm-mode` on the same element after mount to match shell UI.
+ */
+export function usfmChromeDomAttributes(chrome?: USFMEditorChrome): Record<string, string> {
+  return resolvedChromeDomAttrs(resolveUSFMChrome(chrome));
+}
+
+function mergeViewAttributes(
+  chrome: ResolvedUSFMChrome,
+  user?: USFMEditorViewOptions['attributes']
+): ConstructorParameters<typeof EditorView>[1]['attributes'] {
+  const base = resolvedChromeDomAttrs(chrome);
   if (!user) return base;
   if (typeof user === 'function') {
     return (props) => {
@@ -144,3 +169,5 @@ export function createUSFMEditorView(
     attributes: mergeViewAttributes(chrome, attributes),
   });
 }
+
+export type { ChapterLabelCommitContext, ChapterLabelHooks } from './plugins/chapter-nodeview';

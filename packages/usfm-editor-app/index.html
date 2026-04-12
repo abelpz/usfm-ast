@@ -4,9 +4,34 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>USFM editor — usfm-tools</title>
+    <!-- First paint before JS/CSS: avoids a blank white viewport if the bundle is slow or tokens fail in older engines. -->
+    <style>
+      html {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        min-height: 100%;
+        min-height: 100dvh;
+        background: #fafafa;
+        color: #18181b;
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      #root {
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+      }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..600;1,14..32,400..600&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

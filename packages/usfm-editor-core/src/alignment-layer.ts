@@ -5,6 +5,8 @@
 
 import type { AlignedWord, AlignmentMap, EditableUSJ, OriginalWord } from '@usfm-tools/types';
 
+import { appendGatewayText } from './gateway-text-spacing';
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
 }
@@ -66,6 +68,16 @@ export function stripArray(
   const sources: OriginalWord[] = [];
   const targets: AlignedWord[] = [];
 
+  const pushGatewayFragment = (chunk: string) => {
+    if (!chunk) return;
+    const last = out[out.length - 1];
+    if (typeof last === 'string') {
+      out[out.length - 1] = appendGatewayText(last, chunk);
+    } else {
+      out.push(chunk);
+    }
+  };
+
   const flushGroup = () => {
     if (!ctx.verseRef) {
       sources.length = 0;
@@ -85,7 +97,7 @@ export function stripArray(
 
   for (const item of nodes) {
     if (typeof item === 'string') {
-      out.push(item);
+      pushGatewayFragment(item);
       continue;
     }
     if (!isRecord(item)) {
@@ -121,7 +133,7 @@ export function stripArray(
       if (openZaln > 0) {
         targets.push(charToAlignedWord(o, text));
       }
-      out.push(text);
+      pushGatewayFragment(text);
       continue;
     }
 
