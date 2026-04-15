@@ -23,6 +23,8 @@ junit.xml
 .env
 .env.door43
 .env.door43.local
+.env.qa
+.env.qa.local
 .env.local
 .env.development.local
 .env.test.local

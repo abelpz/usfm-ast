@@ -62,6 +62,12 @@ export {
   markerPaletteKeymap,
   type MarkerPaletteKeymapOptions,
 } from './plugins/marker-palette-keymap';
+export {
+  markerShortcutKeymap,
+  SHORTCUT_SPECIAL,
+  type MarkerShortcut,
+  type ShortcutSpecial,
+} from './plugins/marker-shortcut-keymap';
 export { readonlyChapterGuardPlugin } from './plugins/readonly-guard';
 export { ScriptureCollabPlugin } from './plugins/scripture-collab';
 export { createAwarenessPlugin, type AwarenessPluginOptions } from './plugins/awareness';
@@ -77,9 +83,11 @@ export {
 } from './scripture-session';
 export {
   SourceTextSession,
+  type HelpsTokenClickHandler,
   type SourceTextSessionOptions,
   type ScriptureEditorWindowTarget,
 } from './source-text-session';
+export { helpsDecorationPluginKey, META_SET_HELPS_DECOS } from './helps-decoration';
 export type { SectionId } from './scripture-plugin';
 export type { ScripturePlugin } from './scripture-plugin';
 export type { SourceTextProvider } from '@usfm-tools/editor-core';

@@ -90,23 +90,44 @@ export class DcsGitSyncAdapter implements GitSyncAdapter {
   ): Promise<string> {
     void _ops;
     const usfm = convertUSJDocumentToUSFM(snapshotUsj ?? doc.getFullUSJ());
-    const file = await this.fetchFile(this.branch);
-    const body = usfm;
-    const sha = file?.sha ?? this.lastSha;
-    const payload = {
-      branch: this.branch,
-      content: encodeBase64Utf8(body),
-      message,
-      ...(sha ? { sha } : {}),
+    const commitSha = await this.putFile(usfm, message);
+    return commitSha;
+  }
+
+  /**
+   * PUT the file content to DCS, retrying once if the cached SHA is stale
+   * (409 conflict or 422 unprocessable — Gitea returns 422 on SHA mismatch).
+   * Avoids a redundant GET on every sync by trusting {@link lastSha} after a
+   * successful read or prior commit.
+   */
+  private async putFile(usfm: string, message: string): Promise<string> {
+    const attempt = async (sha: string | undefined): Promise<Response> => {
+      const payload = {
+        branch: this.branch,
+        content: encodeBase64Utf8(usfm),
+        message,
+        ...(sha ? { sha } : {}),
+      };
+      return fetch(this.api, {
+        method: 'PUT',
+        headers: this.headers,
+        body: JSON.stringify(payload),
+      });
     };
-    const res = await fetch(this.api, {
-      method: 'PUT',
-      headers: this.headers,
-      body: JSON.stringify(payload),
-    });
+
+    let res = await attempt(this.lastSha);
+
+    // SHA mismatch: re-fetch to get the current SHA and retry once.
+    if (res.status === 409 || res.status === 422) {
+      const file = await this.fetchFile(this.branch);
+      res = await attempt(file?.sha ?? this.lastSha);
+    }
+
     if (!res.ok) throw new Error(`DCS commit: ${res.status}`);
     const out = (await res.json()) as { commit?: { sha?: string }; content?: { sha?: string } };
-    return out?.commit?.sha ?? out?.content?.sha ?? 'unknown';
+    const newSha = out?.commit?.sha ?? out?.content?.sha;
+    if (newSha) this.lastSha = newSha;
+    return newSha ?? 'unknown';
   }
 
   async checkout(rev: string): Promise<string> {

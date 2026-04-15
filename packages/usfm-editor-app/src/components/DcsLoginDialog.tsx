@@ -1,6 +1,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -21,6 +22,9 @@ export function DcsLoginDialog({ open, onOpenChange, defaultHost, contextMessage
       <DialogContent className="sm:max-w-md" showCloseButton>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">Door43</DialogTitle>
+          <DialogDescription className="sr-only">
+            Sign in with your Door43 account to use API features.
+          </DialogDescription>
         </DialogHeader>
         <DcsLoginForm
           defaultHost={defaultHost}

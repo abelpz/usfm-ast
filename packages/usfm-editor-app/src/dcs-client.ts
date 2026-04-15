@@ -1,16 +1,23 @@
 /**
- * Thin Gitea / Door43 API client for the demo app.
- * Mirrors `@biblia-studio/door43` authenticated slices so usfm-ast builds without linking Biblia Studio.
+ * Door43 / Gitea API client for the editor app.
+ * Repo **contents** I/O is re-exported from `@usfm-tools/door43-rest` (shared with `@usfm-tools/editor-adapters`).
  */
+
+import * as door43Rest from '@usfm-tools/door43-rest';
 
 const DEFAULT_HOST = 'git.door43.org';
 
-/** Match `@biblia-studio/door43` — scoped Gitea requires `read:user` for `GET /api/v1/user`. */
+/**
+ * Match `@biblia-studio/door43` — scoped Gitea requires `read:user` for `GET /api/v1/user`.
+ * `write:organization` is required for `POST /api/v1/orgs`, `POST /api/v1/orgs/{org}/repos`, and
+ * related org APIs used by local project sync; without it those calls return **403**.
+ */
 const DEFAULT_TOKEN_SCOPES = [
   'read:user',
   'read:repository',
   'write:repository',
   'read:organization',
+  'write:organization',
 ] as const;
 
 function normalizeHost(host: string): string {
@@ -345,6 +352,62 @@ function catalogRepoOwnerAvatarUrl(raw: Record<string, unknown>): string | undef
   return u.trim();
 }
 
+/** Book code from a USFM ingredient path (`01-GEN.usfm`, `ingredients/GEN.usfm`, …). */
+function bookIdentifierFromUsfmPath(path: string): string {
+  const norm = path.replace(/\\/g, '/').trim();
+  const m = /(?:^|\/)(?:[0-9]{2}-)?([A-Za-z0-9]{2,5})\.(?:usfm|sfm)$/i.exec(norm);
+  return m ? m[1]!.toLowerCase() : '';
+}
+
+function catalogIngredientIdentifier(ing: Record<string, unknown>, path: string): string {
+  const idRaw = ing.identifier;
+  if (typeof idRaw === 'string' && idRaw.trim()) return idRaw.trim();
+  if (typeof idRaw === 'number' && Number.isFinite(idRaw)) return String(idRaw);
+  const scope = ing.scope;
+  if (isRecord(scope)) {
+    const keys = Object.keys(scope);
+    if (keys.length) return keys[0]!.trim().toLowerCase();
+  }
+  return bookIdentifierFromUsfmPath(path);
+}
+
+/**
+ * Normalize Door43 `ingredients` whether the API returns an array (usual) or a path-keyed object
+ * (Scripture-burrito style), and tolerate numeric `identifier` values.
+ */
+function parseCatalogIngredients(raw: Record<string, unknown>): CatalogIngredient[] {
+  const ingredientsRaw = raw.ingredients;
+  const ingredients: CatalogIngredient[] = [];
+  if (Array.isArray(ingredientsRaw)) {
+    for (const ing of ingredientsRaw) {
+      if (!isRecord(ing)) continue;
+      const path = typeof ing.path === 'string' ? ing.path.trim() : '';
+      if (!path) continue;
+      const identifier = catalogIngredientIdentifier(ing, path);
+      if (!identifier) continue;
+      const sort = typeof ing.sort === 'number' ? ing.sort : 0;
+      const title = typeof ing.title === 'string' ? ing.title : undefined;
+      ingredients.push({ identifier, path, sort, title });
+    }
+  } else if (isRecord(ingredientsRaw)) {
+    for (const [pathKey, ing] of Object.entries(ingredientsRaw)) {
+      if (!isRecord(ing)) continue;
+      const path =
+        typeof ing.path === 'string' && ing.path.trim()
+          ? ing.path.trim()
+          : pathKey.trim().replace(/^\.\//, '');
+      if (!path || !/\.(usfm|sfm)$/i.test(path)) continue;
+      const identifier = catalogIngredientIdentifier(ing, path);
+      if (!identifier) continue;
+      const sort = typeof ing.sort === 'number' ? ing.sort : 0;
+      const title = typeof ing.title === 'string' ? ing.title : undefined;
+      ingredients.push({ identifier, path, sort, title });
+    }
+  }
+  ingredients.sort((a, b) => a.sort - b.sort);
+  return ingredients;
+}
+
 function mapCatalogEntry(raw: unknown): CatalogEntry | null {
   if (!isRecord(raw)) return null;
   const fullName = typeof raw.full_name === 'string' ? raw.full_name.trim() : '';
@@ -355,23 +418,11 @@ function mapCatalogEntry(raw: unknown): CatalogEntry | null {
   if (!ownerLogin || !repoName) return null;
   const name = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim() : repoName;
   const rel = raw.release;
-  if (!isRecord(rel)) return null;
-  const tagName = typeof rel.tag_name === 'string' ? rel.tag_name.trim() : '';
+  let tagName = '';
+  if (isRecord(rel) && typeof rel.tag_name === 'string') tagName = rel.tag_name.trim();
+  if (!tagName && typeof raw.branch_or_tag_name === 'string') tagName = raw.branch_or_tag_name.trim();
   if (!tagName) return null;
-  const ingredientsRaw = raw.ingredients;
-  const ingredients: CatalogIngredient[] = [];
-  if (Array.isArray(ingredientsRaw)) {
-    for (const ing of ingredientsRaw) {
-      if (!isRecord(ing)) continue;
-      const identifier = typeof ing.identifier === 'string' ? ing.identifier.trim() : '';
-      const path = typeof ing.path === 'string' ? ing.path.trim() : '';
-      if (!identifier || !path) continue;
-      const sort = typeof ing.sort === 'number' ? ing.sort : 0;
-      const title = typeof ing.title === 'string' ? ing.title : undefined;
-      ingredients.push({ identifier, path, sort, title });
-    }
-    ingredients.sort((a, b) => a.sort - b.sort);
-  }
+  const ingredients = parseCatalogIngredients(raw);
   let defaultBranch: string | undefined;
   if (typeof raw.default_branch === 'string' && raw.default_branch.trim()) {
     defaultBranch = raw.default_branch.trim();
@@ -441,6 +492,34 @@ export async function searchCatalogSources(options: {
   }
 
   return all;
+}
+
+/**
+ * Full catalog metadata for one published release (includes `ingredients` when search results are slim).
+ * `GET /api/v1/catalog/entry/{owner}/{repo}/{tag}`
+ */
+export async function fetchCatalogSourceEntry(options: {
+  host?: string;
+  owner: string;
+  repo: string;
+  tag: string;
+}): Promise<CatalogEntry | null> {
+  const host = options.host ?? DEFAULT_HOST;
+  const base = apiV1(host);
+  const owner = encodeURIComponent(options.owner.trim());
+  const repo = encodeURIComponent(options.repo.trim());
+  const tag = encodeURIComponent(options.tag.trim());
+  const res = await fetch(`${base}/catalog/entry/${owner}/${repo}/${tag}`, {
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  });
+  if (!res.ok) return null;
+  const body: unknown = await res.json();
+  const raw =
+    isRecord(body) && body.data !== undefined
+      ? ((Array.isArray(body.data) ? body.data[0] : body.data) as unknown)
+      : body;
+  return mapCatalogEntry(raw);
 }
 
 /** Gitea caps vary; 100 keeps round-trips low while staying within typical limits. */
@@ -583,15 +662,161 @@ export async function createUserRepo(options: {
   description?: string;
   private?: boolean;
   autoInit?: boolean;
+  /** Gitea default branch for `auto_init`. Defaults to `main` (Scripture Burritos). */
+  defaultBranch?: string;
 }): Promise<Door43RepoRow> {
+  const info = await door43Rest.createUserRepo({
+    host: options.host,
+    token: options.token,
+    name: options.name,
+    description: options.description,
+    private: options.private,
+    autoInit: options.autoInit,
+    defaultBranch: options.defaultBranch,
+  });
+  return {
+    fullName: info.fullName,
+    name: info.name,
+    htmlUrl: info.htmlUrl,
+    owner: info.owner,
+    defaultBranch: info.defaultBranch,
+    empty: info.empty,
+  };
+}
+
+export async function createOrgRepo(options: {
+  host?: string;
+  token: string;
+  org: string;
+  name: string;
+  description?: string;
+  private?: boolean;
+  autoInit?: boolean;
+  /** Gitea default branch for `auto_init`. Defaults to `main` (Scripture Burritos). */
+  defaultBranch?: string;
+}): Promise<Door43RepoRow> {
+  const info = await door43Rest.createOrgRepo({
+    host: options.host,
+    token: options.token,
+    org: options.org,
+    name: options.name,
+    description: options.description,
+    private: options.private,
+    autoInit: options.autoInit,
+    defaultBranch: options.defaultBranch,
+  });
+  return {
+    fullName: info.fullName,
+    name: info.name,
+    htmlUrl: info.htmlUrl,
+    owner: info.owner,
+    defaultBranch: info.defaultBranch,
+    empty: info.empty,
+  };
+}
+
+export type Door43RepoInfo = {
+  fullName: string;
+  name: string;
+  htmlUrl: string;
+  owner: string;
+  defaultBranch: string;
+  empty?: boolean;
+};
+
+function mapRepoInfoFromJson(raw: unknown): Door43RepoInfo | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const o = raw as Record<string, unknown>;
+  const fullName = typeof o.full_name === 'string' ? o.full_name.trim() : '';
+  const name = typeof o.name === 'string' ? o.name.trim() : '';
+  const htmlUrl = typeof o.html_url === 'string' ? o.html_url.trim() : '';
+  let owner = '';
+  if (typeof o.owner === 'object' && o.owner !== null) {
+    const login = (o.owner as { login?: unknown }).login;
+    if (typeof login === 'string') owner = login.trim();
+  }
+  const defaultBranch =
+    typeof o.default_branch === 'string' && o.default_branch.trim()
+      ? o.default_branch.trim()
+      : door43Rest.DOOR43_LEGACY_DEFAULT_BRANCH;
+  if (!fullName || !name || !htmlUrl) return null;
+  const empty = typeof o.empty === 'boolean' ? o.empty : undefined;
+  return { fullName, name, htmlUrl, owner, defaultBranch, empty };
+}
+
+/** Returns repository metadata, or `null` if not found (404). */
+export async function getRepoInfo(options: {
+  host?: string;
+  token?: string;
+  owner: string;
+  repo: string;
+}): Promise<Door43RepoInfo | null> {
+  const host = options.host ?? DEFAULT_HOST;
+  const enc = encodeURIComponent;
+  const url = `${apiV1(host)}/repos/${enc(options.owner)}/${enc(options.repo)}`;
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (options.token) headers.Authorization = `token ${options.token}`;
+  const res = await fetch(url, { headers, cache: 'no-store' });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`DCS get repo ${res.status}: ${res.statusText}`);
+  return mapRepoInfoFromJson(await res.json());
+}
+
+export type Door43OrgSummary = { username: string; fullName?: string };
+
+export async function listUserOrgs(options: {
+  host?: string;
+  token: string;
+  pageSize?: number;
+  maxPages?: number;
+}): Promise<Door43OrgSummary[]> {
+  const host = options.host ?? DEFAULT_HOST;
+  const limit = Math.min(Math.max(options.pageSize ?? 100, 1), 100);
+  const maxPages = Math.min(Math.max(options.maxPages ?? 40, 1), 80);
+  const out: Door43OrgSummary[] = [];
+  const seen = new Set<string>();
+
+  for (let page = 1; page <= maxPages; page += 1) {
+    const u = new URL(`${apiV1(host)}/user/orgs`);
+    u.searchParams.set('page', String(page));
+    u.searchParams.set('limit', String(limit));
+    const res = await fetch(u.toString(), {
+      headers: { Authorization: `token ${options.token}`, Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`DCS list orgs ${res.status}: ${res.statusText}`);
+    const body: unknown = await res.json();
+    if (!Array.isArray(body)) throw new Error('Invalid user/orgs response');
+    for (const raw of body) {
+      if (typeof raw !== 'object' || raw === null) continue;
+      const o = raw as Record<string, unknown>;
+      const username = typeof o.username === 'string' ? o.username.trim() : '';
+      if (!username || seen.has(username)) continue;
+      seen.add(username);
+      const fullName = typeof o.full_name === 'string' ? o.full_name.trim() : undefined;
+      out.push({ username, fullName });
+    }
+    if (body.length < limit) break;
+  }
+  return out.sort((a, b) => a.username.localeCompare(b.username));
+}
+
+export async function createOrganization(options: {
+  host?: string;
+  token: string;
+  username: string;
+  fullName?: string;
+  description?: string;
+  visibility?: 'public' | 'limited' | 'private';
+}): Promise<Door43OrgSummary> {
   const host = options.host ?? DEFAULT_HOST;
   const body: Record<string, unknown> = {
-    name: options.name,
-    private: options.private ?? false,
-    auto_init: options.autoInit ?? true,
+    username: options.username,
+    visibility: options.visibility ?? 'public',
   };
+  if (options.fullName) body.full_name = options.fullName;
   if (options.description) body.description = options.description;
-  const res = await fetch(`${apiV1(host)}/user/repos`, {
+  const res = await fetch(`${apiV1(host)}/orgs`, {
     method: 'POST',
     headers: {
       Authorization: `token ${options.token}`,
@@ -599,144 +824,23 @@ export async function createUserRepo(options: {
       Accept: 'application/json',
     },
     body: JSON.stringify(body),
+    cache: 'no-store',
   });
-  if (!res.ok) throw new Error(`DCS create repo ${res.status}: ${res.statusText}`);
-  return mapRepo(await res.json());
+  if (!res.ok) throw new Error(`DCS create org ${res.status}: ${res.statusText}`);
+  const raw: unknown = await res.json();
+  if (typeof raw !== 'object' || raw === null) throw new Error('Invalid create org response');
+  const o = raw as Record<string, unknown>;
+  const username = typeof o.username === 'string' ? o.username.trim() : '';
+  if (!username) throw new Error('Invalid create org response');
+  const fullName = typeof o.full_name === 'string' ? o.full_name.trim() : undefined;
+  return { username, fullName };
 }
 
-export type Door43ContentEntry = {
-  name: string;
-  path: string;
-  type: 'file' | 'dir';
-  sha: string;
-  size: number;
-};
-
-function contentsUrl(
-  base: string,
-  owner: string,
-  repo: string,
-  path: string,
-  ref?: string,
-): string {
-  const enc = encodeURIComponent;
-  const seg = path
-    .split('/')
-    .filter(Boolean)
-    .map(enc)
-    .join('/');
-  const suffix = seg ? `/${seg}` : '';
-  const u = new URL(`${base}/repos/${enc(owner)}/${enc(repo)}/contents${suffix}`);
-  if (ref) u.searchParams.set('ref', ref);
-  return u.toString();
-}
-
-export async function listRepoContents(options: {
-  host?: string;
-  token?: string;
-  owner: string;
-  repo: string;
-  path?: string;
-  ref?: string;
-}): Promise<Door43ContentEntry[]> {
-  const host = options.host ?? DEFAULT_HOST;
-  const base = apiV1(host);
-  const url = contentsUrl(base, options.owner, options.repo, options.path ?? '', options.ref);
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  if (options.token) headers.Authorization = `token ${options.token}`;
-  const res = await fetch(url, { headers, cache: 'no-store' });
-  if (!res.ok) throw new Error(`DCS list contents ${res.status}: ${res.statusText}`);
-  const body: unknown = await res.json();
-  if (Array.isArray(body)) {
-    return body.map((item) => {
-      const o = item as Record<string, unknown>;
-      const name = o.name;
-      const path = o.path;
-      const type = o.type;
-      const sha = o.sha;
-      if (typeof name !== 'string' || typeof path !== 'string' || typeof sha !== 'string') {
-        throw new Error('Invalid content row');
-      }
-      if (type !== 'file' && type !== 'dir') throw new Error('Invalid content type');
-      return {
-        name,
-        path,
-        type,
-        sha,
-        size: typeof o.size === 'number' ? o.size : 0,
-      };
-    });
-  }
-  if (typeof body === 'object' && body !== null) {
-    const o = body as Record<string, unknown>;
-    const name = o.name;
-    const path = o.path;
-    const type = o.type;
-    const sha = o.sha;
-    if (
-      typeof name === 'string' &&
-      typeof path === 'string' &&
-      typeof sha === 'string' &&
-      (type === 'file' || type === 'dir')
-    ) {
-      return [
-        {
-          name,
-          path,
-          type,
-          sha,
-          size: typeof o.size === 'number' ? o.size : 0,
-        },
-      ];
-    }
-  }
-  throw new Error('Invalid contents response');
-}
-
-export async function getFileContent(options: {
-  host?: string;
-  token?: string;
-  owner: string;
-  repo: string;
-  path: string;
-  ref?: string;
-}): Promise<{ content: string; sha: string; name: string; path: string }> {
-  const host = options.host ?? DEFAULT_HOST;
-  const base = apiV1(host);
-  const url = contentsUrl(base, options.owner, options.repo, options.path, options.ref);
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  if (options.token) headers.Authorization = `token ${options.token}`;
-  const res = await fetch(url, { headers, cache: 'no-store' });
-  if (!res.ok) throw new Error(`DCS get file ${res.status}: ${res.statusText}`);
-  const o = (await res.json()) as Record<string, unknown>;
-  if (o.type !== 'file') throw new Error('Path is not a file');
-  const name = o.name;
-  const path = o.path;
-  const sha = o.sha;
-  const content = o.content;
-  const encoding = o.encoding;
-  if (
-    typeof name !== 'string' ||
-    typeof path !== 'string' ||
-    typeof sha !== 'string' ||
-    typeof content !== 'string' ||
-    encoding !== 'base64'
-  ) {
-    throw new Error('Invalid file response');
-  }
-  const b64 = content.replace(/\s/g, '');
-  let text: string;
-  if (typeof Buffer !== 'undefined') {
-    text = Buffer.from(b64, 'base64').toString('utf8');
-  } else {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    text = new TextDecoder('utf-8').decode(bytes);
-  }
-  return { content: text, sha, name, path };
-}
-
+/**
+ * Revoke a PAT via Gitea. Often returns **403** when the same token is used to authorize the
+ * request (Door43 policy). Prefer clearing local credentials in the app; users can revoke the
+ * token under Door43 → Settings → Applications.
+ */
 export async function deleteToken(options: {
   host?: string;
   username: string;
@@ -751,7 +855,22 @@ export async function deleteToken(options: {
     method: 'DELETE',
     headers: { Authorization: `token ${options.token}`, Accept: 'application/json' },
   });
-  if (!res.ok && res.status !== 204) {
-    throw new Error(`DCS delete token ${res.status}: ${res.statusText}`);
-  }
+  if (res.ok || res.status === 204) return;
+  if (res.status === 401 || res.status === 403 || res.status === 404) return;
+  throw new Error(`DCS delete token ${res.status}: ${res.statusText}`);
 }
+
+export const listRepoContents = door43Rest.listRepoContents;
+export const getFileContent = door43Rest.getFileContent;
+export const createOrUpdateRepoFile = door43Rest.createOrUpdateRepoFile;
+export const deleteRepoFile = door43Rest.deleteRepoFile;
+
+export type {
+  Door43ContentEntry,
+  Door43FileContent,
+  ListRepoContentsOptions,
+  GetFileContentOptions,
+  CreateOrUpdateRepoFileOptions,
+  DeleteRepoFileOptions,
+  Door43ContentsWriteResult,
+} from '@usfm-tools/door43-rest';

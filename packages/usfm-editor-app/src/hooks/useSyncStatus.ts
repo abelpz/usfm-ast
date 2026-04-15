@@ -12,7 +12,16 @@ export function useSyncStatus(getSnapshot: () => SyncStatusSnapshot, pollMs = 20
   const [snap, setSnap] = useState<SyncStatusSnapshot>(() => getSnapshot());
 
   const update = useCallback(() => {
-    setSnap(getSnapshot());
+    setSnap((prev) => {
+      const next = getSnapshot();
+      if (
+        prev.state === next.state &&
+        prev.peerCount === next.peerCount &&
+        prev.detail === next.detail
+      )
+        return prev;
+      return next;
+    });
   }, [getSnapshot]);
 
   useEffect(() => {

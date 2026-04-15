@@ -1,0 +1,36 @@
+{
+  "name": "@usfm-tools/door43-rest",
+  "version": "0.1.0",
+  "description": "Minimal Gitea/Door43 REST client: repo contents list/read/create/update/delete (no auth helpers)",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "bun run clean && tsc --build",
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "node -e \"console.log('no tests')\""
+  },
+  "keywords": ["door43", "gitea", "dcs"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abelpz/usfm-ast.git",
+    "directory": "packages/usfm-door43-rest"
+  },
+  "publishConfig": { "access": "public" },
+  "devDependencies": {
+    "rimraf": "^5.0.0",
+    "typescript": "5.9.3"
+  }
+}

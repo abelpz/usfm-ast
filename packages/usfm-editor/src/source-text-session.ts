@@ -13,11 +13,18 @@ import {
   type SourceTextProvider,
   type UsjDocument,
 } from '@usfm-tools/editor-core';
+import type { HelpEntry } from '@usfm-tools/types';
 import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 
 import { createUSFMPlugins, usfmChromeDomAttributes } from './editor';
 import { resolveUSFMChrome, type USFMEditorChrome } from './chrome';
+import {
+  buildHelpsDecorationSet,
+  createHelpsDecorationPlugin,
+  META_SET_HELPS_DECOS,
+  type HelpsTokenClickHandler,
+} from './helps-decoration';
 import { usfmSchema } from './schema';
 import {
   chapterSubsetToPm,
@@ -50,6 +57,8 @@ export type ScriptureEditorWindowTarget = {
   isIntroductionVisible(): boolean;
 };
 
+export type { HelpsTokenClickHandler } from './helps-decoration';
+
 /**
  * Wraps a non-editable ProseMirror view for displaying a source/reference text.
  * Accepts content from any {@link SourceTextProvider} or directly via
@@ -64,6 +73,9 @@ export class SourceTextSession {
   private provider: SourceTextProvider | null = null;
   private loaded = false;
   private readonly loadListeners: Array<() => void> = [];
+  private lastHelpsTwl: HelpEntry[] = [];
+  private lastHelpsTn: HelpEntry[] = [];
+  private onHelpsTokenClick: HelpsTokenClickHandler | null = null;
 
   constructor(
     place: ConstructorParameters<typeof EditorView>[0],
@@ -79,7 +91,12 @@ export class SourceTextSession {
     this.store = new DocumentStore({ silentConsole: true });
 
     const chrome = resolveUSFMChrome(options.chrome ?? { preset: 'minimal' });
-    const plugins = createUSFMPlugins(usfmSchema, { chrome, omitHistory: true });
+    const helpsPlugin = createHelpsDecorationPlugin(
+      () => this.store,
+      () => ({ twl: this.lastHelpsTwl, tn: this.lastHelpsTn }),
+      () => this.onHelpsTokenClick,
+    );
+    const plugins = createUSFMPlugins(usfmSchema, { chrome, omitHistory: true, extra: [helpsPlugin] });
 
     this.contentView = new EditorView(place, {
       state: EditorState.create({
@@ -189,6 +206,28 @@ export class SourceTextSession {
     return this.provider;
   }
 
+  /**
+   * Highlight TWL/TN matches in the reference text using inline decorations.
+   * Pass empty arrays to clear.
+   */
+  setHelpsAnnotations(twl: HelpEntry[], tn: HelpEntry[]): void {
+    this.lastHelpsTwl = twl;
+    this.lastHelpsTn = tn;
+    this._dispatchHelpsDecorations();
+  }
+
+  /** Remove all help highlights. */
+  clearHelpsAnnotations(): void {
+    this.lastHelpsTwl = [];
+    this.lastHelpsTn = [];
+    this._dispatchHelpsDecorations();
+  }
+
+  /** Fired when the user clicks an underlined span (decoration with `data-help-ids`). */
+  setOnHelpsTokenClick(handler: HelpsTokenClickHandler | null): void {
+    this.onHelpsTokenClick = handler;
+  }
+
   /** Subscribe to load events. Returns an unsubscribe function. */
   onLoad(fn: () => void): () => void {
     this.loadListeners.push(fn);
@@ -247,5 +286,13 @@ export class SourceTextSession {
       plugins: this.contentView.state.plugins,
     });
     this.contentView.updateState(state);
+    this._dispatchHelpsDecorations();
+  }
+
+  private _dispatchHelpsDecorations(): void {
+    if (!this.loaded) return;
+    const { state } = this.contentView;
+    const deco = buildHelpsDecorationSet(state.doc, this.store, this.lastHelpsTwl, this.lastHelpsTn);
+    this.contentView.dispatch(state.tr.setMeta(META_SET_HELPS_DECOS, deco));
   }
 }

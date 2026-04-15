@@ -13,6 +13,22 @@ function extensionOf(name: string): string {
   return name.split('.').pop()?.toLowerCase() ?? '';
 }
 
+/**
+ * Decode Gitea Contents API `content` (base64) as UTF-8.
+ * Raw `atob()` treats each byte as a Latin-1 code unit, corrupting UTF-8 (mojibake in UI,
+ * broken alignment / helps matching).
+ */
+function decodeBase64Utf8(b64: string): string {
+  const cleaned = b64.replace(/\s/g, '');
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(cleaned, 'base64').toString('utf8');
+  }
+  const binary = atob(cleaned);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
 /** Parse raw text to a USJ document given an inferred format. */
 async function parseToUsj(text: string, ext: string): Promise<UsjDocument> {
   if (ext === 'usj' || ext === 'json') {
@@ -55,21 +71,41 @@ export interface DcsSourceTextOptions {
 }
 
 /**
+ * Extract a BCP 47 language code from a DCS repository name.
+ * DCS repos follow the convention `{lang}_{resourceType}`, e.g.:
+ *   `es-419_glt` → `es-419`, `en_ult` → `en`, `kbt-bali_tit` → `kbt-bali`.
+ */
+export function extractLangFromDcsRepo(repo: string): string | undefined {
+  const underscoreIdx = repo.indexOf('_');
+  if (underscoreIdx <= 0) return undefined;
+  const candidate = repo.slice(0, underscoreIdx).toLowerCase();
+  // Basic BCP 47 shape: 2–8 primary letters + optional hyphen-subtags
+  if (/^[a-z]{2,8}(-[a-z0-9]{1,8})*$/.test(candidate)) return candidate;
+  return undefined;
+}
+
+/**
  * Fetches a scripture file from a DCS (Door43 Content Service / Gitea)
  * repository via the Gitea Contents API.
  */
 export class DcsSourceTextProvider implements SourceTextProvider {
   readonly id = 'dcs';
   readonly displayName: string;
+  /** BCP 47 language code inferred from the repository name (e.g. `es-419`). */
+  readonly langCode: string | undefined;
 
   constructor(private readonly options: DcsSourceTextOptions) {
     const { owner, repo, filePath } = options;
     this.displayName = `DCS: ${owner}/${repo}/${filePath}`;
+    this.langCode = extractLangFromDcsRepo(repo);
   }
 
   async load(): Promise<UsjDocument> {
     const { baseUrl, owner, repo, filePath, ref = 'master', token } = this.options;
-    const path = encodeURIComponent(filePath);
+    // Encode each path segment individually so that directory separators (/) are
+    // preserved as real path separators in the URL, not encoded as %2F (which
+    // causes Gitea to return 404 for files in subdirectories).
+    const path = filePath.split('/').map((seg) => encodeURIComponent(seg)).join('/');
     const url = `${baseUrl.replace(/\/$/, '')}/api/v1/repos/${owner}/${repo}/contents/${path}?ref=${encodeURIComponent(ref)}`;
 
     const headers: Record<string, string> = { Accept: 'application/json' };
@@ -87,8 +123,8 @@ export class DcsSourceTextProvider implements SourceTextProvider {
     }
     const json = (await resp.json()) as GiteaContents;
 
-    const b64 = (json.content ?? '').replace(/[\r\n]/g, '');
-    const decoded = atob(b64);
+    const b64 = json.content ?? '';
+    const decoded = decodeBase64Utf8(b64);
 
     const ext = extensionOf(json.name ?? filePath);
     return parseToUsj(decoded, ext);

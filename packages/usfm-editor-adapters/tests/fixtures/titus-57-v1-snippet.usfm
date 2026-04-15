@@ -1,0 +1,41 @@
+\id TIT EN_ULT en_English_ltr Wed Aug 24 2022 09:32:57 GMT-0400 (Eastern Daylight Time) tc
+\usfm 3.0
+\ide UTF-8
+\h Titus
+\toc1 The Letter of Paul to Titus
+\toc2 Titus
+\toc3 Tit
+\mt Titus
+
+\ts\*
+\c 1
+\p
+\v 1 \zaln-s |x-strong="G39720" x-lemma="Παῦλος" x-morph="Gr,N,,,,,NMS," x-occurrence="1" x-occurrences="1" x-content="Παῦλος"\*\w Paul|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*,
+\zaln-s |x-strong="G14010" x-lemma="δοῦλος" x-morph="Gr,N,,,,,NMS," x-occurrence="1" x-occurrences="1" x-content="δοῦλος"\*\w a|x-occurrence="1" x-occurrences="1"\w*
+\w servant|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s |x-strong="G23160" x-lemma="θεός" x-morph="Gr,N,,,,,GMS," x-occurrence="1" x-occurrences="2" x-content="Θεοῦ"\*\w of|x-occurrence="1" x-occurrences="5"\w*
+\w God|x-occurrence="1" x-occurrences="2"\w*\zaln-e\*
+\zaln-s |x-strong="G11610" x-lemma="δέ" x-morph="Gr,CC,,,,,,,," x-occurrence="1" x-occurrences="1" x-content="δὲ"\*\w and|x-occurrence="1" x-occurrences="2"\w*\zaln-e\*
+\zaln-s |x-strong="G06520" x-lemma="ἀπόστολος" x-morph="Gr,N,,,,,NMS," x-occurrence="1" x-occurrences="1" x-content="ἀπόστολος"\*\w an|x-occurrence="1" x-occurrences="1"\w*
+\w apostle|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s |x-strong="G24240" x-lemma="Ἰησοῦς" x-morph="Gr,N,,,,,GMS," x-occurrence="1" x-occurrences="1" x-content="Ἰησοῦ"\*\w of|x-occurrence="2" x-occurrences="5"\w*
+\w Jesus|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s |x-strong="G55470" x-lemma="χριστός" x-morph="Gr,N,,,,,GMS," x-occurrence="1" x-occurrences="1" x-content="Χριστοῦ"\*\w Christ|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*,
+\zaln-s |x-strong="G25960" x-lemma="κατά" x-morph="Gr,P,,,,,A,,," x-occurrence="1" x-occurrences="1" x-content="κατὰ"\*\w for|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s |x-strong="G41020" x-lemma="πίστις" x-morph="Gr,N,,,,,AFS," x-occurrence="1" x-occurrences="1" x-content="πίστιν"\*\w the|x-occurrence="1" x-occurrences="3"\w*
+\w faith|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s |x-strong="G15880" x-lemma="ἐκλεκτός" x-morph="Gr,NS,,,,GMP," x-occurrence="1" x-occurrences="1" x-content="ἐκλεκτῶν"\*\w of|x-occurrence="3" x-occurrences="5"\w*\zaln-e\*
+\zaln-s |x-strong="G15880" x-lemma="ἐκλεκτός" x-morph="Gr,NS,,,,GMP," x-occurrence="1" x-occurrences="1" x-content="ἐκλεκτῶν"\*\w the|x-occurrence="2" x-occurrences="3"\w*
+\w chosen|x-occurrence="1" x-occurrences="1"\w*
+\w people|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s |x-strong="G23160" x-lemma="θεός" x-morph="Gr,N,,,,,GMS," x-occurrence="2" x-occurrences="2" x-content="Θεοῦ"\*\w of|x-occurrence="4" x-occurrences="5"\w*
+\w God|x-occurrence="2" x-occurrences="2"\w*\zaln-e\*
+\zaln-s |x-strong="G25320" x-lemma="καί" x-morph="Gr,CC,,,,,,,," x-occurrence="1" x-occurrences="1" x-content="καὶ"\*\w and|x-occurrence="2" x-occurrences="2"\w*\zaln-e\*
+\zaln-s |x-strong="G19220" x-lemma="ἐπίγνωσις" x-morph="Gr,N,,,,,AFS," x-occurrence="1" x-occurrences="1" x-content="ἐπίγνωσιν"\*\w knowledge|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s |x-strong="G02250" x-lemma="ἀλήθεια" x-morph="Gr,N,,,,,GFS," x-occurrence="1" x-occurrences="1" x-content="ἀληθείας"\*\w of|x-occurrence="5" x-occurrences="5"\w*\zaln-e\*
+\zaln-s |x-strong="G02250" x-lemma="ἀλήθεια" x-morph="Gr,N,,,,,GFS," x-occurrence="1" x-occurrences="1" x-content="ἀληθείας"\*\w the|x-occurrence="3" x-occurrences="3"\w*
+\w truth|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s |x-strong="G35880" x-lemma="ὁ" x-morph="Gr,EA,,,,GFS," x-occurrence="1" x-occurrences="1" x-content="τῆς"\*\w that|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s |x-strong="G25960" x-lemma="κατά" x-morph="Gr,P,,,,,A,,," x-occurrence="1" x-occurrences="1" x-content="κατ’"\*\w agrees|x-occurrence="1" x-occurrences="1"\w*
+\w with|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s |x-strong="G21500" x-lemma="εὐσέβεια" x-morph="Gr,N,,,,,AFS," x-occurrence="1" x-occurrences="1" x-content="εὐσέβειαν"\*\w godliness|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*,

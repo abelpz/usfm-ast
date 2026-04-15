@@ -9,8 +9,11 @@ const repoPackages = path.resolve(__dirname, '..');
 
 const workspaceSrcAliases = {
   '@usfm-tools/adapters': path.resolve(repoPackages, 'usfm-adapters/src/index.ts'),
+  '@usfm-tools/checking': path.resolve(repoPackages, 'usfm-editor-checking/src/index.ts'),
+  '@usfm-tools/door43-rest': path.resolve(repoPackages, 'usfm-door43-rest/src/index.ts'),
   '@usfm-tools/editor-adapters': path.resolve(repoPackages, 'usfm-editor-adapters/src/index.ts'),
   '@usfm-tools/parser': path.resolve(repoPackages, 'usfm-parser/src/index.ts'),
+  '@usfm-tools/project-formats': path.resolve(repoPackages, 'usfm-editor-project-formats/src/index.ts'),
   '@usfm-tools/types': path.resolve(repoPackages, 'shared-types/src/index.ts'),
   '@usfm-tools/editor/chrome.css': path.resolve(repoPackages, 'usfm-editor/chrome.css'),
   '@usfm-tools/editor-ui/chrome-ui.css': path.resolve(repoPackages, 'usfm-editor-ui/chrome-ui.css'),
@@ -19,6 +22,7 @@ const workspaceSrcAliases = {
   '@usfm-tools/editor': path.resolve(repoPackages, 'usfm-editor/src/index.ts'),
   '@usfm-tools/editor-ui': path.resolve(repoPackages, 'usfm-editor-ui/src/index.ts'),
   '@usfm-tools/editor-core': path.resolve(repoPackages, 'usfm-editor-core/src/index.ts'),
+  '@usfm-tools/help-markdown': path.resolve(repoPackages, 'help-markdown/src/index.ts'),
   '@usfm-tools/formatter': path.resolve(repoPackages, 'usfm-formatter/src/index.ts'),
 } as const;
 

@@ -8,5 +8,11 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  external: ['@usfm-tools/adapters', '@usfm-tools/editor-core', '@usfm-tools/parser'],
+  external: [
+    '@usfm-tools/adapters',
+    '@usfm-tools/door43-rest',
+    '@usfm-tools/editor-core',
+    '@usfm-tools/parser',
+    '@usfm-tools/types',
+  ],
 });

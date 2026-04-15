@@ -13,12 +13,10 @@ export interface SourcePanelMountOptions {
   onSourceSession?: (session: SourceTextSession | null) => void;
   /** When set, immediately load this USFM string as the reference (in-memory file). */
   prefillSourceUsfm?: string;
+  /** Open the settings drawer once right after mount (e.g. “Add source” tab). */
+  openDrawerOnMount?: boolean;
 }
 
-const SETTINGS_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-  <circle cx="12" cy="12" r="3"/>
-  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-</svg>`;
 
 export function mountSourcePanel(
   container: HTMLElement,
@@ -27,17 +25,6 @@ export function mountSourcePanel(
 ): () => void {
   container.innerHTML = `
     <div class="source-panel">
-
-      <!-- Always-visible thin bar -->
-      <div class="source-panel-bar" aria-live="polite">
-        <div class="source-panel-bar-info">
-          <span class="source-panel-bar-label">Reference text</span>
-          <span class="source-panel-bar-name" hidden></span>
-        </div>
-        <button type="button" class="src-settings-btn" title="Reference settings" aria-expanded="false" aria-label="Reference settings">
-          ${SETTINGS_ICON}
-        </button>
-      </div>
 
       <!-- Collapsible settings drawer (hidden by default) -->
       <div class="source-panel-drawer" hidden>
@@ -105,8 +92,6 @@ export function mountSourcePanel(
   `;
 
   /* ── Element refs ─────────────────────────────────────────────────────── */
-  const barName      = container.querySelector('.source-panel-bar-name') as HTMLElement;
-  const settingsBtn  = container.querySelector('.src-settings-btn') as HTMLButtonElement;
   const drawer       = container.querySelector('.source-panel-drawer') as HTMLElement;
   const tabs         = container.querySelectorAll<HTMLButtonElement>('.src-tab');
   const filePanelEl  = container.querySelector<HTMLElement>('[data-panel="file"]')!;
@@ -135,6 +120,15 @@ export function mountSourcePanel(
     chrome: { preset: 'minimal' },
     contextChapters: targetSession.getContextChapterRadius(),
   });
+
+  // Subscribe BEFORE notifying the parent (which may immediately call session.load()),
+  // so showView() is guaranteed to fire no matter how quickly the load resolves.
+  const unsubLoad = sourceSession.onLoad(() => {
+    showView();
+    setIdentity(true, sourceSession.getProvider()?.displayName);
+    if (syncCheckbox.checked) applyTargetWindow();
+  });
+
   options.onSourceSession?.(sourceSession);
 
   /* ── Settings drawer toggle ───────────────────────────────────────────── */
@@ -143,11 +137,7 @@ export function mountSourcePanel(
   function setDrawerOpen(open: boolean) {
     drawerOpen = open;
     drawer.hidden = !open;
-    settingsBtn.setAttribute('aria-expanded', String(open));
-    settingsBtn.classList.toggle('src-settings-btn--active', open);
   }
-
-  settingsBtn.addEventListener('click', () => setDrawerOpen(!drawerOpen));
 
   /* ── Tabs ─────────────────────────────────────────────────────────────── */
   let activeTab: 'file' | 'dcs' = 'file';
@@ -173,17 +163,8 @@ export function mountSourcePanel(
     statusEl.className = `src-status src-status--${type}`;
   }
 
-  /* ── Identity bar ─────────────────────────────────────────────────────── */
-  function setIdentity(loaded: boolean, name?: string) {
-    const barLabel = container.querySelector('.source-panel-bar-label') as HTMLElement;
-    if (loaded && name) {
-      barLabel.hidden = true;
-      barName.textContent = name;
-      barName.hidden = false;
-    } else {
-      barLabel.hidden = false;
-      barName.hidden = true;
-    }
+  /* ── Identity ─────────────────────────────────────────────────────────── */
+  function setIdentity(loaded: boolean, _name?: string) {
     emptyHint.style.display = loaded ? 'none' : '';
     removeBtn.hidden = !loaded;
   }
@@ -300,6 +281,10 @@ export function mountSourcePanel(
   startSync();
   setIdentity(false);
 
+  if (options.openDrawerOnMount) {
+    setDrawerOpen(true);
+  }
+
   if (options.prefillSourceUsfm?.trim()) {
     const f = new File([options.prefillSourceUsfm], 'reference.usfm', { type: 'text/plain' });
     void handleLoad(new FileSourceTextProvider(f));
@@ -307,6 +292,7 @@ export function mountSourcePanel(
 
   return () => {
     stopSync();
+    unsubLoad();
     options.onSourceSession?.(null);
     sourceSession.destroy();
   };

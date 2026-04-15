@@ -714,7 +714,7 @@ export function attachWysiwygChrome(
   }
 
   function paletteFilterQuery(): string {
-    return paletteInput.value.replace(/^\\/, '').trim().toLowerCase();
+    return paletteInput.value.trim().toLowerCase();
   }
 
   function rebuildPaletteList() {
@@ -801,14 +801,14 @@ export function attachWysiwygChrome(
     paletteEntries = buildAddMenuEntries(session, state, pos, section, pres);
     const trig = options.markerPalette?.getTriggerKey?.() ?? '\\';
     const mode = readEditorMode();
-    paletteInput.value = pres.palettePlaceholder(mode, trig);
+    paletteInput.value = '';
+    paletteInput.placeholder = pres.palettePlaceholder(mode, trig);
     paletteInput.setAttribute('aria-label', pres.paletteAriaLabel(mode));
     paletteInput.classList.toggle('usfm-wysiwyg-palette-input--docs', pres.isSimplifiedMode(mode));
     rebuildPaletteList();
     palette.hidden = false;
     positionPalette(v);
     paletteInput.focus();
-    paletteInput.select();
   }
 
   paletteInput.addEventListener('input', () => {

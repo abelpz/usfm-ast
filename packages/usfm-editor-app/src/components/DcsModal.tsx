@@ -1,6 +1,5 @@
 import {
   createUserRepo,
-  deleteToken,
   fetchAuthenticatedUser,
   listAuthenticatedUserRepos,
   listRepoContents,
@@ -155,19 +154,8 @@ export function DcsModal({ open, onOpenChange }: Props) {
   }, [open, creds, selectedRepo, browsePath, branch, refreshContents]);
 
   async function onLogout() {
-    const c = creds;
-    if (c?.tokenId !== undefined) {
-      try {
-        await deleteToken({
-          host: c.host,
-          username: c.username,
-          token: c.token,
-          tokenIdOrName: c.tokenId,
-        });
-      } catch {
-        /* ignore */
-      }
-    }
+    // Do not call Gitea `DELETE …/tokens/{id}` here: authenticating with the same PAT
+    // often returns 403 and spams the console. Revoke the token under Door43 → Settings if needed.
     localStorage.removeItem(DCS_CREDS_KEY);
     localStorage.removeItem(DCS_TARGET_KEY);
     setCreds(null);

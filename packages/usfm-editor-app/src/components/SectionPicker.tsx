@@ -1,7 +1,7 @@
 import type { ScriptureSession, SourceTextSession } from '@usfm-tools/editor';
 import type { EditorContentPage } from '@usfm-tools/editor';
 import { Book, ChevronDown, ChevronLeft, ChevronRight, ScrollText, SlidersHorizontal } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -82,7 +82,7 @@ function mergeWithReferencePages(
   return result;
 }
 
-export function SectionPicker({ session, referenceSession, onWindowNotice, inline }: Props) {
+export const SectionPicker = memo(function SectionPicker({ session, referenceSession, onWindowNotice, inline }: Props) {
   const maxSel = session.maxVisibleChapters;
   const contextN = session.getContextChapterRadius();
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -125,14 +125,14 @@ export function SectionPicker({ session, referenceSession, onWindowNotice, inlin
     const canPrev = idx > 0;
     const canNext = idx >= 0 && idx < allEntries.length - 1;
 
-    function goToEntry(entry: { page: EditorContentPage; fromReference: boolean }) {
+    const goToEntry = (entry: { page: EditorContentPage; fromReference: boolean }) => {
       if (entry.page.kind === 'chapter') {
         session.navigateToChapter(entry.page.chapter);
       } else {
         session.setContentPage(entry.page);
       }
       rerender();
-    }
+    };
 
     const inner = (
       <div className="flex items-center gap-1.5">
@@ -150,7 +150,7 @@ export function SectionPicker({ session, referenceSession, onWindowNotice, inlin
         >
           <ChevronLeft className="size-4" />
         </Button>
-        <div className="scrollbar-none bg-muted/60 flex min-w-0 flex-1 flex-wrap items-center justify-center gap-1 rounded-md px-1.5 py-1">
+        <div className="scrollbar-thin bg-muted/60 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-md px-1.5 py-1">
           {allEntries.map(({ page: p, fromReference }) => {
             const active = pageKey(p) === pageKey(current);
             return (
@@ -363,4 +363,4 @@ export function SectionPicker({ session, referenceSession, onWindowNotice, inlin
       {nonPagInner}
     </div>
   );
-}
+});

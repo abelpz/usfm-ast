@@ -14,7 +14,7 @@ import {
   type UsjDocument,
 } from '@usfm-tools/editor-core';
 import type { EditorView } from 'prosemirror-view';
-import { markerPaletteKeymap, ScriptureSession, serializeToUSJ } from '@usfm-tools/editor';
+import { markerPaletteKeymap, markerShortcutKeymap, ScriptureSession, serializeToUSJ } from '@usfm-tools/editor';
 import {
   attachWysiwygChrome,
   readEditorMode,
@@ -27,6 +27,7 @@ import {
   MARKER_PALETTE_TRIGGER_PRESETS,
   setStoredMarkerPaletteTrigger,
 } from '@/marker-palette-trigger';
+import { getStoredMarkerShortcuts } from '@/marker-shortcuts';
 import type { DcsStoredCredentials, DcsStoredTarget } from '@/lib/dcs-storage';
 
 export type UseScriptureSessionArgs = {
@@ -77,6 +78,7 @@ export function useScriptureSession({
       markerPaletteKeymap((v) => paletteOpener.current(v), {
         getTriggerKey: getStoredMarkerPaletteTrigger,
       }),
+      markerShortcutKeymap(getStoredMarkerShortcuts),
     ];
 
     function buildCollabTransport(): CompositeRealtimeTransport {

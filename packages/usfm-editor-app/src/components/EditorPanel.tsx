@@ -4,7 +4,7 @@ import {
 } from '@/hooks/useScriptureSession';
 import type { DcsStoredCredentials, DcsStoredTarget } from '@/lib/dcs-storage';
 import { cn } from '@/lib/utils';
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 
 export type EditorPanelProps = {
   initialUsfm: string;
@@ -17,7 +17,7 @@ export type EditorPanelProps = {
   className?: string;
 };
 
-export function EditorPanel({
+export const EditorPanel = memo(function EditorPanel({
   initialUsfm,
   collabActive,
   wsRelay,
@@ -46,9 +46,9 @@ export function EditorPanel({
     <div
       ref={mountRef}
       className={cn(
-        'pm text-foreground min-h-[min(420px,55vh)] min-w-0 flex-1 rounded-2xl border border-border bg-card p-4 shadow-sm',
+        'pm text-foreground relative h-full min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain rounded-2xl border border-border bg-card p-4 shadow-sm',
         className,
       )}
     />
   );
-}
+});

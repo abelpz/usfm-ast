@@ -26,6 +26,12 @@ export interface SourceTextProvider {
   /** Human-readable label shown in the UI. */
   readonly displayName: string;
   /**
+   * BCP 47 language code of this source text, when known (e.g. `'es-419'`, `'en'`).
+   * Used to auto-discover translation helps (TN/TWL) from the Door43 catalog.
+   * Providers that cannot determine the language leave this `undefined`.
+   */
+  readonly langCode?: string;
+  /**
    * Load (or reload) the source document.
    * Must resolve to a full-book {@link UsjDocument}; may reject on failure.
    */

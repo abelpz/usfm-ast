@@ -83,7 +83,7 @@ export function UsfmSourcePane({ session, visible }: Props) {
       <textarea
         ref={taRef}
         className={cn(
-          'font-mono text-foreground min-h-[200px] w-full flex-1 resize-none border-0 bg-transparent p-3 text-sm outline-none',
+          'font-mono text-foreground min-h-0 w-full flex-1 resize-none border-0 bg-transparent p-3 text-sm outline-none',
         )}
         spellCheck={false}
         aria-label="USFM source"

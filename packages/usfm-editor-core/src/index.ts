@@ -48,6 +48,17 @@ export {
   type SourceMatchResult,
 } from './alignment-provenance';
 export {
+  extractAlignmentDocumentFromUsfm,
+  getActiveAlignmentPointerForBook,
+  listAlignmentSources,
+  mergeAlignmentIntoUsfm,
+  parseAlignmentDirectoryFileJson,
+  serializeAlignmentDirectoryFile,
+  stripAlignmentFromUsfm,
+  swapAlignmentInUsfm,
+  type RepoFileEntry,
+} from './alignment-directory';
+export {
   alignmentDocumentSourceKey,
   serializeAlignmentJson,
   parseAlignmentJson,

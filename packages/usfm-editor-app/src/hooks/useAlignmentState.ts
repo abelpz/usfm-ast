@@ -50,7 +50,7 @@ export function useAlignmentState(
       session.clearAlignmentSource();
       setCompat(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs after reset effect when overlay opens
+    // Deps intentionally limited: runs when overlay opens with current session/source.
   }, [overlayOpen, sourceTextSession, session]);
 
   const refresh = useCallback(() => setBump((n) => n + 1), []);

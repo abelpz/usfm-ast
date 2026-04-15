@@ -1,5 +1,6 @@
 import { BookCombobox } from '@/components/BookCombobox';
 import { DcsLoginDialog } from '@/components/DcsLoginDialog';
+import { Tip } from '@/components/Tip';
 import { Door43LanguagePicker } from '@/components/Door43LanguagePicker';
 import { TranslateCatalogSourceList } from '@/components/TranslateCatalogSourceList';
 import { Button } from '@/components/ui/button';
@@ -31,14 +32,24 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Stepper } from '@/components/ui/stepper';
 import {
-  deleteToken,
+  createOrUpdateRepoFile,
+  createUserRepo,
   fetchAuthenticatedUser,
+  fetchCatalogSourceEntry,
   getFileContent,
   type CatalogEntry,
   type Door43RepoRow,
   type Door43UserInfo,
 } from '@/dcs-client';
 import { booksFromDetectedProject, loadDcsProjectDescriptor } from '@/lib/dcs-format-detect';
+import {
+  enhancedProjectInitialFiles,
+  listRCBooks,
+  listSBBooks,
+  parseResourceContainer,
+  parseScriptureBurrito,
+  scaffoldRcProject,
+} from '@usfm-tools/project-formats';
 import { getCatalogLanguages, getLangnames, type DcsLangnameEntry } from '@/lib/dcs-langnames-cache';
 import {
   fetchCatalogSourcesWizardCached,
@@ -50,16 +61,17 @@ import { groupedBookSelectItems } from '@/lib/book-code-groups';
 import { cn } from '@/lib/utils';
 import { DCS_CREDS_KEY, loadDcsCredentials, type DcsStoredCredentials } from '@/lib/dcs-storage';
 import type { ProjectLaunchConfig } from '@/lib/project-launch';
+import { getProjectStorage } from '@/lib/project-storage';
 import { addRecentProject, loadRecentProjects, removeRecentProject, type RecentProjectEntry } from '@/lib/recent-projects';
-import { parseScriptureBurrito, listSBBooks } from '@/lib/scripture-burrito';
-import { parseResourceContainer, listRCBooks } from '@/lib/resource-container';
 import { blankTranslationFromSourceUsfm, blankUsfmForBook, extractBookCodeFromUsfm } from '@/lib/usfm-project';
 import { USFM_BOOK_CODES } from '@usfm-tools/editor';
+import type { ProjectMeta } from '@usfm-tools/types';
 import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
   FileText,
+  FolderPlus,
   FolderOpen,
   Globe,
   Loader2,
@@ -68,10 +80,12 @@ import {
   Plus,
   Search,
   Sparkles,
+  Trash2,
   Upload,
+  X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const DEFAULT_HOST = 'git.door43.org';
 
@@ -138,6 +152,7 @@ async function readFileFromDirectory(
 
 export function HomePage() {
   const navigate = useNavigate();
+  const loc = useLocation();
   /** Re-read after Door43 sign-in from the launcher modal (useDcsCredentials only runs once per mount). */
   const [credentials, setCredentials] = useState<DcsStoredCredentials | null>(() => loadDcsCredentials());
   const host = credentials?.host ?? DEFAULT_HOST;
@@ -202,10 +217,41 @@ export function HomePage() {
   const [dcsBookPick, setDcsBookPick] = useState<string | null>(null);
   const [dcsErr, setDcsErr] = useState<string | null>(null);
 
+  const [enhOpen, setEnhOpen] = useState(false);
+  const [enhRepo, setEnhRepo] = useState('');
+  const [enhLang, setEnhLang] = useState('es');
+  const [enhTitle, setEnhTitle] = useState('');
+  const [enhBusy, setEnhBusy] = useState(false);
+  const [enhErr, setEnhErr] = useState<string | null>(null);
+
+  const [startProjOpen, setStartProjOpen] = useState(false);
+  const [startProjId, setStartProjId] = useState('');
+  const [startProjName, setStartProjName] = useState('');
+  const [startProjLang, setStartProjLang] = useState('');
+  const [startProjBusy, setStartProjBusy] = useState(false);
+  const [startProjErr, setStartProjErr] = useState<string | null>(null);
+  const [localProjects, setLocalProjects] = useState<ProjectMeta[]>([]);
+
   const [folderBusy, setFolderBusy] = useState(false);
   const [folderErr, setFolderErr] = useState<string | null>(null);
 
   const [recentList, setRecentList] = useState(() => loadRecentProjects());
+
+  useEffect(() => {
+    if (loc.pathname !== '/') return;
+    let cancelled = false;
+    void getProjectStorage()
+      .listProjects()
+      .then((rows) => {
+        if (!cancelled) setLocalProjects(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setLocalProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loc.pathname]);
 
   const goEditor = useCallback(
     (cfg: ProjectLaunchConfig) => {
@@ -285,19 +331,6 @@ export function HomePage() {
     translateSourceTab === 'device' ? translateWizardStep === 2 : translateWizardStep === 3;
 
   async function onLogoutHome() {
-    const c = credentials;
-    if (c?.tokenId !== undefined) {
-      try {
-        await deleteToken({
-          host: c.host,
-          username: c.username,
-          token: c.token,
-          tokenIdOrName: c.tokenId,
-        });
-      } catch {
-        /* ignore */
-      }
-    }
     try {
       localStorage.removeItem(DCS_CREDS_KEY);
     } catch {
@@ -434,6 +467,8 @@ export function HomePage() {
         bookCode?: string;
         dcs?: RecentProjectEntry['dcs'];
         overSource: boolean;
+        /** Door43 language (e.g. es-419) for catalog helps discovery; omit for device file flow. */
+        sourceLanguage?: string;
       },
     ) => {
       const code = meta.bookCode ?? extractBookCodeFromUsfm(sourceUsfm) ?? 'UNK';
@@ -444,11 +479,13 @@ export function HomePage() {
         dcs: meta.dcs,
         translateOverSource: meta.overSource,
       });
+      const lang = meta.sourceLanguage?.trim();
       if (meta.overSource) {
         goEditor({
           initialUsfm: sourceUsfm,
           skipPersistedDcsInitialFetch: true,
           openReferencePanel: false,
+          sourceLanguage: lang,
           projectMeta: { name: recent.name, bookCode: code, source: 'translate', recentId: recent.id },
         });
       } else {
@@ -457,6 +494,7 @@ export function HomePage() {
           sourceReferenceUsfm: sourceUsfm,
           openReferencePanel: true,
           skipPersistedDcsInitialFetch: true,
+          sourceLanguage: lang,
           projectMeta: { name: recent.name, bookCode: code, source: 'translate', recentId: recent.id },
         });
       }
@@ -492,10 +530,32 @@ export function HomePage() {
     });
   }
 
-  function onSelectCatalogEntry(entry: CatalogEntry) {
+  async function onSelectCatalogEntry(entry: CatalogEntry) {
     setTrCatalogSelected(entry);
     setTrDcsErr(null);
-    const books = booksFromCatalogEntry(entry);
+    let books = booksFromCatalogEntry(entry);
+    if (books.length === 0) {
+      setTrDcsLoading(true);
+      try {
+        const hydrated = await fetchCatalogSourceEntry({
+          host,
+          owner: entry.ownerLogin,
+          repo: entry.repoName,
+          tag: entry.releaseTag,
+        });
+        if (hydrated) {
+          setTrCatalogSelected(hydrated);
+          books = booksFromCatalogEntry(hydrated);
+        }
+        if (books.length === 0) {
+          setTrDcsErr('This release has no USFM books listed in the catalog. Try another version or repository.');
+        }
+      } catch (e) {
+        setTrDcsErr(e instanceof Error ? e.message : String(e));
+      } finally {
+        setTrDcsLoading(false);
+      }
+    }
     setTrCatalogBooks(books);
     setTrCatalogBookPick(books.length === 1 ? books[0]!.path : null);
     if (translateOpen && translateWizardStep === 2 && translateSourceTab === 'dcs') {
@@ -527,6 +587,7 @@ export function HomePage() {
         recentName: `${trCatalogSelected.title} — ${book.code} (${ref})`,
         bookCode: book.code,
         overSource: over,
+        sourceLanguage: trDcsLangLc.trim(),
         dcs: {
           owner: trCatalogSelected.ownerLogin,
           repo: trCatalogSelected.repoName,
@@ -762,6 +823,123 @@ export function HomePage() {
     }
   }
 
+  async function createLocalProject() {
+    const id = startProjId.trim().toUpperCase();
+    if (!/^[A-Z]{3,8}$/.test(id)) {
+      setStartProjErr('ID must be 3-8 letters (A-Z).');
+      return;
+    }
+    const storage = getProjectStorage();
+    const existing = await storage.getProject(id);
+    if (existing) {
+      setStartProjErr('A project with this ID already exists.');
+      return;
+    }
+    setStartProjBusy(true);
+    setStartProjErr(null);
+    try {
+      const files = scaffoldRcProject({
+        identifier: id,
+        languageTag: startProjLang.trim() || 'en',
+        title: startProjName.trim() || id,
+      });
+      const now = new Date().toISOString();
+      await storage.createProject({
+        id,
+        name: startProjName.trim() || id,
+        language: startProjLang.trim() || 'en',
+        format: 'resource-container',
+        created: now,
+        updated: now,
+      });
+      const fileMap = files as Record<string, string>;
+      for (const [path, content] of Object.entries(fileMap)) {
+        await storage.writeFile(id, path, content);
+      }
+      setStartProjOpen(false);
+      setStartProjId('');
+      setStartProjName('');
+      setStartProjLang('');
+      setLocalProjects(await storage.listProjects());
+      navigate(`/project/${id}`);
+    } catch (e) {
+      setStartProjErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setStartProjBusy(false);
+    }
+  }
+
+  async function deleteLocalProject(pid: string) {
+    if (!window.confirm('Delete this local project and all its files? This cannot be undone.')) return;
+    try {
+      const storage = getProjectStorage();
+      await storage.deleteProject(pid);
+      setLocalProjects(await storage.listProjects());
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  const createEnhancedProject = useCallback(async () => {
+    if (!credentials?.token) {
+      setLoginContextMessage('Sign in to create a repository on Door43.');
+      setHeaderLoginOpen(true);
+      return;
+    }
+    const repoName = enhRepo
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-_]/g, '-')
+      .replace(/^-+|-+$/g, '');
+    if (!repoName) {
+      setEnhErr('Enter a valid repository name (letters, numbers, hyphens).');
+      return;
+    }
+    const langTag = enhLang.trim() || 'en';
+    const title = enhTitle.trim() || repoName;
+    setEnhBusy(true);
+    setEnhErr(null);
+    try {
+      const created = await createUserRepo({
+        host,
+        token: credentials.token,
+        name: repoName,
+        description: `Enhanced translation project: ${title}`,
+        private: false,
+        autoInit: true,
+      });
+      const defaultRef = created.defaultBranch ?? 'main';
+      const files = enhancedProjectInitialFiles({ languageTag: langTag, title });
+      for (const [path, content] of Object.entries(files)) {
+        await createOrUpdateRepoFile({
+          host,
+          token: credentials.token,
+          owner: credentials.username,
+          repo: repoName,
+          path,
+          content,
+          message: `Initialize enhanced project: ${path}`,
+          branch: defaultRef,
+        });
+      }
+      setEnhOpen(false);
+      setEnhRepo('');
+      setEnhTitle('');
+      navigate(
+        `/dcs-project?${new URLSearchParams({
+          owner: credentials.username,
+          repo: repoName,
+          ref: defaultRef,
+          host,
+        }).toString()}`,
+      );
+    } catch (e) {
+      setEnhErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setEnhBusy(false);
+    }
+  }, [credentials, enhLang, enhRepo, enhTitle, host, navigate]);
+
   async function reopenRecent(r: RecentProjectEntry) {
     if (r.source === 'dcs' && r.dcs) {
       setDcsLoading(true);
@@ -894,7 +1072,7 @@ export function HomePage() {
       ) : null}
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-4 py-10">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <button
             type="button"
             onClick={() => setBlankOpen(true)}
@@ -914,6 +1092,21 @@ export function HomePage() {
             <span className="text-lg font-semibold">Translate from source</span>
             <span className="text-muted-foreground text-sm">
               From your device or published Bible sources on Door43. Guided steps.
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setStartProjErr(null);
+              setStartProjOpen(true);
+            }}
+            className="border-primary/30 bg-card hover:bg-accent/50 flex flex-col items-start gap-2 rounded-xl border-2 p-6 text-left shadow-sm transition-colors sm:col-span-1 lg:col-span-1"
+          >
+            <FolderPlus className="text-primary size-7" />
+            <span className="text-lg font-semibold">Start project</span>
+            <span className="text-muted-foreground text-sm">
+              Create a local translation project (Resource Container). Pick a language and add books as you go.
             </span>
           </button>
         </div>
@@ -945,7 +1138,55 @@ export function HomePage() {
             <span className="font-semibold">Open from DCS</span>
             <span className="text-muted-foreground text-xs">Browse Door43 repositories by language (public or your access).</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEnhErr(null);
+              setEnhOpen(true);
+            }}
+            className="border-border bg-card hover:bg-accent/40 flex flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm shadow-sm transition-colors sm:col-span-2"
+          >
+            <Sparkles className="text-primary size-5" />
+            <span className="font-semibold">Create enhanced project on DCS</span>
+            <span className="text-muted-foreground text-xs">
+              New Scripture Burrito repo with <code className="text-xs">checkings/</code>, <code className="text-xs">alignments/</code>, and
+              extension hooks. Requires sign-in.
+            </span>
+          </button>
         </div>
+
+        {localProjects.length > 0 ? (
+          <section>
+            <h2 className="mb-2 text-sm font-semibold">Local projects</h2>
+            <ul className="border-border divide-y rounded-lg border">
+              {localProjects.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <Button variant="link" asChild className="h-auto min-w-0 truncate p-0 text-left font-medium">
+                      <Link to={`/project/${encodeURIComponent(p.id)}`}>{p.name}</Link>
+                    </Button>
+                    <p className="text-muted-foreground text-xs">
+                      <span className="font-mono">{p.id}</span> · {p.language} · updated {p.updated.slice(0, 10)}
+                    </p>
+                  </div>
+                  <Tip label="Delete project" side="left">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-destructive hover:text-destructive shrink-0"
+                      onClick={() => void deleteLocalProject(p.id)}
+                      aria-label="Delete project"
+                    >
+                      <Trash2 className="size-3.5" aria-hidden />
+                    </Button>
+                  </Tip>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {recentList.length > 0 ? (
           <section>
@@ -960,17 +1201,21 @@ export function HomePage() {
                   >
                     {r.name}
                   </button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      removeRecentProject(r.id);
-                      setRecentList(loadRecentProjects());
-                    }}
-                  >
-                    Remove
-                  </Button>
+                  <Tip label="Remove from recents" side="left">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-muted-foreground"
+                      onClick={() => {
+                        removeRecentProject(r.id);
+                        setRecentList(loadRecentProjects());
+                      }}
+                      aria-label="Remove from recents"
+                    >
+                      <X className="size-3.5" aria-hidden />
+                    </Button>
+                  </Tip>
                 </li>
               ))}
             </ul>
@@ -1507,6 +1752,18 @@ export function HomePage() {
                   {dcsSelected.description?.trim() ? (
                     <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">{dcsSelected.description.trim()}</p>
                   ) : null}
+                  <Button variant="link" asChild className="mt-1 h-auto px-0 py-0 text-xs">
+                    <Link
+                      to={`/dcs-project?${new URLSearchParams({
+                        owner: dcsSelected.owner ?? dcsSelected.fullName.split('/')[0]!,
+                        repo: dcsSelected.name,
+                        ref: dcsRef || dcsSelected.defaultBranch || 'main',
+                        host,
+                      }).toString()}`}
+                    >
+                      Project dashboard
+                    </Link>
+                  </Button>
                 </div>
               </div>
               <details className="text-sm">
@@ -1536,6 +1793,113 @@ export function HomePage() {
                 Open in editor
               </Button>
             ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={enhOpen}
+        onOpenChange={(o) => {
+          setEnhOpen(o);
+          if (!o) setEnhErr(null);
+        }}
+      >
+        <DialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Create enhanced project</DialogTitle>
+            <DialogDescription>
+              Creates a new repository under your Door43 user with the enhanced directory layout (metadata, checkings, alignments placeholders).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="enh-repo">Repository name</Label>
+              <Input
+                id="enh-repo"
+                value={enhRepo}
+                onChange={(e) => setEnhRepo(e.target.value)}
+                placeholder="my-translation-es"
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <Label htmlFor="enh-lang">Target language tag (BCP-47)</Label>
+              <Input id="enh-lang" value={enhLang} onChange={(e) => setEnhLang(e.target.value)} placeholder="es-419" />
+            </div>
+            <div>
+              <Label htmlFor="enh-title">Project title</Label>
+              <Input id="enh-title" value={enhTitle} onChange={(e) => setEnhTitle(e.target.value)} placeholder="My translation" />
+            </div>
+            {enhErr ? <p className="text-destructive text-sm">{enhErr}</p> : null}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setEnhOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={enhBusy} onClick={() => void createEnhancedProject()}>
+              {enhBusy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              Create on Door43
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={startProjOpen}
+        onOpenChange={(o) => {
+          setStartProjOpen(o);
+          if (!o) setStartProjErr(null);
+        }}
+      >
+        <DialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Start project</DialogTitle>
+            <DialogDescription>
+              Creates a local Resource Container project in this browser (IndexedDB). You can add books from the project dashboard.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="start-proj-id">Bible ID (3-8 letters)</Label>
+              <Input
+                id="start-proj-id"
+                value={startProjId}
+                onChange={(e) => setStartProjId(e.target.value.toUpperCase())}
+                placeholder="RVR"
+                maxLength={8}
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <Label htmlFor="start-proj-name">Project name</Label>
+              <Input
+                id="start-proj-name"
+                value={startProjName}
+                onChange={(e) => setStartProjName(e.target.value)}
+                placeholder="Reina Valera"
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <Label htmlFor="start-proj-lang">Target language (BCP-47)</Label>
+              <Input
+                id="start-proj-lang"
+                value={startProjLang}
+                onChange={(e) => setStartProjLang(e.target.value)}
+                placeholder="es-419"
+                autoComplete="off"
+              />
+            </div>
+            {startProjErr ? <p className="text-destructive text-sm">{startProjErr}</p> : null}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setStartProjOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={startProjBusy} onClick={() => void createLocalProject()}>
+              {startProjBusy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              Create project
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

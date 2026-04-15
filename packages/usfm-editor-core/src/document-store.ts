@@ -110,6 +110,15 @@ export class DocumentStore {
     return splitUsjByChapter(this.usj).find((s) => s.chapter === chapter);
   }
 
+  /**
+   * Split the live (non-cloned) USJ into chapter slices by reference.
+   * Nodes in the returned slices point directly into the internal USJ — do NOT mutate them.
+   * Use this for read-only operations that must avoid the overhead of {@link getFullUSJ}.
+   */
+  getChapterSlicesRef(): ChapterSlice[] {
+    return splitUsjByChapter(this.usj);
+  }
+
   getFullUSJ(): UsjDocument {
     return deepClone(this.usj);
   }

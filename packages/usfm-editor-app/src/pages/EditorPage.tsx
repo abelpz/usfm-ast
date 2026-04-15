@@ -1,11 +1,14 @@
 import { AlignmentPanel } from '@/components/AlignmentPanel';
+import { MarkerShortcutsDialog } from '@/components/MarkerShortcutsDialog';
+import { CheckingPanel } from '@/components/CheckingPanel';
 import { ExportUsfmDialog } from '@/components/ExportUsfmDialog';
 import { CollaborateModal } from '@/components/CollaborateModal';
 import { DcsLoginDialog } from '@/components/DcsLoginDialog';
 import { DcsModal } from '@/components/DcsModal';
+import { DcsSyncButton } from '@/components/DcsSyncButton';
 import { EditorPanel } from '@/components/EditorPanel';
 import { SectionPicker } from '@/components/SectionPicker';
-import { SourcePanel } from '@/components/SourcePanel';
+import { ReferenceColumn } from '@/components/ReferenceColumn';
 import { Topbar } from '@/components/Topbar';
 import { UsfmSourcePane } from '@/components/UsfmSourcePane';
 import { Button } from '@/components/ui/button';
@@ -19,6 +22,7 @@ import { fetchAuthenticatedUser, getFileContent, type Door43UserInfo } from '@/d
 import { loadDcsCredentials, loadDcsTarget, type DcsStoredCredentials, type DcsStoredTarget } from '@/lib/dcs-storage';
 import type { SyncStatusSnapshot } from '@/hooks/useSyncStatus';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
+import { useLocalProjectSync } from '@/hooks/useLocalProjectSync';
 import type { ScriptureSessionController } from '@/hooks/useScriptureSession';
 import {
   formatMarkerPaletteTriggerForHelp,
@@ -30,7 +34,11 @@ import type { UsjDocument } from '@usfm-tools/editor-core';
 import type { EditorMode, SourceTextSession } from '@usfm-tools/editor';
 import { mountConflictReview, readEditorMode, writeEditorMode } from '@usfm-tools/editor-ui';
 import { isProjectLaunchConfig } from '@/lib/project-launch';
+import { getProjectStorage } from '@/lib/project-storage';
+import { blankUsfmForBook } from '@/lib/usfm-project';
 import { cn } from '@/lib/utils';
+import { listRCBooks, parseResourceContainer } from '@usfm-tools/project-formats';
+import { USFM_BOOK_CODES } from '@usfm-tools/editor';
 import {
   useCallback,
   useEffect,
@@ -81,7 +89,14 @@ export function EditorPage() {
   const [postEditorLogin, setPostEditorLogin] = useState<null | 'dcs' | 'sync'>(null);
   const [pendingSyncAfterLogin, setPendingSyncAfterLogin] = useState(false);
   const [editorUser, setEditorUser] = useState<Door43UserInfo | null>(null);
-  const [initialUsfm, setInitialUsfm] = useState(() => launch?.initialUsfm ?? SAMPLE_USFM);
+  const [initialUsfm, setInitialUsfm] = useState(() => {
+    if (launch?.localProject) {
+      const bc = launch.localProject.bookCode;
+      const row = USFM_BOOK_CODES.find(([c]) => c === bc);
+      return blankUsfmForBook(bc, row?.[1] ?? bc);
+    }
+    return launch?.initialUsfm ?? SAMPLE_USFM;
+  });
   const [ctrl, setCtrl] = useState<ScriptureSessionController | null>(null);
   const onController = useCallback((c: ScriptureSessionController | null) => {
     setCtrl(c);
@@ -114,6 +129,7 @@ export function EditorPage() {
   const [referencePanel, setReferencePanel] = useState(() => Boolean(launch?.openReferencePanel));
   const [usfmSource, setUsfmSource] = useState(false);
   const [alignmentOpen, setAlignmentOpen] = useState(false);
+  const [checkingOpen, setCheckingOpen] = useState(false);
   const [exportUsfmOpen, setExportUsfmOpen] = useState(false);
   const [sourceTextSession, setSourceTextSession] = useState<SourceTextSession | null>(null);
 
@@ -124,6 +140,15 @@ export function EditorPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const conflictHostRef = useRef<HTMLDivElement>(null);
   const focusedOnceRef = useRef(false);
+
+  const [hasLocalProjectDcs, setHasLocalProjectDcs] = useState(false);
+  const [localProjectMeta, setLocalProjectMeta] = useState<import('@usfm-tools/types').ProjectMeta | null>(null);
+  const localProjectStorage = useMemo(() => launch?.localProject ? getProjectStorage() : null, [launch?.localProject]);
+
+  const localSync = useLocalProjectSync(
+    launch?.localProject?.projectId,
+    launch?.localProject?.bookCode,
+  );
 
   const dcsSyncEnabled = Boolean(dcsCreds && dcsTarget?.syncEnabled);
 
@@ -140,18 +165,37 @@ export function EditorPage() {
         dcsSyncEnabled && dcsTarget
           ? `DCS sync: ${dcsTarget.owner}/${dcsTarget.repo} (${dcsTarget.usfmPath})`
           : undefined;
+      const localDcsDetail =
+        launch?.localProject && hasLocalProjectDcs
+          ? localSync.detail ??
+            (localSync.autoSync
+              ? 'Local project: DCS auto-push after save (idle)'
+              : 'Local project: auto-sync paused')
+          : launch?.localProject
+            ? 'Local project: connect Door43 on the project dashboard to enable push'
+            : undefined;
       const collabDetail = collabActive
         ? 'Collaboration (BroadcastChannel + optional relay)'
         : undefined;
       return {
-        state: !online ? 'offline' : 'synced',
+        state: !online ? 'offline' : localSync.isSyncing ? 'syncing' : 'synced',
         peerCount: collabActive ? peers : undefined,
-        detail: [dcsDetail, collabDetail].filter(Boolean).join(' · ') || undefined,
+        detail: [dcsDetail, localDcsDetail, collabDetail].filter(Boolean).join(' · ') || undefined,
       };
     } catch {
       return { state: 'offline', detail: 'Status unavailable' };
     }
-  }, [ctrl?.collabRealtimeEngine, collabActive, dcsSyncEnabled, dcsTarget]);
+  }, [
+    ctrl?.collabRealtimeEngine,
+    collabActive,
+    dcsSyncEnabled,
+    dcsTarget,
+    launch?.localProject,
+    hasLocalProjectDcs,
+    localSync.detail,
+    localSync.isSyncing,
+    localSync.autoSync,
+  ]);
 
   const {
     state: syncState,
@@ -161,6 +205,7 @@ export function EditorPage() {
   } = useSyncStatus(getSyncSnapshot);
 
   useEffect(() => {
+    if (launch?.localProject) return;
     if (launch?.skipPersistedDcsInitialFetch) return;
     if (!dcsCreds || !dcsTarget?.usfmPath) return;
     let cancelled = false;
@@ -185,7 +230,70 @@ export function EditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [dcsCreds, dcsTarget, launch?.skipPersistedDcsInitialFetch]);
+  }, [dcsCreds, dcsTarget, launch?.localProject, launch?.skipPersistedDcsInitialFetch]);
+
+  useEffect(() => {
+    if (!launch?.localProject) {
+      setHasLocalProjectDcs(false);
+      return;
+    }
+    const { projectId, bookCode } = launch.localProject;
+    let cancelled = false;
+    void (async () => {
+      const storage = getProjectStorage();
+      const meta = await storage.getProject(projectId);
+      if (!cancelled) {
+        setHasLocalProjectDcs(Boolean(meta?.syncConfig));
+        setLocalProjectMeta(meta);
+      }
+      const manifest = await storage.readFile(projectId, 'manifest.yaml');
+      if (!manifest || cancelled) return;
+      const rc = parseResourceContainer(manifest);
+      const book = listRCBooks(rc).find((b) => b.code === bookCode);
+      if (!book) return;
+      const usfm = await storage.readFile(projectId, book.path);
+      if (usfm && !cancelled) setInitialUsfm(usfm);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [launch?.localProject?.projectId, launch?.localProject?.bookCode]);
+
+  useEffect(() => {
+    if (!launch?.localProject || !ctrl?.session) return;
+    const { projectId, bookCode } = launch.localProject;
+    const storage = getProjectStorage();
+    let saveTimer: ReturnType<typeof setTimeout> | undefined;
+    const session = ctrl.session;
+
+    const unsub = session.onChange(() => {
+      // 2 s debounce: persist current book USFM to IndexedDB.
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        void (async () => {
+          const usfm = session.toUSFM();
+          const manifest = await storage.readFile(projectId, 'manifest.yaml');
+          if (!manifest) return;
+          const rc = parseResourceContainer(manifest);
+          const book = listRCBooks(rc).find((b) => b.code === bookCode);
+          if (book) await storage.writeFile(projectId, book.path, usfm);
+        })();
+      }, 2000);
+
+      // Notify the sync hook so it can update dirty state and schedule an auto-push.
+      localSync.notifyChange();
+    });
+
+    return () => {
+      unsub();
+      if (saveTimer) clearTimeout(saveTimer);
+    };
+  }, [launch?.localProject, ctrl?.session, localSync.notifyChange]);
+
+  // Keep the topbar status indicator in sync with localSync state changes.
+  useEffect(() => {
+    syncUpdate();
+  }, [localSync.isSyncing, localSync.detail, syncUpdate]);
 
   useEffect(() => {
     document.body.setAttribute('data-usfm-theme', usfmTheme);
@@ -222,7 +330,7 @@ export function EditorPage() {
     return base;
   }, [paletteValue]);
 
-  function onShellMouseDown(e: MouseEvent<HTMLDivElement>) {
+  const onShellMouseDown = useCallback((e: MouseEvent<HTMLDivElement>) => {
     const t = e.target as HTMLElement | null;
     if (t?.closest('select')) return;
     if (
@@ -232,9 +340,9 @@ export function EditorPage() {
     ) {
       e.preventDefault();
     }
-  }
+  }, []);
 
-  async function onFileInputChange(ev: ChangeEvent<HTMLInputElement>) {
+  const onFileInputChange = useCallback(async (ev: ChangeEvent<HTMLInputElement>) => {
     const f = ev.target.files?.[0];
     if (!f || !ctrl) return;
     const name = f.name.toLowerCase();
@@ -253,9 +361,9 @@ export function EditorPage() {
     } catch {
       /* ignore */
     }
-  }
+  }, [ctrl]);
 
-  function onExportUsx() {
+  const onExportUsx = useCallback(() => {
     if (!ctrl) return;
     const blob = new Blob([ctrl.session.toUSX()], { type: 'application/xml;charset=utf-8' });
     const a = document.createElement('a');
@@ -263,7 +371,7 @@ export function EditorPage() {
     a.download = 'edited.usx';
     a.click();
     URL.revokeObjectURL(a.href);
-  }
+  }, [ctrl]);
 
   const onSyncNow = useCallback(async () => {
     if (!ctrl) return;
@@ -284,60 +392,117 @@ export function EditorPage() {
     void onSyncNow();
   }, [pendingSyncAfterLogin, dcsCreds?.token, ctrl, onSyncNow]);
 
-  function onPaletteChange(v: string) {
+  const onPaletteChange = useCallback((v: string) => {
     setPaletteValue(v);
     setStoredMarkerPaletteTrigger(v);
-  }
+  }, []);
+
+  const onSignInClick = useCallback(() => {
+    setLoginContext(undefined);
+    setPostEditorLogin(null);
+    setEditorLoginOpen(true);
+  }, []);
+
+  const onDcs = useCallback(() => {
+    if (!dcsCreds?.token) {
+      setLoginContext('Sign in to configure Door43 sync and repositories.');
+      setPostEditorLogin('dcs');
+      setEditorLoginOpen(true);
+      return;
+    }
+    setDcsOpen(true);
+  }, [dcsCreds?.token]);
+
+  const onCollaborate = useCallback(() => setCollabOpen(true), []);
+  const onOpenExportUsfm = useCallback(() => setExportUsfmOpen(true), []);
+  const onToggleReference = useCallback(() => setReferencePanel((v: boolean) => !v), []);
+  const onToggleUsfmSource = useCallback(() => setUsfmSource((v: boolean) => !v), []);
+  const onAlignment = useCallback(() => setAlignmentOpen(true), []);
+  const onCloseAlignment = useCallback(() => setAlignmentOpen(false), []);
+  const onChecking = useCallback(() => setCheckingOpen((v) => !v), []);
+  const onHelp = useCallback(() => setHelpOpen(true), []);
+  const [markerShortcutsOpen, setMarkerShortcutsOpen] = useState(false);
+  const onMarkerShortcuts = useCallback(() => setMarkerShortcutsOpen(true), []);
+  const onTopbarSyncNow = useCallback(() => {
+    if (dcsTarget?.syncEnabled && !dcsCreds?.token) {
+      setLoginContext('Sign in to sync changes with Door43.');
+      setPostEditorLogin('sync');
+      setEditorLoginOpen(true);
+      return;
+    }
+    void onSyncNow();
+  }, [dcsTarget?.syncEnabled, dcsCreds?.token, onSyncNow]);
+
+  const onSourceLanguageChange = useCallback((lc: string | null) => {
+    const projectId = launch?.localProject?.projectId;
+    if (!projectId || !localProjectStorage) return;
+    void localProjectStorage.updateProject(projectId, {
+      sourceRefLanguage: lc ?? undefined,
+    });
+  }, [launch?.localProject?.projectId, localProjectStorage]);
+
+  const onLocalProjectUpdated = useCallback(() => {
+    void getProjectStorage().getProject(launch!.localProject!.projectId).then((m) => {
+      if (m) setLocalProjectMeta(m);
+      setHasLocalProjectDcs(Boolean(m?.syncConfig));
+    });
+  }, [launch?.localProject?.projectId]);
+
+  const navigationSlot = useMemo(() => ctrl ? (
+    <SectionPicker
+      inline
+      session={ctrl.session}
+      referenceSession={sourceTextSession ?? undefined}
+      onWindowNotice={(msg) => console.info(msg)}
+    />
+  ) : undefined, [ctrl, sourceTextSession]);
+
+  const localSyncSlot = useMemo(() => localProjectMeta && localProjectStorage ? (
+    <DcsSyncButton
+      meta={localProjectMeta}
+      storage={localProjectStorage}
+      localSync={localSync}
+      onUpdated={onLocalProjectUpdated}
+    />
+  ) : undefined, [localProjectMeta, localProjectStorage, localSync, onLocalProjectUpdated]);
 
   return (
     <div
-      className="bg-background text-foreground flex min-h-dvh w-full flex-1 flex-col antialiased"
+      className="bg-background text-foreground flex h-dvh max-h-dvh min-h-0 w-full flex-col overflow-hidden antialiased"
       onMouseDown={onShellMouseDown}
     >
-      <div className="border-border flex items-center gap-2 border-b px-3 py-1 text-sm">
+      <div className="border-border flex shrink-0 flex-wrap items-center gap-3 border-b px-3 py-1 text-sm">
         <Link to="/" className="text-muted-foreground hover:text-foreground shrink-0 underline-offset-4 hover:underline">
           Home
         </Link>
+        {launch?.localProject ? (
+          <Link
+            to={`/project/${launch.localProject.projectId}`}
+            className="text-muted-foreground hover:text-foreground shrink-0 underline-offset-4 hover:underline"
+          >
+            Back to project
+          </Link>
+        ) : null}
       </div>
 
       <Topbar
         fileInputRef={fileInputRef}
         onFileInputChange={onFileInputChange}
         door43User={editorUser}
-        onSignInClick={() => {
-          setLoginContext(undefined);
-          setPostEditorLogin(null);
-          setEditorLoginOpen(true);
-        }}
-        onDcs={() => {
-          if (!dcsCreds?.token) {
-            setLoginContext('Sign in to configure Door43 sync and repositories.');
-            setPostEditorLogin('dcs');
-            setEditorLoginOpen(true);
-            return;
-          }
-          setDcsOpen(true);
-        }}
-        onCollaborate={() => setCollabOpen(true)}
+        onSignInClick={onSignInClick}
+        onDcs={onDcs}
+        onCollaborate={onCollaborate}
         syncState={syncState}
         syncPeerCount={syncPeers}
         syncDetail={syncDetail}
         syncConnected={dcsSyncEnabled || collabActive}
-        onOpenExportUsfm={() => setExportUsfmOpen(true)}
+        onOpenExportUsfm={onOpenExportUsfm}
         onExportUsx={onExportUsx}
         referencePanel={referencePanel}
-        onToggleReference={() => setReferencePanel((v: boolean) => !v)}
+        onToggleReference={onToggleReference}
         usfmSource={usfmSource}
-        onToggleUsfmSource={() => setUsfmSource((v: boolean) => !v)}
-        onSyncNow={() => {
-          if (dcsTarget?.syncEnabled && !dcsCreds?.token) {
-            setLoginContext('Sign in to sync changes with Door43.');
-            setPostEditorLogin('sync');
-            setEditorLoginOpen(true);
-            return;
-          }
-          void onSyncNow();
-        }}
+        onToggleUsfmSource={onToggleUsfmSource}
+        onSyncNow={onTopbarSyncNow}
         usfmTheme={usfmTheme}
         onUsfmTheme={setUsfmTheme}
         editorMode={editorMode}
@@ -345,52 +510,46 @@ export function EditorPage() {
         markerPaletteValue={paletteValue}
         onMarkerPaletteValue={onPaletteChange}
         markerPaletteOptions={paletteOptions}
-        onAlignment={() => setAlignmentOpen(true)}
-        onHelp={() => setHelpOpen(true)}
-        navigationSlot={
-          ctrl ? (
-            <SectionPicker
-              inline
-              session={ctrl.session}
-              referenceSession={sourceTextSession ?? undefined}
-              onWindowNotice={(msg) => console.info(msg)}
-            />
-          ) : undefined
-        }
+        onAlignment={onAlignment}
+        onChecking={onChecking}
+        checkingOpen={checkingOpen}
+        onHelp={onHelp}
+        onMarkerShortcuts={onMarkerShortcuts}
+        navigationSlot={navigationSlot}
+        localSyncSlot={localSyncSlot}
       />
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div ref={conflictHostRef} className="conflict-host" />
 
-        <main className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-8">
+        <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 pb-4">
           <div
             className={cn(
-              'flex min-h-0 flex-1 gap-4',
+              'flex min-h-0 min-w-0 flex-1 gap-4 overflow-hidden',
               referencePanel
                 ? 'flex-col landscape:flex-row landscape:items-stretch'
                 : 'flex-col',
             )}
           >
             {referencePanel && ctrl ? (
-              <div
-                className={cn(
-                  'flex min-h-0 min-w-0 flex-col',
-                  'landscape:flex-1 landscape:overflow-hidden',
-                  'portrait:flex-1 portrait:min-h-0 portrait:overflow-hidden',
-                )}
-              >
-                <SourcePanel
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <ReferenceColumn
                   session={ctrl.session}
                   onSourceSession={setSourceTextSession}
                   prefillSourceUsfm={launch?.sourceReferenceUsfm}
+                  targetSession={ctrl.session}
+                  dcsAuth={dcsCreds ? { host: dcsCreds.host, token: dcsCreds.token } : null}
+                  sourceLanguage={launch?.sourceLanguage}
+                  launchBookCode={launch?.projectMeta?.bookCode}
+                  onSourceLanguageChange={onSourceLanguageChange}
                 />
               </div>
             ) : null}
 
             <div
               className={cn(
-                'flex min-h-0 min-w-0 flex-1 flex-col gap-0 md:flex-row',
-                referencePanel && 'min-h-0 min-w-0 flex-1 overflow-hidden',
+                'flex min-h-0 min-w-0 flex-1 flex-col gap-0 overflow-hidden md:flex-row',
+                referencePanel && 'min-h-0 min-w-0 flex-1',
               )}
             >
               <EditorPanel
@@ -405,13 +564,19 @@ export function EditorPage() {
               {ctrl ? <UsfmSourcePane session={ctrl.session} visible={usfmSource} /> : null}
             </div>
           </div>
+
+          {checkingOpen ? (
+            <div className="border-border max-h-[min(40vh,22rem)] w-full max-w-4xl shrink-0 overflow-y-auto border-t pt-3">
+              <CheckingPanel />
+            </div>
+          ) : null}
         </main>
       </div>
 
       {ctrl ? (
         <AlignmentPanel
           open={alignmentOpen}
-          onClose={() => setAlignmentOpen(false)}
+          onClose={onCloseAlignment}
           session={ctrl.session}
           sourceTextSession={sourceTextSession}
           usfmTheme={usfmTheme}
@@ -440,6 +605,8 @@ export function EditorPage() {
       />
       <DcsModal open={dcsOpen} onOpenChange={setDcsOpen} />
       <CollaborateModal open={collabOpen} onOpenChange={setCollabOpen} />
+
+      <MarkerShortcutsDialog open={markerShortcutsOpen} onOpenChange={setMarkerShortcutsOpen} />
 
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
         <DialogContent className="sm:max-w-md" showCloseButton>

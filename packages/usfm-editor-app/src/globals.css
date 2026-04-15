@@ -72,6 +72,19 @@
   --ring: #6366f1;
 }
 
+/*
+ * Radix ScrollArea wraps the viewport’s children in a div with inline
+ * `min-width: 100%; display: table`, so wide content can grow past the viewport
+ * and clip horizontally. Force a normal block sizing context so text wraps.
+ */
+[data-radix-scroll-area-viewport] > div {
+  display: block !important;
+  width: 100%;
+  min-width: 0 !important;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -134,4 +147,61 @@ img.ProseMirror-separator {
   /* Gutter strip (~⋮ + +) + same inset on the right so the column feels balanced */
   box-sizing: border-box;
   padding: 0.25rem 3rem 1.5rem;
+}
+
+/* TWL/TN help highlights on reference ProseMirror (inline decorations) */
+.ProseMirror .usfm-helps-deco {
+  border-radius: 2px;
+}
+.ProseMirror .usfm-helps-twl {
+  text-decoration: underline dotted;
+  text-decoration-color: rgba(124, 58, 237, 0.45);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  cursor: pointer;
+}
+.ProseMirror .usfm-helps-tn {
+  text-decoration: underline dotted;
+  text-decoration-color: rgba(217, 119, 6, 0.45);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  cursor: pointer;
+}
+.ProseMirror .usfm-helps-twl.usfm-helps-tn {
+  text-decoration: underline dotted;
+  text-decoration-color: rgba(124, 58, 237, 0.45);
+  border-bottom: 1px dotted rgba(217, 119, 6, 0.45);
+}
+.ProseMirror .usfm-helps-active {
+  background-color: rgba(124, 58, 237, 0.08);
+  border-radius: 2px;
+}
+
+/* Thin, subtle scrollbar for horizontally scrollable navigation rows. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, currentColor 25%, transparent) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  height: 3px;
+  width: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+/* Completely hide scrollbar (visual only, scrolling still works). */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }

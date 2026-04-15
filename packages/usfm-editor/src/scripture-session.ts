@@ -556,11 +556,31 @@ export class ScriptureSession {
   }
 
   private syncStoreFromPm(state: EditorState): void {
-    const oldTexts = collectVerseTextsFromContent(
-      this.store.getFullUSJ().content as unknown[]
-    );
-
     const pm = state.doc;
+
+    // Collect the chapter numbers being written (writable chapters only).
+    const editedChapters: number[] = [];
+    pm.forEach((node) => {
+      if (node.type.name === 'chapter' && !node.attrs.readonly) {
+        editedChapters.push(chapterNumberFromPmChapter(node));
+      }
+    });
+
+    // Skip full-book deep-clone when no alignment data is active — reconciliation is a no-op.
+    const needsAlignmentReconcile = this.isAlignmentSourceLoaded() && editedChapters.length > 0;
+
+    // Snapshot old verse texts scoped to just the edited chapters (no full-book clone needed).
+    let oldTexts: Record<string, string> = {};
+    if (needsAlignmentReconcile) {
+      const slices = this.store.getChapterSlicesRef();
+      for (const ch of editedChapters) {
+        const slice = slices.find((s) => s.chapter === ch);
+        if (slice) {
+          Object.assign(oldTexts, collectVerseTextsFromContent(slice.nodes));
+        }
+      }
+    }
+
     const pre = preChapterPmSectionsToUsjNodes(pm);
     if (pre.length > 0) {
       const full = this.store.getFullUSJ();
@@ -590,10 +610,18 @@ export class ScriptureSession {
       }
     });
 
-    const newTexts = collectVerseTextsFromContent(
-      this.store.getFullUSJ().content as unknown[]
-    );
-    this.reconcileAlignmentsForVerseTextDiff(oldTexts, newTexts);
+    if (needsAlignmentReconcile) {
+      // Snapshot new verse texts from only the edited chapters (still no full-book clone).
+      let newTexts: Record<string, string> = {};
+      const slicesAfter = this.store.getChapterSlicesRef();
+      for (const ch of editedChapters) {
+        const slice = slicesAfter.find((s) => s.chapter === ch);
+        if (slice) {
+          Object.assign(newTexts, collectVerseTextsFromContent(slice.nodes));
+        }
+      }
+      this.reconcileAlignmentsForVerseTextDiff(oldTexts, newTexts);
+    }
   }
 
   private reconcileAlignmentsForVerseTextDiff(
@@ -843,7 +871,6 @@ export class ScriptureSession {
       this.loadUSFM(usfm);
       return;
     }
-    const oldTexts = collectVerseTextsFromContent(this.store.getFullUSJ().content as unknown[]);
     const parser = new USFMParser({ silentConsole: true });
     const toDoc = (text: string): UsjDocument => {
       parser.parse(text);
@@ -862,10 +889,29 @@ export class ScriptureSession {
         parsed = toDoc(`\\c ${this.contentPage.chapter}\n${usfm}`);
       }
     }
+
+    // Determine the chapter number affected so we can scope the verse-text diff.
+    const editedChapterNum =
+      this.contentPage.kind === 'chapter' ? this.contentPage.chapter : null;
+    const needsAlignmentReconcile = this.isAlignmentSourceLoaded() && editedChapterNum !== null;
+
+    // Snapshot old verse texts for just this chapter before the merge (no full-book clone).
+    let oldTexts: Record<string, string> = {};
+    if (needsAlignmentReconcile) {
+      const slice = this.store.getChapterSlicesRef().find((s) => s.chapter === editedChapterNum);
+      if (slice) oldTexts = collectVerseTextsFromContent(slice.nodes);
+    }
+
     this.mergeParsedVisibleUsfmIntoStore(parsed);
     this.normalizeStoreToEditableUsj();
-    const newTexts = collectVerseTextsFromContent(this.store.getFullUSJ().content as unknown[]);
-    this.reconcileAlignmentsForVerseTextDiff(oldTexts, newTexts);
+
+    if (needsAlignmentReconcile) {
+      // Snapshot new verse texts for the same chapter after the merge.
+      const sliceAfter = this.store.getChapterSlicesRef().find((s) => s.chapter === editedChapterNum);
+      const newTexts = sliceAfter ? collectVerseTextsFromContent(sliceAfter.nodes) : {};
+      this.reconcileAlignmentsForVerseTextDiff(oldTexts, newTexts);
+    }
+
     this.rebuildEditorDoc();
   }
 

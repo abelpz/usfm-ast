@@ -1,0 +1,48 @@
+{
+  "name": "@usfm-tools/project-formats",
+  "version": "0.1.0",
+  "description": "Scripture Burrito + Resource Container parsing, DCS layout detection, enhanced project summary",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "bun run clean && tsc --build",
+    "build:watch": "tsc --build --watch",
+    "test": "jest --passWithNoTests",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@usfm-tools/types": "workspace:*",
+    "js-yaml": "4.1.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "4.0.9",
+    "@types/jest": "^29.5.0",
+    "jest": "^29.5.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "5.9.3"
+  },
+  "keywords": ["usfm", "scripture-burrito", "resource-container", "door43"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abelpz/usfm-ast.git",
+    "directory": "packages/usfm-editor-project-formats"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

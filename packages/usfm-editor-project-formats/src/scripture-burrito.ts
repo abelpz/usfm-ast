@@ -1,7 +1,11 @@
 /**
  * Scripture Burrito 1.x metadata.json parsing and validation.
+ * Extended fields: per-ingredient `x-source`, root `x-activeAlignment`, `x-checkingConfig`.
  * @see https://docs.burrito.bible/en/latest/schema_docs/metadata.html
  */
+
+import type { ActiveAlignmentPointer, BookSourceProvenance, SbCheckingConfig } from '@usfm-tools/types';
+import { parseBookSourceProvenance } from './book-source-provenance';
 
 export type SBLocalizedMap = Record<string, string>;
 
@@ -22,6 +26,8 @@ export type SBIngredient = {
   /** URL for external large media */
   url?: string;
   role?: string;
+  /** Pragmatic SB extension: per-book / per-ingredient source versions used in translation */
+  'x-source'?: BookSourceProvenance[];
 };
 
 export type SBFlavor = {
@@ -60,6 +66,10 @@ export type ScriptureBurritoMeta = {
   confidential?: boolean;
   idAuthorities?: Record<string, { id?: string; name?: SBLocalizedMap }>;
   relationships?: unknown;
+  /** Pragmatic: which alignment file per book is merged into USFM */
+  'x-activeAlignment'?: Record<string, ActiveAlignmentPointer>;
+  /** Pragmatic: where checking artifacts live */
+  'x-checkingConfig'?: SbCheckingConfig;
   [key: string]: unknown;
 };
 
@@ -70,6 +80,38 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 function expectString(v: unknown, field: string): string {
   if (typeof v !== 'string' || !v.trim()) throw new Error(`Scripture Burrito: missing or invalid string: ${field}`);
   return v;
+}
+
+function parseActiveAlignmentBlock(raw: unknown): Record<string, ActiveAlignmentPointer> | undefined {
+  if (!isRecord(raw)) return undefined;
+  const out: Record<string, ActiveAlignmentPointer> = {};
+  for (const [bookKey, v] of Object.entries(raw)) {
+    if (!isRecord(v)) continue;
+    const sourceLanguage =
+      typeof v.sourceLanguage === 'string'
+        ? v.sourceLanguage
+        : typeof v.source_language === 'string'
+          ? v.source_language
+          : '';
+    const path = typeof v.path === 'string' ? v.path : '';
+    if (!sourceLanguage.trim() || !path.trim()) continue;
+    const bk = bookKey.toUpperCase();
+    out[bk] = { sourceLanguage: sourceLanguage.trim(), path: path.trim() };
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+function parseCheckingConfigBlock(raw: unknown): SbCheckingConfig | undefined {
+  if (!isRecord(raw)) return undefined;
+  const path = typeof raw.path === 'string' ? raw.path.trim() : '';
+  const stagesFile =
+    typeof raw.stagesFile === 'string'
+      ? raw.stagesFile.trim()
+      : typeof raw.stages_file === 'string'
+        ? raw.stages_file.trim()
+        : '';
+  if (!path || !stagesFile) return undefined;
+  return { path, stagesFile };
 }
 
 /**
@@ -119,6 +161,11 @@ export function parseScriptureBurrito(json: unknown): ScriptureBurritoMeta {
       };
     }
     if (isRecord(raw.scope)) ing.scope = raw.scope as Record<string, unknown>;
+    const xsource = raw['x-source'];
+    if (Array.isArray(xsource)) {
+      const parsed = xsource.map(parseBookSourceProvenance).filter((x): x is BookSourceProvenance => x != null);
+      if (parsed.length) ing['x-source'] = parsed;
+    }
     ingredients[path] = ing;
   }
 
@@ -137,11 +184,16 @@ export function parseScriptureBurrito(json: unknown): ScriptureBurritoMeta {
   if (json.idAuthorities) out.idAuthorities = json.idAuthorities as ScriptureBurritoMeta['idAuthorities'];
   if (json.relationships !== undefined) out.relationships = json.relationships;
 
+  const xaa = parseActiveAlignmentBlock(json['x-activeAlignment']);
+  if (xaa) out['x-activeAlignment'] = xaa;
+  const xcc = parseCheckingConfigBlock(json['x-checkingConfig']);
+  if (xcc) out['x-checkingConfig'] = xcc;
+
   return out;
 }
 
 /** Strip optional `NN-` sort prefix (e.g. `57-TIT.usfm` → `TIT`). */
-function bookFromIngredientPath(path: string): string | null {
+export function bookFromIngredientPath(path: string): string | null {
   const base = path.split('/').pop()?.replace(/\.usfm$/i, '') ?? '';
   const stripped = base.replace(/^\d{1,2}-/i, '');
   const u = stripped.toUpperCase();
@@ -178,11 +230,11 @@ export function listSBBooks(meta: ScriptureBurritoMeta, defaultLocale = 'en'): S
   for (const [path, ing] of Object.entries(meta.ingredients)) {
     if (!isSBIngredientUsfm(ing)) continue;
     const codes: string[] = [];
-    const scopeKeyOk = /^([1-4][A-Z]{2}|[A-Z]{3})$/i;
+    const scopeKeyOkLocal = /^([1-4][A-Z]{2}|[A-Z]{3})$/i;
     if (ing.scope && typeof ing.scope === 'object') {
       for (const k of Object.keys(ing.scope)) {
         const ku = k.toUpperCase();
-        if (scopeKeyOk.test(ku)) codes.push(ku);
+        if (scopeKeyOkLocal.test(ku)) codes.push(ku);
       }
     }
     const fromPath = bookFromIngredientPath(path);

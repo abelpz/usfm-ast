@@ -23,7 +23,9 @@ import {
   FileUp,
   Globe,
   HelpCircle,
+  Keyboard,
   Layers,
+  ListChecks,
   LogIn,
   MoreHorizontal,
   RefreshCw,
@@ -31,6 +33,7 @@ import {
   SunMoon,
   Users,
 } from 'lucide-react';
+import { memo } from 'react';
 import type { ReactNode, RefObject } from 'react';
 
 export type TopbarProps = {
@@ -63,12 +66,18 @@ export type TopbarProps = {
   onMarkerPaletteValue: (v: string) => void;
   markerPaletteOptions: ReadonlyArray<{ value: string; label: string }>;
   onAlignment: () => void;
+  /** Toggle checking extension panel (optional). */
+  onChecking?: () => void;
+  checkingOpen?: boolean;
   onHelp: () => void;
+  onMarkerShortcuts: () => void;
   /** Optional center slot — typically the SectionPicker rendered inline. */
   navigationSlot?: ReactNode;
+  /** Optional slot for local-project DCS sync indicator button. */
+  localSyncSlot?: ReactNode;
 };
 
-export function Topbar({
+export const Topbar = memo(function Topbar({
   fileInputRef,
   onFileInputChange,
   door43User,
@@ -94,11 +103,15 @@ export function Topbar({
   onMarkerPaletteValue,
   markerPaletteOptions,
   onAlignment,
+  onChecking,
+  checkingOpen,
   onHelp,
+  onMarkerShortcuts,
   navigationSlot,
+  localSyncSlot,
 }: TopbarProps) {
   return (
-    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-30 flex items-center gap-2 border-b border-border px-3 py-1.5 backdrop-blur">
+    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 z-30 flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5 backdrop-blur">
       <BookOpen className="text-primary size-5 shrink-0" aria-label="Scripture Editor" />
 
       {navigationSlot ? (
@@ -108,6 +121,7 @@ export function Topbar({
       )}
 
       <div className="flex shrink-0 items-center gap-2">
+        {localSyncSlot}
         {door43User ? (
           <Button type="button" variant="ghost" size="icon" className="size-8 rounded-full p-0" onClick={onDcs} title="Door43">
             {door43User.avatarUrl ? (
@@ -187,6 +201,14 @@ export function Topbar({
               <Layers className="size-4" />
               Word alignment
             </DropdownMenuItem>
+            {onChecking ? (
+              <DropdownMenuCheckboxItem checked={Boolean(checkingOpen)} onCheckedChange={() => onChecking()}>
+                <span className="flex items-center gap-2">
+                  <ListChecks className="size-4" />
+                  Checking panel
+                </span>
+              </DropdownMenuCheckboxItem>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="gap-2">
@@ -230,6 +252,11 @@ export function Topbar({
                   <option value="medium">Medium</option>
                   <option value="advanced">Advanced</option>
                 </select>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="gap-2" onSelect={onMarkerShortcuts}>
+                  <Keyboard className="size-4" />
+                  Marker shortcuts…
+                </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuSeparator />
@@ -242,4 +269,4 @@ export function Topbar({
       </div>
     </header>
   );
-}
+});
