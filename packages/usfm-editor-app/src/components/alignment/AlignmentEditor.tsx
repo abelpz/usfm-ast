@@ -1,5 +1,7 @@
-import type { ScriptureSession, SourceTextSession } from '@usfm-tools/editor';
+import type { ScriptureSession } from '@usfm-tools/editor';
 import { alignmentWordSurfacesEqual } from '@usfm-tools/editor-core';
+import type { Door43LanguageOption } from '@/dcs-client';
+import type { SourceSlotSnapshot } from './AlignmentSourcePicker';
 import type { AlignmentGroup } from '@usfm-tools/types';
 import {
   DndContext,
@@ -7,10 +9,9 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  type Active,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   addSourcesToBox,
   deriveAlignmentBoxes,
@@ -81,12 +82,15 @@ function canSplitBox(groups: AlignmentGroup[], box: { groupIndex: number | null 
 
 type Props = {
   session: ScriptureSession;
-  sourceTextSession: SourceTextSession | null;
+  /** All source slots from ReferenceColumn — passed to the alignment source picker. */
+  sourceSlots: ReadonlyArray<SourceSlotSnapshot>;
   overlayOpen: boolean;
+  dcsAuth: { host: string; token?: string } | null;
+  onRequestAddDcsLanguage: (lang: Door43LanguageOption) => void;
 };
 
-export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Props) {
-  const st = useAlignmentState(session, sourceTextSession, overlayOpen);
+export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, onRequestAddDcsLanguage }: Props) {
+  const st = useAlignmentState(session, overlayOpen);
   const {
     step,
     compat,
@@ -95,7 +99,8 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
     verseSids,
     selectedTrans,
     setSelectedTrans,
-    confirmSourceUsj,
+    useExistingLayer,
+    startNewLayer,
     resetToPickSource,
     referenceLabel,
     bump,
@@ -134,14 +139,35 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
     return { alignedWordCount, totalWordCount, percent };
   }, [boxes, trTok]);
 
+  /**
+   * Pre-computed color slot per translation token index. Recomputes only when groups/boxes/tokens
+   * change, not on every selection or pointer-move render.
+   */
+  const colorSlots = useMemo(
+    () =>
+      trTok.map((_, i) => {
+        const gi = transIndexToGroup(groups, trTok, i);
+        if (gi === null) return null;
+        const box = boxes.find((b) => b.groupIndex === gi);
+        return box ? alignmentColorSlotFromBox(box) : null;
+      }),
+    [groups, trTok, boxes],
+  );
+
   const showReferenceMissing =
     session.isAlignmentSourceLoaded() && trTok.length > 0 && refTok.length === 0;
 
+  // Compat blocking (incompatible source) only applies to the __embedded__ layer because that
+  // layer is tied to the translation's original alignment source. When the user picks a *new*
+  // explicit layer they deliberately chose a different source, so the embedded-source mismatch
+  // is expected and must not prevent editing.
+  const isEmbeddedLayer = activeKey === '__embedded__';
+  const compatBlocked = compat?.compatible === false && isEmbeddedLayer;
+
   const [selectedBoxIds, setSelectedBoxIds] = useState<Set<string>>(new Set());
   const [selectedDetachRef, setSelectedDetachRef] = useState<{ boxId: string; refIndex: number } | null>(null);
-  /** Multi-select within one box’s aligned translation chips (move several to bank or another box). */
+  /** Multi-select within one box's aligned translation chips (move several to bank or another box). */
   const [selectedAligned, setSelectedAligned] = useState<{ boxId: string; indices: number[] } | null>(null);
-  const [activeDrag, setActiveDrag] = useState<Active | null>(null);
   const lastBoxAnchorRef = useRef<string | null>(null);
   /** Grip `getBoundingClientRect()` synchronously in onDragStart (before layout changes). */
   const dragGripRectAtStartRef = useRef<DOMRect | null>(null);
@@ -154,7 +180,7 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
+      activationConstraint: { distance: 4 },
     }),
   );
 
@@ -189,11 +215,20 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
     return cn('border', GROUP_STYLES[paletteSlot % GROUP_STYLES.length]);
   }, []);
 
+  /**
+   * Stable ref for selectedTrans — lets toggleSource avoid listing selectedTrans as a dep,
+   * preventing unnecessary re-creation on every word click.
+   */
+  const selectedTransRef = useRef(selectedTrans);
+  useLayoutEffect(() => {
+    selectedTransRef.current = selectedTrans;
+  }, [selectedTrans]);
+
   const toggleSource = useCallback(
     (i: number, shiftKey: boolean) => {
       setSelectedAligned(null);
-      if (shiftKey && selectedTrans.length > 0) {
-        const anchor = selectedTrans[selectedTrans.length - 1]!;
+      if (shiftKey && selectedTransRef.current.length > 0) {
+        const anchor = selectedTransRef.current[selectedTransRef.current.length - 1]!;
         const lo = Math.min(anchor, i);
         const hi = Math.max(anchor, i);
         setSelectedTrans(Array.from({ length: hi - lo + 1 }, (_, k) => lo + k));
@@ -201,7 +236,7 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
       }
       setSelectedTrans((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]));
     },
-    [setSelectedTrans, selectedTrans],
+    [setSelectedTrans],
   );
 
   const onSelectDetachRef = useCallback((boxId: string, refIndex: number) => {
@@ -362,7 +397,7 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!over || compat?.compatible === false) return;
+      if (!over || compatBlocked) return;
       const d = active.data.current as
         | SourceWordDragData
         | MergeBoxDragData
@@ -411,7 +446,7 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
         return;
       }
     },
-    [compat?.compatible, onDropSource, onDropMerge, onDropUnalign, onDetachTargetRef],
+    [compatBlocked, onDropSource, onDropMerge, onDropUnalign, onDetachTargetRef],
   );
 
   const onMergeToolbar = useCallback(() => {
@@ -433,7 +468,7 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
   }, [verseSid, selectedBoxIds, refTok, trTok, groups, applyGroups]);
 
   const onSplitToolbar = useCallback(() => {
-    if (!verseSid || compat?.compatible === false) return;
+    if (!verseSid || compatBlocked) return;
     if (selectedDetachRef) {
       const box = deriveAlignmentBoxes(refTok, groups, trTok).find((b) => b.id === selectedDetachRef.boxId);
       if (box && box.groupIndex !== null && box.targetTokens.length > 1) {
@@ -449,7 +484,7 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
     if (next) applyGroups(next);
   }, [
     verseSid,
-    compat?.compatible,
+    compatBlocked,
     selectedDetachRef,
     selectedBoxIds,
     refTok,
@@ -482,13 +517,13 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
     setSelectedAligned(null);
   }, [verseSid, session, setSelectedTrans]);
 
-  const mergeDisabled = selectedBoxIds.size < 2 || compat?.compatible === false;
+  const mergeDisabled = selectedBoxIds.size < 2 || compatBlocked;
   const selectedBoxList = useMemo(
     () => boxes.filter((b) => selectedBoxIds.has(b.id)),
     [boxes, selectedBoxIds],
   );
   const splitDisabled = useMemo(() => {
-    if (compat?.compatible === false) return true;
+    if (compatBlocked) return true;
     if (selectedDetachRef) {
       const b = boxes.find((x) => x.id === selectedDetachRef.boxId);
       return !(b && b.groupIndex !== null && b.targetTokens.length > 1);
@@ -496,30 +531,28 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
     if (selectedBoxIds.size !== 1) return true;
     const one = selectedBoxList[0];
     return !(one && canSplitBox(groups, one));
-  }, [compat?.compatible, selectedDetachRef, selectedBoxIds, selectedBoxList, boxes, groups]);
+  }, [compatBlocked, selectedDetachRef, selectedBoxIds, selectedBoxList, boxes, groups]);
   const insertDisabled =
-    selectedTrans.length === 0 || selectedBoxIds.size !== 1 || compat?.compatible === false;
-  const unlinkDisabled = selectedBoxIds.size !== 1 || compat?.compatible === false;
+    selectedTrans.length === 0 || selectedBoxIds.size !== 1 || compatBlocked;
+  const unlinkDisabled = selectedBoxIds.size !== 1 || compatBlocked;
 
   const colorSlotForBox = useCallback((box: AlignmentBoxModel) => alignmentColorSlotFromBox(box), []);
 
-  const colorSlotForTransIndex = useCallback(
-    (transIndex: number) => {
-      const gi = transIndexToGroup(groups, trTok, transIndex);
-      if (gi === null) return null;
-      const box = boxes.find((b) => b.groupIndex === gi);
-      return box ? alignmentColorSlotFromBox(box) : null;
-    },
-    [boxes, groups, trTok],
-  );
-
   if (step === 'pick-source') {
+    const existingLayersForPicker = session.getAlignmentDocuments();
+    const expectedAlignmentKey = session.getExpectedAlignmentKey();
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-8">
         <AlignmentSourcePicker
-          sourceTextSession={sourceTextSession}
+          sourceSlots={sourceSlots}
+          existingLayers={existingLayersForPicker}
+          activeLayerKey={activeKey}
+          expectedAlignmentKey={expectedAlignmentKey}
+          dcsAuth={dcsAuth}
           referenceLabel={referenceLabel}
-          onConfirm={confirmSourceUsj}
+          onUseExistingLayer={useExistingLayer}
+          onStartNewLayer={startNewLayer}
+          onRequestAddDcsLanguage={onRequestAddDcsLanguage}
         />
       </div>
     );
@@ -537,12 +570,12 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
         </button>
       </div>
 
-      {compat && !compat.compatible ? (
+      {compatBlocked ? (
         <div
           className="border-destructive/50 bg-destructive/10 text-destructive shrink-0 rounded-lg border px-3 py-2 text-sm"
           role="alert"
         >
-          {compat.reason ?? 'Source mismatch — alignment is blocked for this phase.'}
+          {compat!.reason ?? 'Source mismatch — alignment is blocked for this phase.'}
         </div>
       ) : null}
 
@@ -635,18 +668,15 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
             const grip = t.closest('button');
             if (grip) dragGripRectAtStartRef.current = grip.getBoundingClientRect();
           }
-          setActiveDrag(e.active);
         }}
         onDragEnd={(e) => {
           dragGripRectAtStartRef.current = null;
           dragOverlayBaseRef.current = null;
-          setActiveDrag(null);
           handleDragEnd(e);
         }}
         onDragCancel={() => {
           dragGripRectAtStartRef.current = null;
           dragOverlayBaseRef.current = null;
-          setActiveDrag(null);
         }}
       >
         <div className="flex min-h-0 flex-1 items-stretch gap-3">
@@ -654,10 +684,10 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
             tokens={trTok}
             sourceAligned={sourceAligned}
             selected={selectedTrans}
-            colorSlotForToken={colorSlotForTransIndex}
+            colorSlots={colorSlots}
             groupClass={chipClass}
             onToggle={toggleSource}
-            disabled={compat?.compatible === false}
+            disabled={compatBlocked}
           />
           <AlignmentBoxGrid
             boxes={boxes}
@@ -667,7 +697,7 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
             onSelectDetachRef={onSelectDetachRef}
             groupClass={chipClass}
             colorSlotForBox={colorSlotForBox}
-            disabled={compat?.compatible === false}
+            disabled={compatBlocked}
             onSelectBox={onSelectBox}
             onRemoveAlignedSource={onRemoveAlignedSource}
             selectedAligned={selectedAligned}
@@ -686,7 +716,7 @@ export function AlignmentEditor({ session, sourceTextSession, overlayOpen }: Pro
             maxWidth: 'min(22rem, 92vw)',
           }}
         >
-          <AlignmentDragGhost active={activeDrag} trTok={trTok} refTok={refTok} boxes={boxes} />
+          <AlignmentDragGhost trTok={trTok} refTok={refTok} boxes={boxes} />
         </DragOverlay>
       </DndContext>
       </div>

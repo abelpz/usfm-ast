@@ -2,7 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { DcsLangnameEntry } from '@/lib/dcs-langnames-cache';
 import { cn } from '@/lib/utils';
-import { Languages, Search } from 'lucide-react';
+import { Languages } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const MAX_OPTIONS = 250;
@@ -84,7 +84,10 @@ export function Door43LanguagePicker({
   );
 
   useEffect(() => {
-    if (!valueLc) return;
+    if (!valueLc) {
+      setQuery('');
+      return;
+    }
     const e = entries.find((x) => x.lc === valueLc);
     if (e) setQuery(`${e.ln} (${e.lc})`);
   }, [valueLc, entries]);
@@ -110,7 +113,7 @@ export function Door43LanguagePicker({
         </Label>
       )}
       <div className="relative shrink-0">
-        <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
+        <Languages className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
         <Input
           ref={inputRef}
           id={`${idPrefix}-lang-combo`}
@@ -174,7 +177,9 @@ export function Door43LanguagePicker({
                   )}
                   onClick={() => pick(e.lc)}
                 >
-                  <span className="font-medium">{e.ln}</span>{' '}
+                  <span className="font-medium" dir={e.ld === 'rtl' ? 'rtl' : 'ltr'} lang={e.lc}>
+                    {e.ln}
+                  </span>{' '}
                   <span className="text-muted-foreground">({e.lc})</span>
                 </button>
               </li>

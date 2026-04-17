@@ -1,8 +1,9 @@
 import { alignmentWordSurfacesEqual, type WordToken } from '@usfm-tools/editor-core';
 import type { AlignedWord } from '@usfm-tools/types';
-import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { GripVertical, Plus, X } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import type { AlignmentBoxModel } from '@/hooks/useAlignmentBoxModel';
 
@@ -23,12 +24,31 @@ type Props = {
   mergeDragBoxIds?: string[];
   disabled?: boolean;
   selectedDetachRef: { boxId: string; refIndex: number } | null;
+  /** Stable callback: receives boxId internally from the box itself. */
   onSelectDetachRef: (boxId: string, refIndex: number) => void;
-  onSelect: (e: MouseEvent) => void;
-  onRemoveAlignedSource: (transIndex: number) => void;
+  /** Stable callback: box calls it with its own id. */
+  onSelectBox: (boxId: string, e: MouseEvent) => void;
+  /** Stable callback: box calls it with its own id. */
+  onRemoveAlignedSource: (boxId: string, transIndex: number) => void;
   /** Translation indices selected in this box (for multi-move / visual). */
-  selectedAlignedIndices: number[];
-  onToggleAlignedSelect: (transIndex: number, shiftKey: boolean) => void;
+  selectedAlignedIndices: readonly number[];
+  /** Stable callback: box calls it with its own id. */
+  onToggleAlignedSelect: (boxId: string, transIndex: number, shiftKey: boolean) => void;
+  /**
+   * Pre-computed by AlignmentBoxGrid from useDndContext().
+   * True when a detach-ref drag originated from this box (disables its droppable).
+   */
+  detachDragFromThisBox: boolean;
+  /**
+   * Pre-computed by AlignmentBoxGrid from useDndContext().
+   * True when this box is part of an active merge drag (applies ghost opacity).
+   */
+  inMergeDragTogether: boolean;
+  /**
+   * Pre-computed by AlignmentBoxGrid: set of translation indices in the current unalign drag.
+   * Used to apply multi-unalign ghost opacity to aligned-word chips.
+   */
+  activeUnalignTransIndices: ReadonlySet<number> | null;
 };
 
 function alignedWordToTransIndex(trTok: WordToken[], aw: AlignedWord): number | null {
@@ -162,14 +182,14 @@ function MergedTargetColumn({
   );
 }
 
-function unalDragIndices(transIndex: number, chipSelected: boolean, selectedInBox: number[]): number[] {
+function unalDragIndices(transIndex: number, chipSelected: boolean, selectedInBox: readonly number[]): number[] {
   if (chipSelected && selectedInBox.length > 1 && selectedInBox.includes(transIndex)) {
     return [...selectedInBox].sort((a, b) => a - b);
   }
   return [transIndex];
 }
 
-function AlignedWordChip({
+const AlignedWordChip = memo(function AlignedWordChip({
   dragId,
   transIndex,
   wordLabel,
@@ -177,6 +197,7 @@ function AlignedWordChip({
   disabled,
   chipSelected,
   selectedInBox,
+  inSameMultiUnalign,
   onToggleSelect,
   onRemove,
 }: {
@@ -186,7 +207,8 @@ function AlignedWordChip({
   occurrenceSup: ReactNode;
   disabled?: boolean;
   chipSelected: boolean;
-  selectedInBox: number[];
+  selectedInBox: readonly number[];
+  inSameMultiUnalign: boolean;
   onToggleSelect: (shiftKey: boolean) => void;
   onRemove: () => void;
 }) {
@@ -202,18 +224,12 @@ function AlignedWordChip({
     disabled: Boolean(disabled),
   });
 
-  const { active } = useDndContext();
-  const activeUn = active?.data?.current as UnalignDragData | undefined;
-  const inSameMultiUnalign =
-    activeUn?.type === 'unalign' &&
-    (activeUn.transIndices ?? [activeUn.transIndex]).includes(transIndex);
-
   return (
     <div
       className={cn(
         'bg-background flex max-w-full items-center gap-0.5 rounded border px-1 py-0.5 text-sm transition-colors',
         chipSelected && 'ring-ring ring-2 ring-offset-2 ring-offset-background',
-        (isDragging || (inSameMultiUnalign && active)) && !disabled && 'opacity-60',
+        (isDragging || inSameMultiUnalign) && !disabled && 'opacity-60',
       )}
     >
       <button
@@ -222,7 +238,7 @@ function AlignedWordChip({
         ref={setNodeRef}
         {...listeners}
         {...attributes}
-        aria-label={`Move “${wordLabel}”`}
+        aria-label={`Move "${wordLabel}"`}
         className={cn(
           'text-muted-foreground hover:text-foreground shrink-0 cursor-grab rounded p-0.5 touch-none active:cursor-grabbing',
           isDragging && 'opacity-60',
@@ -246,7 +262,7 @@ function AlignedWordChip({
         type="button"
         data-no-box-select
         className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5"
-        aria-label={`Remove “${wordLabel}” from this box`}
+        aria-label={`Remove "${wordLabel}" from this box`}
         onClick={(e) => {
           e.stopPropagation();
           onRemove();
@@ -256,9 +272,9 @@ function AlignedWordChip({
       </button>
     </div>
   );
-}
+});
 
-export function AlignmentBox({
+export const AlignmentBox = memo(function AlignmentBox({
   box,
   trTok,
   selected,
@@ -268,20 +284,15 @@ export function AlignmentBox({
   disabled,
   selectedDetachRef,
   onSelectDetachRef,
-  onSelect,
+  onSelectBox,
   onRemoveAlignedSource,
   selectedAlignedIndices,
   onToggleAlignedSelect,
+  detachDragFromThisBox,
+  inMergeDragTogether,
+  activeUnalignTransIndices,
 }: Props) {
   const mergedTop = box.targetTokens.length > 1;
-  const { active } = useDndContext();
-  const activeData = active?.data?.current;
-  const detachData = activeData as DetachRefDragData | undefined;
-  const mergeDrag = activeData as MergeBoxDragData | undefined;
-  const detachDragFromThisBox = detachData?.type === 'detach-ref' && detachData.boxId === box.id;
-  const inMergeDragTogether =
-    mergeDrag?.type === 'merge-box' &&
-    (mergeDrag.boxIds ? mergeDrag.boxIds.includes(box.id) : mergeDrag.boxId === box.id);
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: boxDropId(box.id),
@@ -301,12 +312,12 @@ export function AlignmentBox({
           : 'min-w-[6.5rem] max-w-[14rem]',
         groupClass(colorSlot),
         selected && 'ring-ring ring-2 ring-offset-2 ring-offset-background',
-        inMergeDragTogether && active && !disabled && 'opacity-60',
+        inMergeDragTogether && !disabled && 'opacity-60',
         isOver && !disabled && 'ring-primary/50 ring-2',
       )}
       onClick={(e) => {
         if ((e.target as HTMLElement).closest('[data-no-box-select]')) return;
-        onSelect(e);
+        onSelectBox(box.id, e);
       }}
     >
       <div className="border-border/80 flex min-w-0 max-w-full items-stretch gap-1 border-b p-1">
@@ -378,6 +389,7 @@ export function AlignmentBox({
               );
             }
             const chipSelected = selectedAlignedIndices.includes(ti);
+            const inSameMultiUnalign = activeUnalignTransIndices?.has(ti) ?? false;
             return (
               <AlignedWordChip
                 key={`${box.id}-s-${aw.word}-${aw.occurrence}-${j}`}
@@ -392,8 +404,9 @@ export function AlignmentBox({
                 disabled={disabled}
                 chipSelected={chipSelected}
                 selectedInBox={selectedAlignedIndices}
-                onToggleSelect={(shiftKey) => onToggleAlignedSelect(ti, shiftKey)}
-                onRemove={() => onRemoveAlignedSource(ti)}
+                inSameMultiUnalign={inSameMultiUnalign}
+                onToggleSelect={(shiftKey) => onToggleAlignedSelect(box.id, ti, shiftKey)}
+                onRemove={() => onRemoveAlignedSource(box.id, ti)}
               />
             );
           })
@@ -401,4 +414,4 @@ export function AlignmentBox({
       </div>
     </div>
   );
-}
+});

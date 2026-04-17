@@ -1,6 +1,7 @@
 import type { ScriptureSession, SourceTextSession } from '@usfm-tools/editor';
 import { useCallback, useEffect, useRef } from 'react';
 import { mountSourcePanel } from '@/lib/mount-source-panel';
+import { getProcessedCacheStorage, getSourceCacheStorage } from '@/hooks/useSourceCache';
 
 type Props = {
   session: ScriptureSession;
@@ -35,6 +36,8 @@ export function SourcePanel({ session, onError, onSourceSession, prefillSourceUs
       onSourceSession: relaySource,
       prefillSourceUsfm,
       openDrawerOnMount,
+      cacheStorage: getSourceCacheStorage(),
+      processedCache: getProcessedCacheStorage(),
     });
     // openDrawerOnMount is intentionally read only on first mount for this DOM mount (new tab).
   }, [session, prefillSourceUsfm, relaySource, relayError]);

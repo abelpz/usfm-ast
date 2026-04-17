@@ -5,8 +5,12 @@ import { useMemo } from 'react';
 import { insertDetachPlaceholderIndex, type AlignmentBoxModel } from '@/hooks/useAlignmentBoxModel';
 
 import { AlignmentBox } from './AlignmentBox';
-import type { DetachRefDragData } from './alignment-dnd-ids';
+import type { DetachRefDragData, MergeBoxDragData, UnalignDragData } from './alignment-dnd-ids';
 import { DetachSplitPlaceholderBox } from './DetachSplitPlaceholderBox';
+
+/** Stable empty array so memoized AlignmentBox children don't get a new reference when
+ *  their selectedAlignedIndices is empty. */
+const EMPTY_NUMBERS: readonly number[] = [];
 
 type Props = {
   boxes: AlignmentBoxModel[];
@@ -25,6 +29,13 @@ type Props = {
 
 /**
  * Main area: alignment boxes in verse order, flex-wrap.
+ *
+ * Performance notes:
+ * - useDndContext() is subscribed here (once) and the derived per-box boolean flags are passed
+ *   as stable primitive props to memoized AlignmentBox children.
+ * - active.data.current is the same object reference throughout a drag, so booleans computed
+ *   from it are stable during pointer moves → AlignmentBox memos survive pointer-move renders.
+ * - EMPTY_NUMBERS prevents selectedAlignedIndices from creating a new [] reference every render.
  */
 export function AlignmentBoxGrid({
   boxes,
@@ -41,7 +52,11 @@ export function AlignmentBoxGrid({
   onToggleAlignedSelect,
 }: Props) {
   const { active } = useDndContext();
+  const hasDrag = Boolean(active);
   const detach = active?.data?.current as DetachRefDragData | undefined;
+  const mergeDrag = active?.data?.current as MergeBoxDragData | undefined;
+  const unalignDrag = active?.data?.current as UnalignDragData | undefined;
+
   const showDetachPlaceholder =
     !disabled &&
     detach?.type === 'detach-ref' &&
@@ -58,6 +73,16 @@ export function AlignmentBoxGrid({
     const sel = ordered.filter((id) => selectedBoxIds.has(id));
     return sel.length >= 2 ? sel : null;
   }, [boxes, selectedBoxIds]);
+
+  /**
+   * Set of translation indices in the current active unalign drag.
+   * Memoized on `active` (stable during pointer move) so this Set is only recreated at
+   * drag start/end — keeping AlignmentBox's activeUnalignTransIndices prop stable.
+   */
+  const activeUnalignSet = useMemo<ReadonlySet<number> | null>(() => {
+    if (!active || unalignDrag?.type !== 'unalign') return null;
+    return new Set<number>(unalignDrag.transIndices ?? [unalignDrag.transIndex]);
+  }, [active, unalignDrag]);
 
   const gridItems = useMemo(() => {
     if (!showDetachPlaceholder || !detach || detachInsertIndex < 0) {
@@ -108,14 +133,25 @@ export function AlignmentBoxGrid({
                 disabled={disabled}
                 selectedDetachRef={selectedDetachRef}
                 onSelectDetachRef={onSelectDetachRef}
-                onSelect={(e) => onSelectBox(item.box.id, e)}
-                onRemoveAlignedSource={(ti) => onRemoveAlignedSource(item.box.id, ti)}
+                onSelectBox={onSelectBox}
+                onRemoveAlignedSource={onRemoveAlignedSource}
                 selectedAlignedIndices={
-                  selectedAligned?.boxId === item.box.id ? selectedAligned.indices : []
+                  selectedAligned?.boxId === item.box.id
+                    ? selectedAligned.indices
+                    : EMPTY_NUMBERS
                 }
-                onToggleAlignedSelect={(ti, shiftKey) =>
-                  onToggleAlignedSelect(item.box.id, ti, shiftKey)
+                onToggleAlignedSelect={onToggleAlignedSelect}
+                detachDragFromThisBox={
+                  hasDrag && detach?.type === 'detach-ref' && detach.boxId === item.box.id
                 }
+                inMergeDragTogether={
+                  hasDrag &&
+                  mergeDrag?.type === 'merge-box' &&
+                  (mergeDrag.boxIds
+                    ? mergeDrag.boxIds.includes(item.box.id)
+                    : mergeDrag.boxId === item.box.id)
+                }
+                activeUnalignTransIndices={activeUnalignSet}
               />
             ),
           )}

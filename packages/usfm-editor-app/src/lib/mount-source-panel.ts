@@ -4,7 +4,13 @@
 
 import { SourceTextSession } from '@usfm-tools/editor';
 import type { ScriptureSession, SourceTextProvider } from '@usfm-tools/editor';
-import { DcsSourceTextProvider, FileSourceTextProvider } from '@usfm-tools/editor-adapters';
+import {
+  CacheFirstSourceTextProvider,
+  DcsSourceTextProvider,
+  FileSourceTextProvider,
+} from '@usfm-tools/editor-adapters';
+import type { ProcessedCacheStorage, SourceCacheStorage } from '@usfm-tools/types';
+import { directionForLang } from '@/lib/lang-direction';
 
 export interface SourcePanelMountOptions {
   onLoad?: (provider: SourceTextProvider) => void;
@@ -13,10 +19,66 @@ export interface SourcePanelMountOptions {
   onSourceSession?: (session: SourceTextSession | null) => void;
   /** When set, immediately load this USFM string as the reference (in-memory file). */
   prefillSourceUsfm?: string;
-  /** Open the settings drawer once right after mount (e.g. “Add source” tab). */
+  /** Open the settings drawer once right after mount (e.g. "Add source" tab). */
   openDrawerOnMount?: boolean;
+  /**
+   * When provided, DCS source loading uses `CacheFirstSourceTextProvider`:
+   * processed cache → raw storage → network (write-through).
+   */
+  cacheStorage?: SourceCacheStorage;
+  /** Processed (Layer 2) cache. Used alongside `cacheStorage` for cache-first reads. */
+  processedCache?: ProcessedCacheStorage;
 }
 
+async function resolveDcsProvider(opts: {
+  baseUrl: string;
+  owner: string;
+  repo: string;
+  filePath: string;
+  ref?: string;
+  token?: string;
+  cacheStorage?: SourceCacheStorage;
+  processedCache?: ProcessedCacheStorage;
+}): Promise<SourceTextProvider> {
+  if (opts.cacheStorage && opts.processedCache) {
+    const repoId = `${opts.owner}/${opts.repo}`;
+    // Look up the cached snapshot to get the releaseTag (needed for cache key).
+    let releaseTag = opts.ref ?? 'master';
+    let langCode = '';
+    try {
+      const cachedRepos = await opts.cacheStorage.listCachedRepos();
+      const match = cachedRepos.find((r) => r.repoId === repoId);
+      if (match) {
+        releaseTag = match.releaseTag;
+        langCode = match.langCode;
+      }
+    } catch {
+      /* continue with ref as releaseTag */
+    }
+    return new CacheFirstSourceTextProvider({
+      rawStorage: opts.cacheStorage,
+      processedCache: opts.processedCache,
+      repoId,
+      releaseTag,
+      ingredientPath: opts.filePath,
+      langCode,
+      displayName: `${opts.repo} (${releaseTag})`,
+      baseUrl: opts.baseUrl,
+      owner: opts.owner,
+      repo: opts.repo,
+      ref: opts.ref,
+      token: opts.token,
+    });
+  }
+  return new DcsSourceTextProvider({
+    baseUrl: opts.baseUrl,
+    owner: opts.owner,
+    repo: opts.repo,
+    filePath: opts.filePath,
+    ref: opts.ref,
+    token: opts.token,
+  });
+}
 
 export function mountSourcePanel(
   container: HTMLElement,
@@ -40,7 +102,7 @@ export function mountSourcePanel(
           <label class="src-file-label">
             <input type="file" class="src-file-input"
               accept=".usfm,.sfm,.usj,.usx,.txt,.xml,.json,*/*" />
-            <span>Choose file…</span>
+            <span>Choose file...</span>
           </label>
         </div>
 
@@ -91,31 +153,31 @@ export function mountSourcePanel(
     </div>
   `;
 
-  /* ── Element refs ─────────────────────────────────────────────────────── */
-  const drawer       = container.querySelector('.source-panel-drawer') as HTMLElement;
-  const tabs         = container.querySelectorAll<HTMLButtonElement>('.src-tab');
-  const filePanelEl  = container.querySelector<HTMLElement>('[data-panel="file"]')!;
-  const dcsPanelEl   = container.querySelector<HTMLElement>('[data-panel="dcs"]')!;
-  const fileInput    = container.querySelector('.src-file-input') as HTMLInputElement;
-  const dcsStep1     = container.querySelector('.src-dcs-step1') as HTMLElement;
-  const dcsStep2     = container.querySelector('.src-dcs-step2') as HTMLElement;
-  const dcsUrlInput  = container.querySelector('.src-dcs-url') as HTMLInputElement;
-  const dcsOwnerInput= container.querySelector('.src-dcs-owner') as HTMLInputElement;
-  const dcsRepoInput = container.querySelector('.src-dcs-repo') as HTMLInputElement;
+  /* -- Element refs -------------------------------------------------------- */
+  const drawer        = container.querySelector('.source-panel-drawer') as HTMLElement;
+  const tabs          = container.querySelectorAll<HTMLButtonElement>('.src-tab');
+  const filePanelEl   = container.querySelector<HTMLElement>('[data-panel="file"]')!;
+  const dcsPanelEl    = container.querySelector<HTMLElement>('[data-panel="dcs"]')!;
+  const fileInput     = container.querySelector('.src-file-input') as HTMLInputElement;
+  const dcsStep1      = container.querySelector('.src-dcs-step1') as HTMLElement;
+  const dcsStep2      = container.querySelector('.src-dcs-step2') as HTMLElement;
+  const dcsUrlInput   = container.querySelector('.src-dcs-url') as HTMLInputElement;
+  const dcsOwnerInput = container.querySelector('.src-dcs-owner') as HTMLInputElement;
+  const dcsRepoInput  = container.querySelector('.src-dcs-repo') as HTMLInputElement;
   const dcsContinueBtn = container.querySelector('.src-dcs-continue') as HTMLButtonElement;
-  const dcsBackBtn   = container.querySelector('.src-dcs-back') as HTMLButtonElement;
-  const dcsPathInput = container.querySelector('.src-dcs-path') as HTMLInputElement;
-  const dcsRefInput  = container.querySelector('.src-dcs-ref') as HTMLInputElement;
-  const dcsTokenInput= container.querySelector('.src-dcs-token') as HTMLInputElement;
-  const dcsLoadBtn   = container.querySelector('.src-dcs-load') as HTMLButtonElement;
-  const syncCheckbox = container.querySelector('.src-sync-chapters') as HTMLInputElement;
-  const removeBtn    = container.querySelector('.src-remove-btn') as HTMLButtonElement;
-  const statusEl     = container.querySelector('.src-status') as HTMLElement;
-  const emptyHint    = container.querySelector('.src-empty-hint') as HTMLElement;
-  const openBtn      = container.querySelector('.src-open-btn') as HTMLButtonElement;
-  const pmMount      = container.querySelector('.src-pm-mount') as HTMLElement;
+  const dcsBackBtn    = container.querySelector('.src-dcs-back') as HTMLButtonElement;
+  const dcsPathInput  = container.querySelector('.src-dcs-path') as HTMLInputElement;
+  const dcsRefInput   = container.querySelector('.src-dcs-ref') as HTMLInputElement;
+  const dcsTokenInput = container.querySelector('.src-dcs-token') as HTMLInputElement;
+  const dcsLoadBtn    = container.querySelector('.src-dcs-load') as HTMLButtonElement;
+  const syncCheckbox  = container.querySelector('.src-sync-chapters') as HTMLInputElement;
+  const removeBtn     = container.querySelector('.src-remove-btn') as HTMLButtonElement;
+  const statusEl      = container.querySelector('.src-status') as HTMLElement;
+  const emptyHint     = container.querySelector('.src-empty-hint') as HTMLElement;
+  const openBtn       = container.querySelector('.src-open-btn') as HTMLButtonElement;
+  const pmMount       = container.querySelector('.src-pm-mount') as HTMLElement;
 
-  /* ── Session ──────────────────────────────────────────────────────────── */
+  /* -- Session ------------------------------------------------------------- */
   const sourceSession = new SourceTextSession(pmMount, {
     chrome: { preset: 'minimal' },
     contextChapters: targetSession.getContextChapterRadius(),
@@ -127,11 +189,19 @@ export function mountSourcePanel(
     showView();
     setIdentity(true, sourceSession.getProvider()?.displayName);
     if (syncCheckbox.checked) applyTargetWindow();
+    const p = sourceSession.getProvider();
+    const lc = p?.langCode?.trim();
+    const explicit = p && 'direction' in p ? p.direction : undefined;
+    void (async () => {
+      const dir =
+        explicit ?? (lc ? await directionForLang(lc) : 'ltr');
+      sourceSession.applyLanguage({ lang: lc || undefined, dir });
+    })();
   });
 
   options.onSourceSession?.(sourceSession);
 
-  /* ── Settings drawer toggle ───────────────────────────────────────────── */
+  /* -- Settings drawer toggle ---------------------------------------------- */
   let drawerOpen = false;
 
   function setDrawerOpen(open: boolean) {
@@ -139,7 +209,7 @@ export function mountSourcePanel(
     drawer.hidden = !open;
   }
 
-  /* ── Tabs ─────────────────────────────────────────────────────────────── */
+  /* -- Tabs ----------------------------------------------------------------- */
   let activeTab: 'file' | 'dcs' = 'file';
 
   function switchTab(tab: 'file' | 'dcs') {
@@ -157,26 +227,26 @@ export function mountSourcePanel(
     btn.addEventListener('click', () => switchTab(btn.dataset.tab as 'file' | 'dcs'));
   });
 
-  /* ── Status ───────────────────────────────────────────────────────────── */
+  /* -- Status --------------------------------------------------------------- */
   function setStatus(msg: string, type: 'ok' | 'error' | 'loading' = 'ok') {
     statusEl.textContent = msg;
     statusEl.className = `src-status src-status--${type}`;
   }
 
-  /* ── Identity ─────────────────────────────────────────────────────────── */
+  /* -- Identity ------------------------------------------------------------- */
   function setIdentity(loaded: boolean, _name?: string) {
     emptyHint.style.display = loaded ? 'none' : '';
     removeBtn.hidden = !loaded;
   }
 
-  /* ── Load ─────────────────────────────────────────────────────────────── */
+  /* -- Load ----------------------------------------------------------------- */
   function showView() {
     emptyHint.style.display = 'none';
     pmMount.removeAttribute('hidden');
   }
 
   async function handleLoad(provider: SourceTextProvider) {
-    setStatus('Loading…', 'loading');
+    setStatus('Loading...', 'loading');
     try {
       await sourceSession.load(provider);
       showView();
@@ -192,7 +262,7 @@ export function mountSourcePanel(
     }
   }
 
-  /* ── File source ──────────────────────────────────────────────────────── */
+  /* -- File source ---------------------------------------------------------- */
   function triggerFilePick() {
     switchTab('file');
     setDrawerOpen(true);
@@ -208,7 +278,7 @@ export function mountSourcePanel(
     await handleLoad(new FileSourceTextProvider(f));
   });
 
-  /* ── DCS source ───────────────────────────────────────────────────────── */
+  /* -- DCS source ----------------------------------------------------------- */
   dcsContinueBtn.addEventListener('click', () => {
     const owner = dcsOwnerInput.value.trim();
     const repo  = dcsRepoInput.value.trim();
@@ -239,10 +309,21 @@ export function mountSourcePanel(
       setStatus('Fill in owner, repo, and file path.', 'error');
       return;
     }
-    await handleLoad(new DcsSourceTextProvider({ baseUrl, owner, repo, filePath, ref, token }));
+
+    const provider = await resolveDcsProvider({
+      baseUrl,
+      owner,
+      repo,
+      filePath,
+      ref,
+      token,
+      cacheStorage: options.cacheStorage,
+      processedCache: options.processedCache,
+    });
+    await handleLoad(provider);
   });
 
-  /* ── Remove ───────────────────────────────────────────────────────────── */
+  /* -- Remove --------------------------------------------------------------- */
   removeBtn.addEventListener('click', () => {
     pmMount.setAttribute('hidden', '');
     emptyHint.style.display = '';
@@ -253,7 +334,7 @@ export function mountSourcePanel(
     dcsStep2.hidden = true;
   });
 
-  /* ── Sync ─────────────────────────────────────────────────────────────── */
+  /* -- Sync ----------------------------------------------------------------- */
   function applyTargetWindow() {
     if (!sourceSession.isLoaded()) return;
     sourceSession.syncSubsetFromTarget(targetSession);

@@ -5,7 +5,7 @@ import {
 import type { DocumentStore } from '@usfm-tools/editor-core';
 import { HelpMarkdown, rcHrefToTwTaArticle } from '@usfm-tools/help-markdown';
 import type { HelpEntry, HelpLink } from '@usfm-tools/types';
-import { FilterX } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Fragment, memo, useCallback, useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,8 @@ type Props = {
   getTitle?: GetArticleTitle;
   /** Same titles keyed by full `rc://…` href for markdown bodies (tc-study parity). */
   getEntryTitleFromRc?: GetEntryTitleFromRc;
+  /** Block direction for gateway-language quotes (from loaded reference `langCode`). */
+  sourceTextDir?: 'ltr' | 'rtl';
 };
 
 /**
@@ -140,6 +142,7 @@ export const HelpsTab = memo(function HelpsTab({
   sourceStore,
   getTitle,
   getEntryTitleFromRc,
+  sourceTextDir,
 }: Props) {
   /** Pre-compute all gateway-quote matches in one memoized pass keyed on entries + sourceStore identity. */
   const entryMatches = useMemo(() => {
@@ -180,14 +183,14 @@ export const HelpsTab = memo(function HelpsTab({
         <div className="flex shrink-0 items-center">
           <Button
             type="button"
-            size="icon"
-            variant="outline"
-            className="size-8 shrink-0"
-            aria-label="Clear filter"
-            title="Clear filter"
+            size="sm"
+            variant="ghost"
+            className="h-8 gap-1.5 px-2 text-xs"
+            aria-label="Back"
             onClick={onClearFilter}
           >
-            <FilterX className="size-4" aria-hidden />
+            <ArrowLeft className="size-3.5" aria-hidden />
+            Back
           </Button>
         </div>
       ) : null}
@@ -216,7 +219,7 @@ export const HelpsTab = memo(function HelpsTab({
                     <div className="mb-2 min-w-0 max-w-full rounded-md bg-gradient-to-r from-blue-50/90 to-indigo-50/80 px-3 py-2 dark:from-blue-950/40 dark:to-indigo-950/30">
                       <div className="space-y-2">
                         {gateway ? (
-                          <div className="text-base leading-relaxed" dir="auto">
+                          <div className="text-base leading-relaxed" dir={sourceTextDir ?? 'auto'}>
                             <span className="text-foreground italic">
                               &ldquo;
                               <GatewayQuote text={gateway} />
@@ -240,7 +243,7 @@ export const HelpsTab = memo(function HelpsTab({
                           </div>
                         ) : null}
                         {!gateway && !showCatalogQuote && showOrigAsQuote ? (
-                          <div className="text-base leading-relaxed" dir="auto">
+                          <div className="text-base leading-relaxed" dir={sourceTextDir ?? 'auto'}>
                             <span
                               className="text-foreground/95 font-mono text-sm italic tracking-tight"
                               lang="und"

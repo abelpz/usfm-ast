@@ -301,7 +301,7 @@
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b93a8'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z'/%3E%3C/svg%3E")
     no-repeat left center;
   background-size: 1rem 1rem;
-  padding-left: 1.35rem;
+  padding-inline-start: 1.35rem;
 }
 
 /* ── Book code combobox ──────────────────────────────────────────────────── */
@@ -714,7 +714,7 @@ body[data-usfm-theme='document-dark'] .usfm-book-code-dropdown {
 .usfm-block-milestone--translator[data-ts-section]::after {
   content: attr(data-ts-section);
   display: inline-block;
-  margin-left: 0.28rem;
+  margin-inline-start: 0.28rem;
   max-width: 12rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -973,4 +973,59 @@ body[data-usfm-theme='document-dark'] .usfm-book-code-dropdown {
 .ProseMirror[data-usfm-theme='document-dark'] .usfm-chapter > .usfm-para {
   margin-bottom: var(--usfm-para-gap, 0.65rem);
   line-height: var(--usfm-line-height, 1.75);
+}
+
+/* ── Sync merge conflict dialog (editor-app) ─────────────────────────────── */
+.usfm-sync-conflict-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.usfm-sync-conflict-modal {
+  max-width: min(960px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--background, #fff);
+  color: var(--foreground, #111);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+.usfm-sync-conflict-panes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+}
+.usfm-sync-conflict-pre {
+  max-height: 200px;
+  overflow: auto;
+  font-size: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 4px;
+  background: var(--muted, #f4f4f5);
+}
+.usfm-sync-conflict-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+.usfm-project-bundle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.usfm-icon-inline {
+  width: 1rem;
+  height: 1rem;
+  margin-inline-end: 0.35rem;
+  vertical-align: middle;
 }

@@ -4,6 +4,7 @@ import {
 } from '@/hooks/useScriptureSession';
 import type { DcsStoredCredentials, DcsStoredTarget } from '@/lib/dcs-storage';
 import { cn } from '@/lib/utils';
+import type { JournalStore } from '@usfm-tools/editor-core';
 import { memo, useEffect, useRef } from 'react';
 
 export type EditorPanelProps = {
@@ -12,6 +13,12 @@ export type EditorPanelProps = {
   wsRelay: string;
   dcsCreds: DcsStoredCredentials | null;
   dcsTarget: DcsStoredTarget | null;
+  /** Project target language (BCP-47) for RTL/LTR editor layout. */
+  targetLanguage?: string;
+  /** Local translation project: persist OT journal to repo-relative `journal/<BOOK>.jsonl`. */
+  projectBookJournalStore?: JournalStore;
+  /** Collab room id (book code) when using {@link projectBookJournalStore}. */
+  localBookCode?: string;
   onEditorChange?: () => void;
   onController?: (c: ScriptureSessionController | null) => void;
   className?: string;
@@ -23,6 +30,9 @@ export const EditorPanel = memo(function EditorPanel({
   wsRelay,
   dcsCreds,
   dcsTarget,
+  targetLanguage,
+  projectBookJournalStore,
+  localBookCode,
   onEditorChange,
   onController,
   className,
@@ -35,6 +45,9 @@ export const EditorPanel = memo(function EditorPanel({
     wsRelay,
     dcsCreds,
     dcsTarget,
+    targetLanguage,
+    projectBookJournalStore,
+    localBookCode,
     onEditorChange,
   });
 

@@ -7,12 +7,32 @@ import { defineConfig } from 'vite';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoPackages = path.resolve(__dirname, '..');
 
+/**
+ * Tauri plugin packages are installed in this package's own node_modules.
+ * When Vite processes workspace-aliased source files from `platform-adapters`,
+ * it resolves dynamic imports relative to those files' directories — which
+ * cannot reach `usfm-editor-app/node_modules`. Explicit aliases fix this by
+ * anchoring every `@tauri-apps/*` import to the known install location.
+ */
+const tauriPluginAliases = {
+  '@tauri-apps/api': path.resolve(__dirname, 'node_modules/@tauri-apps/api'),
+  '@tauri-apps/plugin-dialog': path.resolve(__dirname, 'node_modules/@tauri-apps/plugin-dialog'),
+  '@tauri-apps/plugin-fs': path.resolve(__dirname, 'node_modules/@tauri-apps/plugin-fs'),
+  '@tauri-apps/plugin-notification': path.resolve(__dirname, 'node_modules/@tauri-apps/plugin-notification'),
+  '@tauri-apps/plugin-shell': path.resolve(__dirname, 'node_modules/@tauri-apps/plugin-shell'),
+  '@tauri-apps/plugin-store': path.resolve(__dirname, 'node_modules/@tauri-apps/plugin-store'),
+  '@tauri-apps/plugin-updater': path.resolve(__dirname, 'node_modules/@tauri-apps/plugin-updater'),
+} as const;
+
 const workspaceSrcAliases = {
   '@usfm-tools/adapters': path.resolve(repoPackages, 'usfm-adapters/src/index.ts'),
   '@usfm-tools/checking': path.resolve(repoPackages, 'usfm-editor-checking/src/index.ts'),
   '@usfm-tools/door43-rest': path.resolve(repoPackages, 'usfm-door43-rest/src/index.ts'),
   '@usfm-tools/editor-adapters': path.resolve(repoPackages, 'usfm-editor-adapters/src/index.ts'),
   '@usfm-tools/parser': path.resolve(repoPackages, 'usfm-parser/src/index.ts'),
+  '@usfm-tools/platform-adapters/web': path.resolve(repoPackages, 'platform-adapters/src/web/index.ts'),
+  '@usfm-tools/platform-adapters/tauri': path.resolve(repoPackages, 'platform-adapters/src/tauri/index.ts'),
+  '@usfm-tools/platform-adapters': path.resolve(repoPackages, 'platform-adapters/src/index.ts'),
   '@usfm-tools/project-formats': path.resolve(repoPackages, 'usfm-editor-project-formats/src/index.ts'),
   '@usfm-tools/types': path.resolve(repoPackages, 'shared-types/src/index.ts'),
   '@usfm-tools/editor/chrome.css': path.resolve(repoPackages, 'usfm-editor/chrome.css'),
@@ -50,6 +70,7 @@ export default defineConfig(({ command }) => {
       alias: {
         '@': path.resolve(__dirname, 'src'),
         ...(useWorkspaceSource ? workspaceSrcAliases : {}),
+        ...tauriPluginAliases,
       },
       dedupe: [...prosemirrorDeps],
     },
@@ -75,6 +96,7 @@ export default defineConfig(({ command }) => {
     },
     server: {
       port: 5180,
+      strictPort: true,
       fs: {
         allow: [repoPackages, path.resolve(repoPackages, '..')],
       },

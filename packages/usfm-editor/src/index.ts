@@ -123,5 +123,9 @@ export {
   USFM_BOOK_CODES,
   USFM_BOOK_CODES_APOCRYPHA,
   KNOWN_BOOK_CODES,
+  OT_BOOK_CODES,
+  NT_BOOK_CODES,
   filterBookCodes,
+  originalLanguageForBook,
+  type OriginalLanguageDescriptor,
 } from './plugins/book-codes';

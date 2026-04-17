@@ -137,6 +137,110 @@ export const KNOWN_BOOK_CODES = new Set(
   [...USFM_BOOK_CODES, ...USFM_BOOK_CODES_APOCRYPHA].map(([c]) => c)
 );
 
+/** Old Testament book codes (canonical USFM 3.x registry order, excluding peripheral). */
+export const OT_BOOK_CODES: ReadonlySet<string> = new Set([
+  'GEN',
+  'EXO',
+  'LEV',
+  'NUM',
+  'DEU',
+  'JOS',
+  'JDG',
+  'RUT',
+  '1SA',
+  '2SA',
+  '1KI',
+  '2KI',
+  '1CH',
+  '2CH',
+  'EZR',
+  'NEH',
+  'EST',
+  'JOB',
+  'PSA',
+  'PRO',
+  'ECC',
+  'SNG',
+  'ISA',
+  'JER',
+  'LAM',
+  'EZK',
+  'DAN',
+  'HOS',
+  'JOL',
+  'AMO',
+  'OBA',
+  'JON',
+  'MIC',
+  'NAM',
+  'HAB',
+  'ZEP',
+  'HAG',
+  'ZEC',
+  'MAL',
+]);
+
+/** New Testament book codes. */
+export const NT_BOOK_CODES: ReadonlySet<string> = new Set([
+  'MAT',
+  'MRK',
+  'LUK',
+  'JHN',
+  'ACT',
+  'ROM',
+  '1CO',
+  '2CO',
+  'GAL',
+  'EPH',
+  'PHP',
+  'COL',
+  '1TH',
+  '2TH',
+  '1TI',
+  '2TI',
+  'TIT',
+  'PHM',
+  'HEB',
+  'JAS',
+  '1PE',
+  '2PE',
+  '1JN',
+  '2JN',
+  '3JN',
+  'JUD',
+  'REV',
+]);
+
+/** Which unfoldingWord original-language resource applies for reference-panel auto-load. */
+export type OriginalLanguageDescriptor = {
+  lang: 'el-x-koine' | 'hbo';
+  subject: 'Greek New Testament' | 'Hebrew Old Testament';
+  resourceId: 'ugnt' | 'uhb';
+};
+
+/**
+ * Maps a book code to the default Door43 original-language resource (UGNT for NT, UHB for OT).
+ * Returns null for apocrypha, peripheral codes, and unknown codes.
+ */
+export function originalLanguageForBook(code: string): OriginalLanguageDescriptor | null {
+  const c = code.trim().toUpperCase();
+  if (NT_BOOK_CODES.has(c)) {
+    return {
+      lang: 'el-x-koine',
+      subject: 'Greek New Testament',
+      resourceId: 'ugnt',
+    };
+  }
+  if (OT_BOOK_CODES.has(c)) {
+    return {
+      lang: 'hbo',
+      subject: 'Hebrew Old Testament',
+      resourceId: 'uhb',
+    };
+  }
+  return null;
+}
+
 /** Filter the list by a raw query (matched against code prefix + name substring, case-insensitive). */
 export function filterBookCodes(query: string): readonly [code: string, name: string][] {
   const q = query.toUpperCase().trim();

@@ -1,10 +1,18 @@
 import type { DcsStoredTarget } from '@/lib/dcs-storage';
+import type { EditorProjectFormatKind, RepoLayoutKind } from '@usfm-tools/editor-core';
 
 /**
  * Passed via react-router `location.state` when opening `/editor` from the home launcher.
  */
 export type ProjectLaunchConfig = {
   initialUsfm: string;
+  /**
+   * Repo layout for DCS / local tooling. When `enhanced`, see {@link repoLayout} for SB vs RC paths.
+   * @see docs/30-project-format.md
+   */
+  projectFormat?: EditorProjectFormatKind;
+  /** Base layout when {@link projectFormat} is `enhanced` (ingredients/ vs flat RC). */
+  repoLayout?: RepoLayoutKind;
   /**
    * When set, the editor will not replace `initialUsfm` with a fetch from persisted DCS target
    * (direct `/editor` visits still load from DCS when configured).

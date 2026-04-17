@@ -71,6 +71,47 @@ export {
   splitVerseSid,
 } from './alignment-io';
 export type {
+  AlignmentManifestJson,
+  AlignmentManifestSource,
+  CheckingBookFile,
+  CheckingBookMeta,
+  CheckingCommentEntry,
+  CheckingDecisionEntry,
+  CheckingEntry,
+  CheckingRootManifestJson,
+  EditorProjectFormatKind,
+  EnhancedProjectDescriptor,
+  ExternalAlignmentDocument,
+  RepoLayoutKind,
+} from './project-format';
+export {
+  appendCheckingEntry,
+  activeEntries,
+  emptyCheckingBook,
+  entriesForRef,
+  parseCheckingBookJson,
+  queryChecking,
+  serializeCheckingBookJson,
+  supersededIds,
+} from './checking-store';
+export {
+  ALIGNMENTS_MANIFEST_PATH,
+  alignmentBookFilePath,
+  directoryHandleReader,
+  directoryHandleWriter,
+  loadAlignmentManifest,
+  loadBookAlignment,
+  parseAlignmentManifestJson,
+  parseBookAlignmentDocument,
+  readTextFromDirectoryHandle,
+  saveBookAlignment,
+  serializeAlignmentManifestJson,
+  serializeBookAlignmentDocument,
+  writeTextToDirectoryHandle,
+  type ExternalFileReader,
+  type ExternalFileWriter,
+} from './alignment-io-external';
+export type {
   SyncEngine,
   SyncResult,
   JournalEntry,

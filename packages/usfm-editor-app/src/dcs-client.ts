@@ -259,11 +259,13 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-/** Slim language row (code, native name, English name) from catalog or langnames APIs. */
+/** Slim language row (code, native name, English name, optional text direction) from catalog or langnames APIs. */
 export type Door43LanguageOption = {
   lc: string;
   ln: string;
   ang?: string;
+  /** Text direction when the API provides it (`ld` or `direction`). */
+  ld?: 'ltr' | 'rtl';
 };
 
 function catalogEnvelopeData(body: unknown): unknown[] {
@@ -312,7 +314,14 @@ export async function fetchCatalogLanguages(
           ? item.ang.trim()
           : lcTrim;
     const ang = typeof item.ang === 'string' && item.ang.trim() ? item.ang.trim() : undefined;
-    out.push({ lc: lcTrim, ln, ang });
+    const ldRaw = item.ld ?? item.direction;
+    const ld: 'ltr' | 'rtl' | undefined =
+      ldRaw === 'rtl' || ldRaw === 'RTL'
+        ? 'rtl'
+        : ldRaw === 'ltr' || ldRaw === 'LTR'
+          ? 'ltr'
+          : undefined;
+    out.push({ lc: lcTrim, ln, ang, ...(ld ? { ld } : {}) });
   }
   out.sort((a, b) => a.ln.localeCompare(b.ln, undefined, { sensitivity: 'base' }));
   return out;
@@ -469,7 +478,8 @@ export async function searchCatalogSources(options: {
   for (let page = 1; page <= maxPages; page += 1) {
     const u = new URL(`${apiV1(host)}/catalog/search`);
     u.searchParams.set('lang', lang);
-    u.searchParams.set('topic', topic);
+    // Empty string = omit topic filter (e.g. Greek NT / Hebrew OT resources excluded from tc-ready).
+    if (topic) u.searchParams.set('topic', topic);
     u.searchParams.set('subject', subject);
     u.searchParams.set('page', String(page));
     u.searchParams.set('limit', String(limit));

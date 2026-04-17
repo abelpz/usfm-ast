@@ -5,11 +5,12 @@ import { loadDcsCredentials } from '@/lib/dcs-storage';
 import {
   projectSourceSummaryFromRc,
   projectSourceSummaryFromSb,
-  summarizeEnhancedProject,
+  summarizeEditorCanonicalProject,
   type RepoProjectDescriptor,
 } from '@usfm-tools/project-formats';
 import type { EnhancedProjectSummary, ProjectSourceSummary } from '@usfm-tools/types';
-import { ArrowLeft, BookMarked, Layers, ListTree } from 'lucide-react';
+import { pushEnhancedLayoutToRemote } from '@/lib/dcs-bootstrap-enhanced-layout';
+import { ArrowLeft, BookMarked, Layers, ListTree, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
@@ -35,6 +36,8 @@ export function ProjectPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [project, setProject] = useState<DetectedDcsProject | null>(null);
+  const [bootstrapBusy, setBootstrapBusy] = useState(false);
+  const [bootstrapErr, setBootstrapErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!owner || !repo) {
@@ -69,8 +72,14 @@ export function ProjectPage() {
 
   const summary: EnhancedProjectSummary | null = useMemo(() => {
     if (!project) return null;
-    return summarizeEnhancedProject(toDescriptor(project));
+    return summarizeEditorCanonicalProject(toDescriptor(project), project.enhanced);
   }, [project]);
+
+  const canBootstrap =
+    project &&
+    project.format !== 'raw-usfm' &&
+    !project.enhanced &&
+    loadDcsCredentials()?.token;
 
   const prov = useMemo(() => (project ? provenanceFor(project) : null), [project]);
 
@@ -133,6 +142,20 @@ export function ProjectPage() {
                   <dt className="text-muted-foreground">Branch</dt>
                   <dd>{ref}</dd>
                 </div>
+                {summary.remoteEnhancedLayout !== undefined ? (
+                  <div className="sm:col-span-2">
+                    <dt className="text-muted-foreground">Editor layout on branch</dt>
+                    <dd>
+                      {summary.remoteEnhancedLayout ? (
+                        <span className="text-emerald-700 dark:text-emerald-400">Standard folders present</span>
+                      ) : (
+                        <span className="text-amber-800 dark:text-amber-200">
+                          Standard folders not uploaded yet (same layout as &quot;new project&quot; on Home)
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
             </section>
 
@@ -160,6 +183,53 @@ export function ProjectPage() {
                 <Layers className="size-4" />
                 Alignments & paths
               </h2>
+              {canBootstrap ? (
+                <div className="border-border bg-muted/30 mb-4 space-y-2 rounded-md border p-3 text-sm">
+                  <p className="text-muted-foreground">
+                    Imported repos use the same editor layout as projects you create locally. Add the standard{' '}
+                    <code className="text-xs">alignments/</code>, <code className="text-xs">checking/</code>, and manifest
+                    hooks to this branch so they stay in sync.
+                  </p>
+                  {bootstrapErr ? <p className="text-destructive text-xs">{bootstrapErr}</p> : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={bootstrapBusy || !project}
+                    onClick={() => {
+                      if (!project) return;
+                      const creds = loadDcsCredentials();
+                      const token = creds?.token;
+                      if (!token) return;
+                      setBootstrapBusy(true);
+                      setBootstrapErr(null);
+                      void pushEnhancedLayoutToRemote({
+                        host: host || undefined,
+                        token,
+                        owner,
+                        repo,
+                        ref: ref || 'main',
+                        project,
+                      })
+                        .then(() => load())
+                        .catch((e) => {
+                          setBootstrapErr(e instanceof Error ? e.message : String(e));
+                        })
+                        .finally(() => {
+                          setBootstrapBusy(false);
+                        });
+                    }}
+                  >
+                    {bootstrapBusy ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        Uploading…
+                      </>
+                    ) : (
+                      'Add standard layout to repository'
+                    )}
+                  </Button>
+                </div>
+              ) : null}
               <dl className="space-y-2 text-sm">
                 <div>
                   <dt className="text-muted-foreground">Alignment sources</dt>

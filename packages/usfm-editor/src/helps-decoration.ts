@@ -4,14 +4,13 @@
 
 import {
   annotateTokensByAlignment,
-  filterHelpsForVerse,
   normalizeHelpsText,
   tokenCharRangesInPlainText,
   tokenizeVersePlainText,
   versePlainTextFromStore,
 } from '@usfm-tools/editor-adapters';
 import { type DocumentStore, needsSpaceBetween, usfmRefToVerseSid } from '@usfm-tools/editor-core';
-import type { HelpEntry } from '@usfm-tools/types';
+import type { AlignmentMap, HelpEntry } from '@usfm-tools/types';
 import type { Node as PMNode } from 'prosemirror-model';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet, EditorView } from 'prosemirror-view';
@@ -119,10 +118,35 @@ function helpClasses(entries: HelpEntry[]): string {
   return parts.join(' ');
 }
 
-export function buildHelpsDecorationSet(doc: PMNode, store: DocumentStore, twl: HelpEntry[], tn: HelpEntry[]): DecorationSet {
+export function buildHelpsDecorationSet(
+  doc: PMNode,
+  store: DocumentStore,
+  twl: HelpEntry[],
+  tn: HelpEntry[],
+  alignmentCache?: Map<number, AlignmentMap>,
+): DecorationSet {
   const book = store.getBookCode();
   const decos: Decoration[] = [];
   const sections = buildChapterPositionMap(doc);
+
+  // Pre-index all helps by "chapter:verse" so per-verse lookup is O(1) instead
+  // of O(total helps) per verse. filterHelpsForVerse scans the full array each
+  // time, which becomes ~45k comparisons/chapter with typical TWL+TN sizes.
+  const helpsByRef = new Map<string, HelpEntry[]>();
+  for (const h of twl) {
+    if (h.ref.segment != null && h.ref.segment !== 'verse') continue;
+    const key = `${h.ref.chapter}:${h.ref.verse}`;
+    const arr = helpsByRef.get(key);
+    if (arr) arr.push(h);
+    else helpsByRef.set(key, [h]);
+  }
+  for (const h of tn) {
+    if (h.ref.segment != null && h.ref.segment !== 'verse') continue;
+    const key = `${h.ref.chapter}:${h.ref.verse}`;
+    const arr = helpsByRef.get(key);
+    if (arr) arr.push(h);
+    else helpsByRef.set(key, [h]);
+  }
 
   for (const sec of sections) {
     if (sec.kind !== 'chapter') continue;
@@ -135,7 +159,7 @@ export function buildHelpsDecorationSet(doc: PMNode, store: DocumentStore, twl: 
     if (!chapterNode) continue;
     const chapterPos = sec.from;
     const posMapByVerse = collectVersePosMap(chapterNode, chapterPos);
-    const alignmentMap = store.getAlignments(chapterNum);
+    const alignmentMap = alignmentCache?.get(chapterNum) ?? store.getAlignments(chapterNum);
 
     for (const [verseNum, posMap] of posMapByVerse) {
       const storePlain = versePlainTextFromStore(store, chapterNum, verseNum);
@@ -157,7 +181,7 @@ export function buildHelpsDecorationSet(doc: PMNode, store: DocumentStore, twl: 
       }
       if (tokenMismatch) continue;
 
-      const helpsForVerse = [...filterHelpsForVerse(twl, chapterNum, verseNum), ...filterHelpsForVerse(tn, chapterNum, verseNum)];
+      const helpsForVerse = helpsByRef.get(`${chapterNum}:${verseNum}`) ?? [];
       if (helpsForVerse.length === 0) continue;
 
       const verseSid = usfmRefToVerseSid(book, { book, chapter: chapterNum, verse: verseNum }) ?? `${book.trim().toUpperCase()} ${chapterNum}:${verseNum}`;

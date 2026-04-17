@@ -17,6 +17,8 @@ type Props = {
   onSelectToken: (tokenIndex: number, entries: TokenAnnotation['entries']) => void;
   /** BCP 47 language tag for typography / shaping (e.g. source language from wizard). */
   lang?: string;
+  /** When set, overrides `dir="auto"` for correct verse-marker placement in RTL gateways. */
+  textDirection?: 'ltr' | 'rtl';
 };
 
 /**
@@ -31,6 +33,7 @@ export function AnnotatedSourceText({
   selectedTokenIndex,
   onSelectToken,
   lang,
+  textDirection,
 }: Props) {
   const byIdx = entriesByTokenIndex(annotations);
   if (tokens.length === 0) {
@@ -41,7 +44,12 @@ export function AnnotatedSourceText({
     );
   }
   return (
-    <p className="text-foreground flex flex-wrap items-baseline gap-x-1 gap-y-1 leading-relaxed" dir="auto" lang={lang} data-testid="annotated-source">
+    <p
+      className="text-foreground flex flex-wrap items-baseline gap-x-1 gap-y-1 leading-relaxed"
+      dir={textDirection ?? 'auto'}
+      lang={lang}
+      data-testid="annotated-source"
+    >
       <span className="text-muted-foreground shrink-0 font-mono text-xs">
         {bookLabel} {chapter}:{verse}
       </span>

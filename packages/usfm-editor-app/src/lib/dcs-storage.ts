@@ -1,3 +1,5 @@
+import type { KeyValueAdapter } from '@usfm-tools/platform-adapters';
+
 export const DCS_CREDS_KEY = 'usfm-dcs-credentials' as const;
 export const DCS_TARGET_KEY = 'usfm-dcs-target' as const;
 
@@ -46,4 +48,52 @@ export function loadDcsTarget(): DcsStoredTarget | null {
   } catch {
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Async overloads that accept a KeyValueAdapter for cross-platform storage.
+// ---------------------------------------------------------------------------
+
+export async function saveDcsCredentialsAsync(
+  kv: KeyValueAdapter,
+  creds: DcsStoredCredentials,
+): Promise<void> {
+  const json = JSON.stringify(creds);
+  try {
+    localStorage.setItem(DCS_CREDS_KEY, json);
+  } catch {
+    /* ignore */
+  }
+  await kv.set(DCS_CREDS_KEY, json);
+}
+
+export async function removeDcsCredentialsAsync(kv: KeyValueAdapter): Promise<void> {
+  try {
+    localStorage.removeItem(DCS_CREDS_KEY);
+  } catch {
+    /* ignore */
+  }
+  await kv.remove(DCS_CREDS_KEY);
+}
+
+export async function saveDcsTargetAsync(
+  kv: KeyValueAdapter,
+  target: DcsStoredTarget,
+): Promise<void> {
+  const json = JSON.stringify(target);
+  try {
+    localStorage.setItem(DCS_TARGET_KEY, json);
+  } catch {
+    /* ignore */
+  }
+  await kv.set(DCS_TARGET_KEY, json);
+}
+
+export async function removeDcsTargetAsync(kv: KeyValueAdapter): Promise<void> {
+  try {
+    localStorage.removeItem(DCS_TARGET_KEY);
+  } catch {
+    /* ignore */
+  }
+  await kv.remove(DCS_TARGET_KEY);
 }

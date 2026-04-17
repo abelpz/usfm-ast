@@ -1,5 +1,5 @@
-import type { Active } from '@dnd-kit/core';
 import type { OriginalWordToken, WordToken } from '@usfm-tools/editor-core';
+import { useDndContext } from '@dnd-kit/core';
 import { GripVertical } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -14,13 +14,13 @@ import type {
 } from './alignment-dnd-ids';
 
 type Props = {
-  active: Active | null;
   trTok: WordToken[];
   refTok: OriginalWordToken[];
   boxes: AlignmentBoxModel[];
 };
 
-export function AlignmentDragGhost({ active, trTok, refTok, boxes }: Props) {
+export function AlignmentDragGhost({ trTok, refTok, boxes }: Props) {
+  const { active } = useDndContext();
   if (!active?.data?.current) return null;
 
   const d = active.data.current as

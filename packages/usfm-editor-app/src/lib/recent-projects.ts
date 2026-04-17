@@ -1,17 +1,29 @@
+import type { EditorProjectFormatKind, RepoLayoutKind } from '@usfm-tools/editor-core';
+
 const STORAGE_KEY = 'usfm-editor-recent-projects';
 const MAX_ENTRIES = 12;
 
-export type RecentProjectSource = 'blank' | 'device' | 'dcs' | 'translate' | 'continue';
+export type RecentProjectSource =
+  | 'blank'
+  | 'device'
+  | 'dcs'
+  | 'translate'
+  | 'continue'
+  /** Opened Door43 repo at project level (no single book). */
+  | 'dcs_repo';
 
 export type RecentProjectEntry = {
   id: string;
   name: string;
   bookCode: string;
   source: RecentProjectSource;
-  /** DCS file location when source is dcs / translate-from-dcs */
-  dcs?: { owner: string; repo: string; ref: string; path: string; host?: string };
+  /** DCS file location when source is dcs / translate-from-dcs; repo-only when source is dcs_repo (path optional). */
+  dcs?: { owner: string; repo: string; ref: string; path?: string; host?: string };
   /** When source is translate: main document was opened with source text vs blank shell + reference. */
   translateOverSource?: boolean;
+  /** Enhanced project format (external alignments + checking manifests). */
+  projectFormat?: EditorProjectFormatKind;
+  repoLayout?: RepoLayoutKind;
   timestamp: number;
 };
 

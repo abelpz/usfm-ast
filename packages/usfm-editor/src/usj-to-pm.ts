@@ -708,3 +708,149 @@ export function chapterSubsetToPm(
 
   return schema.nodes.doc!.create({}, Fragment.from(parts));
 }
+
+/**
+ * Pre-computed partition of a read-only source text document.
+ *
+ * Built once after load by {@link SourceTextSession} to avoid re-cloning and
+ * re-stripping the full book USJ on every chapter switch. All fields are the
+ * same data that {@link chapterSubsetToPm} would derive internally — but
+ * derived once and reused.
+ */
+export type SourceSessionCachedContent = {
+  identification: unknown[];
+  bookTitles: unknown[];
+  introduction: unknown[];
+  chapters: { chapter: Record<string, unknown>; body: unknown[] }[];
+  /** Same value as {@link DocumentStore.getMaxChapterNumber}. */
+  maxChapter: number;
+};
+
+/**
+ * Like {@link chapterSubsetToPm} but accepts pre-computed cached partition data
+ * instead of reading from the store on every call.
+ *
+ * This is the hot path for {@link SourceTextSession} chapter switches: the
+ * expensive `getFullUSJ()` deep-clone and `stripAlignments()` full-book walk
+ * are paid once at load time; subsequent chapter changes only run the chapter
+ * windowing and ProseMirror node construction.
+ */
+export function chapterSubsetToPmFromCached(
+  cached: SourceSessionCachedContent,
+  options: ChapterSubsetToPmOptions,
+  schema: Schema = usfmSchema
+): PMNode {
+  const { identification, bookTitles, introduction, chapters, maxChapter } = cached;
+
+  const page = options.contentPage;
+  if (page) {
+    const tsState: TsState = { section: 1, openSection: null };
+    if (page.kind === 'identification') {
+      const parts: PMNode[] = [];
+      if (identification.length > 0) parts.push(headerToPm(schema, identification, tsState));
+      if (bookTitles.length > 0) parts.push(bookTitlesToPm(schema, bookTitles, tsState));
+      if (parts.length === 0) {
+        const p = schema.nodes.paragraph!.create({ marker: 'p', sid: null });
+        parts.push(schema.nodes.header!.create({}, Fragment.from([p])));
+      }
+      return schema.nodes.doc!.create({}, Fragment.from(parts));
+    }
+    if (page.kind === 'introduction') {
+      advanceTsStateThroughPreChapterContent(tsState, identification, bookTitles, []);
+      const introParts: PMNode[] = [bookIntroductionToPm(schema, introduction, tsState)];
+      return schema.nodes.doc!.create({}, Fragment.from(introParts));
+    }
+    // page.kind === 'chapter'
+    const chNum = page.chapter;
+    const contextN = options.contextChapters ?? 0;
+    const selected = chNum >= 1 && chNum <= maxChapter ? [chNum] : maxChapter >= 1 ? [1] : [];
+    const expanded =
+      selected.length > 0 ? expandChaptersWithContext(selected, contextN, maxChapter) : [];
+    advanceTsStateThroughPreChapterContent(tsState, identification, bookTitles, introduction);
+    if (expanded.length > 0) {
+      advanceTsStateForSkippedChapterBodies(tsState, chapters, expanded[0]!.chapter);
+    }
+    const parts: PMNode[] = [];
+    if (chapters.length === 0) {
+      const label = schema.nodes.chapter_label!.create({}, schema.text('1'));
+      const emptyPara = schema.nodes.paragraph!.create({ marker: 'p', sid: null });
+      parts.push(
+        schema.nodes.chapter!.create(
+          { sid: null, altnumber: null, pubnumber: null, readonly: false },
+          Fragment.from([label, emptyPara])
+        )
+      );
+      return schema.nodes.doc!.create({}, Fragment.from(parts));
+    }
+    const byNum = new Map<number, { chapter: Record<string, unknown>; body: unknown[] }>();
+    for (const c of chapters) {
+      const num = parseInt(String(c.chapter.number ?? '1'), 10);
+      if (Number.isFinite(num) && num > 0) byNum.set(num, c);
+    }
+    for (const { chapter: n, readonly } of expanded) {
+      const pair = byNum.get(n);
+      if (pair) parts.push(chapterToPm(schema, pair.chapter, pair.body, { readonly }, tsState));
+    }
+    if (!parts.some((p) => p.type.name === 'chapter')) {
+      const label = schema.nodes.chapter_label!.create({}, schema.text('1'));
+      const emptyPara = schema.nodes.paragraph!.create({ marker: 'p', sid: null });
+      parts.push(
+        schema.nodes.chapter!.create(
+          { sid: null, altnumber: null, pubnumber: null, readonly: false },
+          Fragment.from([label, emptyPara])
+        )
+      );
+    }
+    return schema.nodes.doc!.create({}, Fragment.from(parts));
+  }
+
+  // Legacy windowed layout (no contentPage)
+  const contextN = options.contextChapters ?? 1;
+  let selected = [...options.visibleChapters].filter((c) => c >= 1 && c <= maxChapter);
+  if (selected.length === 0 && maxChapter >= 1) selected = [1];
+  const expanded = expandChaptersWithContext(selected, contextN, maxChapter);
+
+  const tsState: TsState = { section: 1, openSection: null };
+  const parts: PMNode[] = [];
+  if (identification.length > 0) parts.push(headerToPm(schema, identification, tsState));
+  if (bookTitles.length > 0) parts.push(bookTitlesToPm(schema, bookTitles, tsState));
+  const introNodes = options.showIntroduction ? introduction : [];
+  parts.push(bookIntroductionToPm(schema, introNodes, tsState));
+
+  if (expanded.length > 0) {
+    advanceTsStateForSkippedChapterBodies(tsState, chapters, expanded[0]!.chapter);
+  }
+
+  if (chapters.length === 0) {
+    const label = schema.nodes.chapter_label!.create({}, schema.text('1'));
+    const emptyPara = schema.nodes.paragraph!.create({ marker: 'p', sid: null });
+    parts.push(
+      schema.nodes.chapter!.create(
+        { sid: null, altnumber: null, pubnumber: null, readonly: false },
+        Fragment.from([label, emptyPara])
+      )
+    );
+    return schema.nodes.doc!.create({}, Fragment.from(parts));
+  }
+
+  const byNum = new Map<number, { chapter: Record<string, unknown>; body: unknown[] }>();
+  for (const c of chapters) {
+    const num = parseInt(String(c.chapter.number ?? '1'), 10);
+    if (Number.isFinite(num) && num > 0) byNum.set(num, c);
+  }
+  for (const { chapter: chNum, readonly } of expanded) {
+    const pair = byNum.get(chNum);
+    if (pair) parts.push(chapterToPm(schema, pair.chapter, pair.body, { readonly }, tsState));
+  }
+  if (!parts.some((p) => p.type.name === 'chapter')) {
+    const label = schema.nodes.chapter_label!.create({}, schema.text('1'));
+    const emptyPara = schema.nodes.paragraph!.create({ marker: 'p', sid: null });
+    parts.push(
+      schema.nodes.chapter!.create(
+        { sid: null, altnumber: null, pubnumber: null, readonly: false },
+        Fragment.from([label, emptyPara])
+      )
+    );
+  }
+  return schema.nodes.doc!.create({}, Fragment.from(parts));
+}

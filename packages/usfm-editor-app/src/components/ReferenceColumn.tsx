@@ -1,8 +1,27 @@
-import type { ScriptureSession, SourceTextSession } from '@usfm-tools/editor';
-import { DcsSourceTextProvider, type DcsSourceTextOptions } from '@usfm-tools/editor-adapters';
+import {
+  originalLanguageForBook,
+  type ScriptureSession,
+  type SourceTextSession,
+} from '@usfm-tools/editor';
+import {
+  CacheFirstSourceTextProvider,
+  DcsSourceTextProvider,
+  type DcsSourceTextOptions,
+} from '@usfm-tools/editor-adapters';
+import { parseDocumentIdentityFromUsj } from '@usfm-tools/editor-core';
 import type { HelpEntry, HelpLink } from '@usfm-tools/types';
+import { getProcessedCacheStorage, getSourceCacheStorage } from '@/hooks/useSourceCache';
+import { getConfiguredDownloadQueue, triggerSchedulerDrain } from '@/hooks/useDownloadQueue';
 import { Book, Languages, LifeBuoy, Loader2, Plus, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  forwardRef,
+} from 'react';
 
 import { HelpArticleOverlay } from '@/components/reference/HelpArticleOverlay';
 import { HelpsTab } from '@/components/reference/HelpsTab';
@@ -27,11 +46,12 @@ import {
 } from '@/lib/helps-config-storage';
 import {
   DEFAULT_CATALOG_TOPIC,
-  fetchCatalogLanguages,
-  searchCatalogSources,
   type CatalogEntry,
   type Door43LanguageOption,
 } from '@/dcs-client';
+import { getCatalogLanguages } from '@/lib/dcs-langnames-cache';
+import { fetchCatalogSourcesCached } from '@/lib/dcs-wizard-query-cache';
+import { directionForLangSync } from '@/lib/lang-direction';
 import { cn } from '@/lib/utils';
 
 type DcsAuth = { host: string; token?: string } | null;
@@ -39,6 +59,8 @@ type DcsAuth = { host: string; token?: string } | null;
 type Props = {
   session: ScriptureSession;
   onSourceSession?: (source: SourceTextSession | null) => void;
+  /** Called whenever the full list of source slots changes (sessions load/unload). */
+  onSourceSessionsChange?: (slots: ReadonlyArray<SourceSlotSnapshot>) => void;
   prefillSourceUsfm?: string;
   targetSession: ScriptureSession | null;
   dcsAuth: DcsAuth;
@@ -50,6 +72,25 @@ type Props = {
   onSourceLanguageChange?: (lc: string | null) => void;
 };
 
+/** Snapshot of a single source slot, safe to pass outside ReferenceColumn. */
+export type SourceSlotSnapshot = {
+  id: string;
+  /** Short code identifier, e.g. "ult" or "glt" (from catalog abbreviation or repo name). */
+  label: string;
+  /** Human-readable title from the catalog, e.g. "unfoldingWord Literal Translation". */
+  title?: string;
+  session: SourceTextSession | null;
+};
+
+/** Imperative handle exposed via ref for parent-driven operations. */
+export type ReferenceColumnHandle = {
+  /**
+   * Trigger a language pick programmatically (same as the user clicking a
+   * language in the picker). Kicks off catalog search + background download.
+   */
+  addDcsLanguage(lang: Door43LanguageOption): void;
+};
+
 type ColumnTab = 'source' | 'helps';
 
 function newSourceSlotId(): string {
@@ -58,29 +99,54 @@ function newSourceSlotId(): string {
     : `src-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-type SourceSlotState = { id: string; label: string; session: SourceTextSession | null };
+type SourceSlotState = {
+  id: string;
+  label: string;
+  title?: string;
+  session: SourceTextSession | null;
+};
+
+/**
+ * Pending auto-load entry for a source slot populated by catalog discovery.
+ * Carries enough info to use the three-tier `CacheFirstSourceTextProvider`.
+ */
+type PendingCatalogLoad = DcsSourceTextOptions & {
+  /** Identifies the cache snapshot: `{owner}/{repoName}`. */
+  repoId: string;
+  /** The release tag — also the `ref` used for the DCS fallback. */
+  releaseTag: string;
+  langCode: string;
+  displayName: string;
+  subject: string;
+  /** Resolved from {@link langCode} for RTL ProseMirror layout. */
+  direction?: 'ltr' | 'rtl';
+};
 
 /**
  * Reference sidebar: Source / Helps tabs, catalog-driven TN/TWL, annotated verse tokens, article overlay.
  */
-export function ReferenceColumn({
-  session,
-  onSourceSession,
-  prefillSourceUsfm,
-  targetSession,
-  dcsAuth,
-  sourceLanguage,
-  launchBookCode,
-  onSourceLanguageChange,
-}: Props) {
+export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function ReferenceColumn(
+  {
+    session,
+    onSourceSession,
+    onSourceSessionsChange,
+    prefillSourceUsfm,
+    targetSession,
+    dcsAuth,
+    sourceLanguage,
+    launchBookCode,
+    onSourceLanguageChange,
+  }: Props,
+  ref
+) {
   const [sourceSlots, setSourceSlots] = useState<SourceSlotState[]>(() => [
-    { id: newSourceSlotId(), label: 'Source', session: null },
+    { id: newSourceSlotId(), label: 'Source', title: undefined, session: null },
   ]);
   const [activeSourceIndex, setActiveSourceIndex] = useState(0);
   const [openDrawerForSlotId, setOpenDrawerForSlotId] = useState<string | null>(null);
   const slotEmitters = useRef(new Map<string, (s: SourceTextSession | null) => void>());
-  /** Pending DcsSourceTextProvider loads keyed by slot id — populated during catalog auto-load. */
-  const pendingLoads = useRef(new Map<string, DcsSourceTextOptions>());
+  /** Pending cache-first loads keyed by slot id — populated during catalog auto-load. */
+  const pendingLoads = useRef(new Map<string, PendingCatalogLoad>());
 
   const getSlotSessionEmitter = useCallback((slotId: string) => {
     let fn = slotEmitters.current.get(slotId);
@@ -94,12 +160,36 @@ export function ReferenceColumn({
             // where sl.label is the default placeholder "Source N".
             const providerName = s?.getProvider()?.displayName?.trim();
             const isPlaceholder = /^Source(\s+\d+)?$/.test(sl.label);
-            const label = s
-              ? (isPlaceholder && providerName ? providerName : sl.label)
-              : sl.label;
+            const label = s ? (isPlaceholder && providerName ? providerName : sl.label) : sl.label;
             return { ...sl, session: s, label };
-          }),
+          })
         );
+        // For manually-loaded sources (no catalog title), update the label from
+        // the USFM \id line once content loads — gives "GEN EN_ULT en_English_ltr"
+        // instead of "File: 01-GEN.usfm" or "DCS: owner/repo/file.usfm".
+        if (s && !pendingLoads.current.has(slotId)) {
+          const unsubId = s.onLoad(() => {
+            unsubId();
+            setSourceSlots((prev) =>
+              prev.map((sl) => {
+                if (sl.id !== slotId || sl.title) return sl; // Skip catalog slots (have title)
+                try {
+                  const usj = s.store.getFullUSJ();
+                  const raw = parseDocumentIdentityFromUsj(usj);
+                  if (!raw) return sl;
+                  const clean = raw
+                    .replace(/\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b.*/i, '')
+                    .replace(/\s+\d{4}\b.*/i, '')
+                    .replace(/\s+\d{2}:\d{2}:\d{2}\b.*/i, '')
+                    .trim();
+                  return clean ? { ...sl, label: clean } : sl;
+                } catch {
+                  return sl;
+                }
+              })
+            );
+          });
+        }
         // Trigger any pending catalog load for this slot.
         // Subscribe to onLoad BEFORE calling load() to guarantee setRev fires even
         // when the fetch resolves as a cached microtask (before the sourceSlots effect
@@ -111,7 +201,23 @@ export function ReferenceColumn({
             unsub();
             setRev((r) => r + 1);
           });
-          void s.load(new DcsSourceTextProvider(opts));
+          const provider = new CacheFirstSourceTextProvider({
+            rawStorage: getSourceCacheStorage(),
+            processedCache: getProcessedCacheStorage(),
+            repoId: opts.repoId,
+            releaseTag: opts.releaseTag,
+            ingredientPath: opts.filePath,
+            langCode: opts.langCode,
+            subject: opts.subject,
+            displayName: opts.displayName,
+            baseUrl: opts.baseUrl,
+            owner: opts.owner,
+            repo: opts.repo,
+            ref: opts.ref,
+            token: opts.token,
+            ...(opts.direction ? { direction: opts.direction } : {}),
+          });
+          void s.load(provider);
         }
       };
       slotEmitters.current.set(slotId, fn);
@@ -121,9 +227,32 @@ export function ReferenceColumn({
 
   const activeSourceSession = sourceSlots[activeSourceIndex]?.session ?? null;
 
+  // Defer sync for hidden source sessions so chapter changes only rebuild the
+  // active tab's ProseMirror doc immediately; hidden sessions will rebuild
+  // lazily when the user switches to their tab.
+  useEffect(() => {
+    sourceSlots.forEach((slot, idx) => {
+      if (slot.session) {
+        slot.session.setDeferSync(idx !== activeSourceIndex);
+      }
+    });
+  }, [sourceSlots, activeSourceIndex]);
+
   const [columnTab, setColumnTab] = useState<ColumnTab>('source');
   const [rev, setRev] = useState(0);
+
+  /** Block direction for helps gateway quotes (matches active reference tab). */
+  const activeRefTextDir = useMemo((): 'ltr' | 'rtl' | undefined => {
+    const p = activeSourceSession?.getProvider();
+    if (!p) return undefined;
+    if ('direction' in p && p.direction) return p.direction;
+    const lc = p.langCode?.trim();
+    return lc ? directionForLangSync(lc) : undefined;
+  }, [activeSourceSession, rev]);
+
   const [tokenFilter, setTokenFilter] = useState<HelpEntry[] | null>(null);
+  /** The tab the user was on before a token click switched them to helps. */
+  const prevColumnTabRef = useRef<ColumnTab>('source');
 
   const [articleOpen, setArticleOpen] = useState(false);
   const [articleTitle, setArticleTitle] = useState('');
@@ -137,7 +266,7 @@ export function ReferenceColumn({
    * Initialized from the `sourceLanguage` prop so a persisted preference auto-loads on mount.
    */
   const [manualSourceLang, setManualSourceLang] = useState<string | null>(
-    () => sourceLanguage?.trim() || null,
+    () => sourceLanguage?.trim() || null
   );
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [langList, setLangList] = useState<Door43LanguageOption[]>([]);
@@ -146,6 +275,8 @@ export function ReferenceColumn({
   const [langError, setLangError] = useState<string | null>(null);
 
   const [scriptureLoading, setScriptureLoading] = useState(false);
+  /** true when catalog data came from localStorage (user is offline) */
+  const [sourceFromCache, setSourceFromCache] = useState(false);
 
   // ── Derived state ─────────────────────────────────────────────────────────
 
@@ -153,13 +284,25 @@ export function ReferenceColumn({
     onSourceSession?.(activeSourceSession);
   }, [activeSourceSession, onSourceSession]);
 
+  // Lift the full slot list to parent (for alignment picker, etc.)
+  useEffect(() => {
+    onSourceSessionsChange?.(sourceSlots);
+  }, [sourceSlots, onSourceSessionsChange]);
+
   useEffect(() => {
     if (!targetSession) return;
     let raf = 0;
     const unsub = targetSession.onChange(() => {
-      if (!raf) raf = requestAnimationFrame(() => { raf = 0; setRev((r) => r + 1); });
+      if (!raf)
+        raf = requestAnimationFrame(() => {
+          raf = 0;
+          setRev((r) => r + 1);
+        });
     });
-    return () => { unsub(); cancelAnimationFrame(raf); };
+    return () => {
+      unsub();
+      cancelAnimationFrame(raf);
+    };
   }, [targetSession]);
 
   useEffect(() => {
@@ -189,19 +332,23 @@ export function ReferenceColumn({
 
   const effectiveConfig: HelpsResourceConfig = useMemo(
     () => discovery.config ?? { ...DEFAULT_HELPS_CONFIG, enabled: false },
-    [discovery.config],
+    [discovery.config]
   );
 
-  const { twl, tn, loading: tsvLoading, error: tsvError } = useHelpsTsvLoader(
-    effectiveConfig,
-    bookCode,
-    dcsAuth,
-  );
+  const {
+    twl,
+    tn,
+    loading: tsvLoading,
+    error: tsvError,
+  } = useHelpsTsvLoader(effectiveConfig, bookCode, dcsAuth);
 
   const verseModel = useAnnotatedVerse(targetSession, activeSourceSession, twl, tn, rev);
   const helpsPageRef = useRef<HelpsContentPage | null>(null);
   const helpsPage = useMemo((): HelpsContentPage | null => {
-    if (!targetSession) { helpsPageRef.current = null; return null; }
+    if (!targetSession) {
+      helpsPageRef.current = null;
+      return null;
+    }
     const cp = targetSession.getContentPage();
     let next: HelpsContentPage | null;
     if (cp.kind === 'introduction' || cp.kind === 'identification') next = { kind: 'introduction' };
@@ -209,10 +356,14 @@ export function ReferenceColumn({
     else next = null;
     const prev = helpsPageRef.current;
     if (
-      prev !== null && next !== null &&
+      prev !== null &&
+      next !== null &&
       prev.kind === next.kind &&
-      (prev.kind !== 'chapter' || (next as { kind: 'chapter'; chapter: number }).chapter === (prev as { kind: 'chapter'; chapter: number }).chapter)
-    ) return prev;
+      (prev.kind !== 'chapter' ||
+        (next as { kind: 'chapter'; chapter: number }).chapter ===
+          (prev as { kind: 'chapter'; chapter: number }).chapter)
+    )
+      return prev;
     helpsPageRef.current = next;
     return next;
   }, [targetSession, rev]);
@@ -220,12 +371,20 @@ export function ReferenceColumn({
 
   useHelpsDecorations(activeSourceSession, twl, tn, rev);
 
-  const { getTitle, getEntryTitleFromRc } = useArticleTitles(chapterHelps, effectiveConfig, dcsAuth?.token);
+  const { getTitle, getEntryTitleFromRc } = useArticleTitles(
+    chapterHelps,
+    effectiveConfig,
+    dcsAuth?.token
+  );
 
-  const onHelpsTokenClick = useCallback((entries: HelpEntry[]) => {
-    setTokenFilter(entries);
-    setColumnTab('helps');
-  }, []);
+  const onHelpsTokenClick = useCallback(
+    (entries: HelpEntry[]) => {
+      prevColumnTabRef.current = columnTab;
+      setTokenFilter(entries);
+      setColumnTab('helps');
+    },
+    [columnTab]
+  );
 
   /** Leaving Helps clears token filter so returning always shows the full chapter list. */
   useEffect(() => {
@@ -273,7 +432,7 @@ export function ReferenceColumn({
         setArticleLoading(false);
       }
     },
-    [effectiveConfig, dcsAuth?.token, getTitle, getEntryTitleFromRc],
+    [effectiveConfig, dcsAuth?.token, getTitle, getEntryTitleFromRc]
   );
 
   const displayedHelps = tokenFilter ?? chapterHelps;
@@ -282,7 +441,10 @@ export function ReferenceColumn({
   const addSourceTab = useCallback(() => {
     const id = newSourceSlotId();
     setSourceSlots((prev) => {
-      const next = [...prev, { id, label: `Source ${prev.length + 1}`, session: null }];
+      const next = [
+        ...prev,
+        { id, label: `Source ${prev.length + 1}`, title: undefined, session: null },
+      ];
       setActiveSourceIndex(next.length - 1);
       return next;
     });
@@ -291,13 +453,14 @@ export function ReferenceColumn({
 
   // ── Language picker handlers ───────────────────────────────────────────────
 
-  /** Load available source languages from catalog when picker opens. */
+  /** Load available source languages from catalog when picker opens. Uses the
+   *  offline-capable getCatalogLanguages (memory -> localStorage -> bundle -> network). */
   useEffect(() => {
     if (!langPickerOpen || langList.length > 0) return;
     setLangLoading(true);
     setLangError(null);
-    void fetchCatalogLanguages(catalogHost, DEFAULT_CATALOG_TOPIC, 'Aligned Bible,Bible')
-      .then((list) => setLangList(list))
+    void getCatalogLanguages(catalogHost)
+      .then((list) => setLangList(list.map((e) => ({ lc: e.lc, ln: e.ln, ang: e.ang }))))
       .catch((e) => setLangError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLangLoading(false));
   }, [langPickerOpen, catalogHost, langList.length]);
@@ -309,18 +472,50 @@ export function ReferenceColumn({
       (l) =>
         l.lc.toLowerCase().includes(q) ||
         l.ln.toLowerCase().includes(q) ||
-        (l.ang ?? '').toLowerCase().includes(q),
+        (l.ang ?? '').toLowerCase().includes(q)
     );
   }, [langList, langQuery]);
 
-  const handleLangPick = useCallback((lang: Door43LanguageOption) => {
-    setManualSourceLang(lang.lc);
-    onSourceLanguageChange?.(lang.lc);
-    setLangPickerOpen(false);
-    setLangQuery('');
-  }, [onSourceLanguageChange]);
+  const handleLangPick = useCallback(
+    (lang: Door43LanguageOption) => {
+      setManualSourceLang(lang.lc);
+      onSourceLanguageChange?.(lang.lc);
+      setLangPickerOpen(false);
+      setLangQuery('');
+      // Trigger background download of all source repos for this language.
+      // Use the configured queue (with catalogFetch) so jobs get real per-repo
+      // zipball URLs rather than placeholder entries.
+      void getConfiguredDownloadQueue()
+        .then((queue) =>
+          Promise.all([
+            queue.enqueueSource(lang.lc, { host: catalogHost }),
+            queue.enqueueSource('el-x-koine', { host: catalogHost }),
+            queue.enqueueSource('hbo', { host: catalogHost }),
+          ])
+        )
+        .then(() => {
+          // Kick the scheduler immediately so downloads begin within milliseconds.
+          triggerSchedulerDrain();
+        });
+    },
+    [onSourceLanguageChange, catalogHost]
+  );
 
-  const onClearFilter = useCallback(() => setTokenFilter(null), []);
+  // Expose imperative handle for parent-driven operations (alignment picker, etc.)
+  useImperativeHandle(
+    ref,
+    () => ({
+      addDcsLanguage(lang: Door43LanguageOption) {
+        handleLangPick(lang);
+      },
+    }),
+    [handleLangPick]
+  );
+
+  const onClearFilter = useCallback(() => {
+    setTokenFilter(null);
+    setColumnTab(prevColumnTabRef.current);
+  }, []);
   const onCloseArticle = useCallback(() => setArticleOpen(false), []);
 
   /**
@@ -332,25 +527,121 @@ export function ReferenceColumn({
     if (!manualSourceLang || !bookCode) return;
     let cancelled = false;
     setScriptureLoading(true);
+    setSourceFromCache(false);
 
     void (async () => {
       try {
-        const entries = await searchCatalogSources({
-          host: catalogHost,
-          lang: manualSourceLang,
-          subject: 'Aligned Bible,Bible',
-          topic: DEFAULT_CATALOG_TOPIC,
-          limit: 20,
-          maxPages: 1,
-        });
+        // 1. Try catalog search (network-first with localStorage fallback).
+        let entries: CatalogEntry[];
+        let fromCache = false;
+        try {
+          const result = await fetchCatalogSourcesCached({
+            host: catalogHost,
+            lang: manualSourceLang,
+            subject: 'Aligned Bible,Bible',
+            topic: DEFAULT_CATALOG_TOPIC,
+            limit: 20,
+            maxPages: 1,
+          });
+          entries = result.entries;
+          fromCache = result.fromCache;
+        } catch {
+          // 2. Last-resort fallback: build slots from IndexedDB raw cache.
+          const rawStorage = getSourceCacheStorage();
+          const cachedRepos = await rawStorage.listCachedRepos(manualSourceLang);
+          if (cancelled) return;
+          if (!cachedRepos.length) return;
+
+          const bookUpper = bookCode.toUpperCase();
+          const hostBase = `https://${catalogHost.replace(/^https?:\/\//, '').replace(/\/$/, '')}`;
+          const newSlots: SourceSlotState[] = [];
+          const loads: [string, Parameters<typeof pendingLoads.current.set>[1]][] = [];
+
+          for (const repo of cachedRepos) {
+            if (!/bible/i.test(repo.subject)) continue;
+            const [owner, repoName] = repo.repoId.split('/') as [string, string];
+            // Find the book file in the raw cache.
+            const files = await rawStorage.listCachedFiles(repo.repoId, repo.releaseTag);
+            const bookFile = files.find((f) =>
+              new RegExp(`(^|[/_-])${bookUpper}\\.(usfm|sfm)$`, 'i').test(f)
+            );
+            if (!bookFile) continue;
+            const slotId = newSourceSlotId();
+            newSlots.push({ id: slotId, label: repoName, title: undefined, session: null });
+            loads.push([slotId, {
+              baseUrl: hostBase,
+              owner,
+              repo: repoName,
+              filePath: bookFile,
+              ref: repo.releaseTag,
+              repoId: repo.repoId,
+              releaseTag: repo.releaseTag,
+              langCode: repo.langCode,
+              displayName: repoName,
+              subject: repo.subject,
+              direction: directionForLangSync(repo.langCode),
+            }]);
+          }
+
+          // Original language (unfoldingWord UGNT / UHB) from cache — same book if present.
+          const olDescOffline = originalLanguageForBook(bookUpper);
+          if (olDescOffline && newSlots.length) {
+            const olRepos = await rawStorage.listCachedRepos(olDescOffline.lang);
+            const olRepo = olRepos.find(
+              (r) =>
+                r.repoId.toLowerCase().startsWith('unfoldingword/') &&
+                r.repoId.split('/')[1]!.toLowerCase().includes(olDescOffline.resourceId),
+            );
+            if (olRepo) {
+              const files = await rawStorage.listCachedFiles(olRepo.repoId, olRepo.releaseTag);
+              const bookFile = files.find((f) =>
+                new RegExp(`(^|[/_-])${bookUpper}\\.(usfm|sfm)$`, 'i').test(f)
+              );
+              if (bookFile) {
+                const [owner, repoName] = olRepo.repoId.split('/') as [string, string];
+                const slotId = newSourceSlotId();
+                newSlots.push({
+                  id: slotId,
+                  label: olDescOffline.resourceId.toUpperCase(),
+                  title: undefined,
+                  session: null,
+                });
+                loads.push([slotId, {
+                  baseUrl: hostBase,
+                  owner,
+                  repo: repoName,
+                  filePath: bookFile,
+                  ref: olRepo.releaseTag,
+                  repoId: olRepo.repoId,
+                  releaseTag: olRepo.releaseTag,
+                  langCode: olRepo.langCode,
+                  displayName: olDescOffline.resourceId.toUpperCase(),
+                  subject: olRepo.subject,
+                  direction: directionForLangSync(olRepo.langCode),
+                }]);
+              }
+            }
+          }
+
+          if (!newSlots.length || cancelled) return;
+          setSourceSlots(newSlots);
+          setActiveSourceIndex(0);
+          slotEmitters.current.clear();
+          pendingLoads.current.clear();
+          for (const [id, load] of loads) pendingLoads.current.set(id, load);
+          setSourceFromCache(true);
+          return;
+        }
+
         if (cancelled) return;
+        if (fromCache) setSourceFromCache(true);
 
         const bookLower = bookCode.toLowerCase();
         type MatchedEntry = { entry: CatalogEntry; filePath: string };
         const matched: MatchedEntry[] = [];
         for (const entry of entries) {
           const ingredient = entry.ingredients.find(
-            (i) => i.identifier?.toLowerCase() === bookLower,
+            (i) => i.identifier?.toLowerCase() === bookLower
           );
           if (ingredient) {
             matched.push({ entry, filePath: ingredient.path.replace(/^\.\//, '') });
@@ -359,12 +650,56 @@ export function ReferenceColumn({
 
         if (!matched.length || cancelled) return;
 
-        // Build one source slot per matching Bible resource
+        // Original-language scripture (unfoldingWord UGNT / UHB only) — optional extra tab.
+        let olExtra: MatchedEntry | null = null;
+        const olDesc = originalLanguageForBook(bookCode);
+        if (olDesc) {
+          try {
+            const olResult = await fetchCatalogSourcesCached({
+              host: catalogHost,
+              lang: olDesc.lang,
+              subject: olDesc.subject,
+              topic: '',
+              limit: 20,
+              maxPages: 1,
+            });
+            const preferred = olResult.entries.find(
+              (e) =>
+                e.ownerLogin === 'unfoldingWord' &&
+                (e.abbreviation || e.repoName).toLowerCase().includes(olDesc.resourceId),
+            );
+            if (preferred) {
+              const ing = preferred.ingredients.find(
+                (i) => i.identifier?.toLowerCase() === bookLower,
+              );
+              if (ing) {
+                olExtra = { entry: preferred, filePath: ing.path.replace(/^\.\//, '') };
+              }
+            }
+          } catch {
+            /* OL is best-effort; gateway slots already resolved. */
+          }
+        }
+
+        if (cancelled) return;
+
+        // Build one source slot per matching Bible resource.
+        // label = short code for matching/technical use (abbreviation from catalog / repo convention)
+        // title = human-readable name from the catalog (from manifest dublin_core.title)
         const newSlots: SourceSlotState[] = matched.map(({ entry }) => ({
           id: newSourceSlotId(),
-          label: entry.abbreviation || entry.title || entry.repoName,
+          label: entry.abbreviation || entry.repoName,
+          title: entry.title || undefined,
           session: null,
         }));
+        if (olExtra) {
+          newSlots.push({
+            id: newSourceSlotId(),
+            label: olExtra.entry.abbreviation || olExtra.entry.repoName,
+            title: olExtra.entry.title || undefined,
+            session: null,
+          });
+        }
         setSourceSlots(newSlots);
         setActiveSourceIndex(0);
         // Clear old emitter cache so new slot ids get fresh emitters
@@ -381,16 +716,42 @@ export function ReferenceColumn({
             repo: entry.repoName,
             filePath,
             ref: entry.releaseTag,
+            // Extra fields for CacheFirstSourceTextProvider
+            repoId: `${entry.ownerLogin}/${entry.repoName}`,
+            releaseTag: entry.releaseTag,
+            langCode: entry.language,
+            displayName: entry.title || entry.abbreviation || entry.repoName,
+            subject: entry.subject,
+            direction: directionForLangSync(entry.language),
+          });
+        }
+        if (olExtra) {
+          const slotId = newSlots[matched.length]!.id;
+          pendingLoads.current.set(slotId, {
+            baseUrl: host,
+            owner: olExtra.entry.ownerLogin,
+            repo: olExtra.entry.repoName,
+            filePath: olExtra.filePath,
+            ref: olExtra.entry.releaseTag,
+            repoId: `${olExtra.entry.ownerLogin}/${olExtra.entry.repoName}`,
+            releaseTag: olExtra.entry.releaseTag,
+            langCode: olExtra.entry.language,
+            displayName: olExtra.entry.title || olExtra.entry.abbreviation || olExtra.entry.repoName,
+            subject: olExtra.entry.subject,
+            direction: directionForLangSync(olExtra.entry.language),
           });
         }
       } catch {
-        // Non-critical — user can still open a source manually
+        // Nothing available (no network, no localStorage, no raw cache)
+        setSourceFromCache(false);
       } finally {
         if (!cancelled) setScriptureLoading(false);
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [manualSourceLang, bookCode, catalogHost]);
 
   const currentLangLabel = useMemo(() => {
@@ -459,7 +820,11 @@ export function ReferenceColumn({
                 <button
                   type="button"
                   className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 border-b px-3 py-1.5 text-xs"
-                  onClick={() => { setManualSourceLang(null); onSourceLanguageChange?.(null); setLangPickerOpen(false); }}
+                  onClick={() => {
+                    setManualSourceLang(null);
+                    onSourceLanguageChange?.(null);
+                    setLangPickerOpen(false);
+                  }}
                 >
                   <X className="size-3" aria-hidden />
                   Clear: {currentLangLabel}
@@ -483,11 +848,14 @@ export function ReferenceColumn({
                       onClick={() => handleLangPick(l)}
                       className={cn(
                         'flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent',
-                        l.lc === manualSourceLang && 'bg-primary/10 font-medium text-primary',
+                        l.lc === manualSourceLang && 'bg-primary/10 font-medium text-primary'
                       )}
                     >
                       <span className="font-mono text-muted-foreground w-10 shrink-0">{l.lc}</span>
-                      <span className="truncate">{l.ln}{l.ang && l.ang !== l.ln ? ` · ${l.ang}` : ''}</span>
+                      <span className="truncate">
+                        {l.ln}
+                        {l.ang && l.ang !== l.ln ? ` · ${l.ang}` : ''}
+                      </span>
                     </button>
                   ))
                 )}
@@ -505,14 +873,25 @@ export function ReferenceColumn({
       {effectiveConfig.enabled && tsvLoading ? (
         <p className="text-muted-foreground text-xs">Loading TWL/TN…</p>
       ) : null}
-      {effectiveConfig.enabled && tsvError ? <p className="text-destructive text-xs">{tsvError}</p> : null}
+      {effectiveConfig.enabled && tsvError ? (
+        <p className="text-destructive text-xs">{tsvError}</p>
+      ) : null}
+
+      {/* Offline indicator — shown when catalog data came from localStorage cache */}
+      {sourceFromCache ? (
+        <p className="text-muted-foreground shrink-0 rounded border border-dashed px-2 py-1 text-center text-xs">
+          Offline — showing cached sources
+        </p>
+      ) : null}
 
       {/* ── Main panel card ─────────────────────────────────────────────── */}
       <div className="border-border bg-card flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-md border">
-
         {/* Source tab */}
         <div
-          className={cn('flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-2', columnTab !== 'source' && 'hidden')}
+          className={cn(
+            'flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-2',
+            columnTab !== 'source' && 'hidden'
+          )}
           aria-hidden={columnTab !== 'source'}
         >
           {!verseModel && !activeSourceSession?.isLoaded() ? (
@@ -528,15 +907,22 @@ export function ReferenceColumn({
                 type="button"
                 size="sm"
                 variant={idx === activeSourceIndex ? 'secondary' : 'ghost'}
-                className="max-w-[140px] shrink-0 truncate"
-                title={slot.label}
+                className="max-w-[100px] text-xs shrink-0 truncate font-bold"
+                title={slot.title ? `${slot.title} (${slot.label})` : slot.label}
                 onClick={() => setActiveSourceIndex(idx)}
               >
-                {slot.label}
+                {slot.label.toUpperCase()}
               </Button>
             ))}
             <Tip label="Add source">
-              <Button type="button" size="icon" variant="outline" className="size-7 shrink-0" onClick={addSourceTab} aria-label="Add source">
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className="size-7 shrink-0"
+                onClick={addSourceTab}
+                aria-label="Add source"
+              >
                 <Plus className="size-3.5" aria-hidden />
               </Button>
             </Tip>
@@ -547,7 +933,10 @@ export function ReferenceColumn({
             {sourceSlots.map((slot, idx) => (
               <div
                 key={slot.id}
-                className={cn('absolute inset-0 flex min-h-0 flex-col', idx === activeSourceIndex ? 'z-10' : 'z-0')}
+                className={cn(
+                  'absolute inset-0 flex min-h-0 flex-col',
+                  idx === activeSourceIndex ? 'z-10' : 'z-0'
+                )}
                 style={{ display: idx === activeSourceIndex ? 'flex' : 'none' }}
                 aria-hidden={idx !== activeSourceIndex}
               >
@@ -564,7 +953,10 @@ export function ReferenceColumn({
 
         {/* Helps tab */}
         <div
-          className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-2', columnTab !== 'helps' && 'hidden')}
+          className={cn(
+            'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-2',
+            columnTab !== 'helps' && 'hidden'
+          )}
           aria-hidden={columnTab !== 'helps'}
         >
           <HelpsTab
@@ -575,6 +967,7 @@ export function ReferenceColumn({
             sourceStore={activeSourceSession?.isLoaded() ? activeSourceSession.store : null}
             getTitle={getTitle}
             getEntryTitleFromRc={getEntryTitleFromRc}
+            sourceTextDir={activeRefTextDir}
           />
         </div>
       </div>
@@ -591,4 +984,4 @@ export function ReferenceColumn({
       />
     </div>
   );
-}
+});

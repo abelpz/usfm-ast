@@ -1,24 +1,32 @@
 import { EditorPage } from '@/pages/EditorPage';
 import { HomePage } from '@/pages/HomePage';
 import { LocalProjectPage } from '@/pages/LocalProjectPage';
-import { ProjectPage } from '@/pages/ProjectPage';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { SourceCachePage } from '@/pages/SourceCachePage';
+import { UpdateBanner } from '@/components/UpdateBanner';
+import { DownloadProgressIndicator } from '@/components/DownloadProgressIndicator';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
-/** Old DCS dashboard used `/project?owner=…`; local projects use `/project/:id`. */
+/** Old DCS dashboard used `/project?owner=…`; projects now import from Home → `/project/:id`. */
 function LegacyDcsProjectRedirect() {
-  const { search } = useLocation();
-  return <Navigate to={`/dcs-project${search}`} replace />;
+  return <Navigate to="/" replace />;
 }
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/dcs-project" element={<ProjectPage />} />
-      <Route path="/project/:id" element={<LocalProjectPage />} />
-      <Route path="/project/:id/editor" element={<EditorPage />} />
-      <Route path="/project" element={<LegacyDcsProjectRedirect />} />
-      <Route path="/editor" element={<EditorPage />} />
-    </Routes>
+    <>
+      <UpdateBanner />
+      <div className="fixed bottom-2 right-2 z-50">
+        <DownloadProgressIndicator />
+      </div>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/dcs-project" element={<Navigate to="/" replace />} />
+        <Route path="/project/:id" element={<LocalProjectPage />} />
+        <Route path="/project/:id/editor" element={<EditorPage />} />
+        <Route path="/project" element={<LegacyDcsProjectRedirect />} />
+        <Route path="/editor" element={<EditorPage />} />
+        <Route path="/source-cache" element={<SourceCachePage />} />
+      </Routes>
+    </>
   );
 }

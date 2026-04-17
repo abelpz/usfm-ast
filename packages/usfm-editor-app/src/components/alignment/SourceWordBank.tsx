@@ -1,16 +1,22 @@
 import type { WordToken } from '@usfm-tools/editor-core';
-import { useDroppable } from '@dnd-kit/core';
+import { useDndContext, useDroppable } from '@dnd-kit/core';
+import { memo, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 
+import type { SourceWordDragData } from './alignment-dnd-ids';
 import { WORD_BANK_DROP_ID } from './alignment-dnd-ids';
 import { DraggableSourceWord } from './DraggableSourceWord';
+
+/** Stable empty array used so memoized children don't get a new reference when unselected. */
+const EMPTY_DRAG_INDICES: readonly number[] = [];
 
 type Props = {
   tokens: WordToken[];
   /** Parallel to tokens: true if this translation word is already in an alignment group. */
   sourceAligned: boolean[];
   selected: number[];
-  colorSlotForToken: (transIndex: number) => number | null;
+  /** Pre-computed color palette slot per token index (avoids O(N*G) work during render). */
+  colorSlots: readonly (number | null)[];
   groupClass: (paletteSlot: number | null) => string;
   onToggle: (index: number, shiftKey: boolean) => void;
   disabled?: boolean;
@@ -18,12 +24,18 @@ type Props = {
 
 /**
  * Left sidebar: translation (source) words stacked vertically; draggable into alignment boxes.
+ *
+ * Performance notes:
+ * - Subscribes to useDndContext() once (instead of once-per-word-chip) so pointer-move events
+ *   only re-render this container, not every DraggableSourceWord.
+ * - DraggableSourceWord is React.memo'd; props are stable during pointer moves.
+ * - selectedUnaligned and selectedSet are memoized to avoid re-creating them on every render.
  */
-export function SourceWordBank({
+export const SourceWordBank = memo(function SourceWordBank({
   tokens,
   sourceAligned,
   selected,
-  colorSlotForToken,
+  colorSlots,
   groupClass,
   onToggle,
   disabled,
@@ -33,6 +45,33 @@ export function SourceWordBank({
     data: { kind: 'word-bank' },
     disabled: Boolean(disabled),
   });
+
+  // Single subscription to DnD context instead of one per word chip.
+  const { active } = useDndContext();
+  const activeSource = active?.data?.current as SourceWordDragData | undefined;
+
+  /**
+   * Set of translation indices participating in the current active multi-drag.
+   * Recomputes only when active drag changes (start/end), not during pointer moves
+   * because `active` is the same object reference throughout a single drag.
+   */
+  const activeDragSet = useMemo<ReadonlySet<number> | null>(() => {
+    if (!active || activeSource?.type !== 'source-word') return null;
+    return new Set<number>(activeSource.transIndices ?? [activeSource.transIndex]);
+  }, [active, activeSource]);
+
+  /** O(1) selected lookup; reconstructed only when the selection array changes. */
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+
+  /**
+   * The set of unaligned selected indices — shared across all selected words as their
+   * multi-drag payload. Memoized so the same array reference is passed to each chip
+   * (prevents spurious re-renders of non-selected chips when selection grows).
+   */
+  const selectedUnaligned = useMemo(
+    () => selected.filter((i) => !sourceAligned[i]).sort((a, b) => a - b),
+    [selected, sourceAligned],
+  );
 
   return (
     <div
@@ -51,8 +90,14 @@ export function SourceWordBank({
         <div className="flex flex-col gap-1.5">
         {tokens.map((t, i) => {
           const aligned = sourceAligned[i] === true;
-          const gi = colorSlotForToken(i);
-          const isSel = selected.includes(i);
+          const gi = colorSlots[i] ?? null;
+          const isSelected = selectedSet.has(i);
+          const inActiveDrag = (activeDragSet?.has(i) ?? false) && Boolean(active);
+          // Only selected words with multi-select get a shared dragTransIndices payload.
+          const dragTransIndices =
+            isSelected && selectedUnaligned.length > 1 && selectedUnaligned.includes(i)
+              ? selectedUnaligned
+              : EMPTY_DRAG_INDICES;
           return (
             <DraggableSourceWord
               key={`${t.verseSid}-${i}-${t.surface}`}
@@ -61,9 +106,9 @@ export function SourceWordBank({
               transIndex={i}
               aligned={aligned}
               groupClass={groupClass(gi)}
-              isSelected={isSel}
-              selectedTrans={selected}
-              sourceAligned={sourceAligned}
+              isSelected={isSelected}
+              dragTransIndices={dragTransIndices}
+              inActiveDrag={inActiveDrag}
               disabled={disabled}
               onToggle={onToggle}
             />
@@ -73,4 +118,4 @@ export function SourceWordBank({
       </div>
     </div>
   );
-}
+});

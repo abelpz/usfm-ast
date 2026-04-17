@@ -8,7 +8,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useKV } from '@/platform/PlatformContext';
 import { useEffect, useState } from 'react';
+
+const WS_RELAY_KEY = 'usfm-ws-relay';
 
 type Props = {
   open: boolean;
@@ -16,16 +19,20 @@ type Props = {
 };
 
 export function CollaborateModal({ open, onOpenChange }: Props) {
+  const kv = useKV();
   const [ws, setWs] = useState('');
 
   useEffect(() => {
-    if (open) setWs(localStorage.getItem('usfm-ws-relay') ?? '');
-  }, [open]);
+    if (open) {
+      void kv.get(WS_RELAY_KEY).then((v) => setWs(v ?? ''));
+    }
+  }, [open, kv]);
 
   function enableAndReload() {
-    localStorage.setItem('usfm-ws-relay', ws.trim());
-    sessionStorage.setItem('usfm-collab', '1');
-    window.location.reload();
+    void kv.set(WS_RELAY_KEY, ws.trim()).then(() => {
+      sessionStorage.setItem('usfm-collab', '1');
+      window.location.reload();
+    });
   }
 
   function disableAndReload() {

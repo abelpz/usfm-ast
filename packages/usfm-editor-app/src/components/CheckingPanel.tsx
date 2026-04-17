@@ -11,7 +11,7 @@ export function CheckingPanel() {
     <div className="border-border bg-muted/20 space-y-3 rounded-lg border p-4 text-sm">
       <h3 className="text-foreground font-semibold">Checking</h3>
       <p className="text-muted-foreground text-xs">
-        Built-in extensions can generate stage templates. Persisted <code>checkings/</code> JSON is written by future sync
+        Built-in extensions can generate stage templates. Persisted <code>checking/</code> JSON is written by future sync
         hooks.
       </p>
       <div className="flex flex-wrap gap-2">

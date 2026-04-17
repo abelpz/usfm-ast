@@ -1,22 +1,30 @@
-import type { ScriptureSession, SourceTextSession } from '@usfm-tools/editor';
+import type { ScriptureSession } from '@usfm-tools/editor';
+import type { Door43LanguageOption } from '@/dcs-client';
+import type { SourceSlotSnapshot } from '@/components/alignment/AlignmentSourcePicker';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlignmentEditor } from '@/components/alignment/AlignmentEditor';
 
 type Props = {
   session: ScriptureSession;
-  sourceTextSession: SourceTextSession | null;
+  /** All source slots from ReferenceColumn (for the alignment source picker). */
+  sourceSlots: ReadonlyArray<SourceSlotSnapshot>;
   open: boolean;
   onClose: () => void;
+  dcsAuth: { host: string; token?: string } | null;
+  /** Called when user wants to add a DCS language from the alignment picker. */
+  onRequestAddDcsLanguage: (lang: Door43LanguageOption) => void;
   /** Mirrors app theme (`document` / `document-dark`) for `data-usfm-theme`. */
   usfmTheme?: 'document' | 'document-dark';
 };
 
 export function AlignmentPanel({
   session,
-  sourceTextSession,
+  sourceSlots,
   open,
   onClose,
+  dcsAuth,
+  onRequestAddDcsLanguage,
   usfmTheme = 'document',
 }: Props) {
   if (!open) return null;
@@ -35,8 +43,10 @@ export function AlignmentPanel({
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
         <AlignmentEditor
           session={session}
-          sourceTextSession={sourceTextSession}
+          sourceSlots={sourceSlots}
           overlayOpen={open}
+          dcsAuth={dcsAuth}
+          onRequestAddDcsLanguage={onRequestAddDcsLanguage}
         />
       </div>
     </div>

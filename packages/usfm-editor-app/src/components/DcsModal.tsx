@@ -8,13 +8,15 @@ import {
   type Door43UserInfo,
 } from '@/dcs-client';
 import {
-  DCS_CREDS_KEY,
-  DCS_TARGET_KEY,
   loadDcsCredentials,
   loadDcsTarget,
+  removeDcsCredentialsAsync,
+  removeDcsTargetAsync,
+  saveDcsTargetAsync,
   type DcsStoredCredentials,
   type DcsStoredTarget,
 } from '@/lib/dcs-storage';
+import { useKV } from '@/platform/PlatformContext';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -38,6 +40,7 @@ type Props = {
 };
 
 export function DcsModal({ open, onOpenChange }: Props) {
+  const kv = useKV();
   const [creds, setCreds] = useState<DcsStoredCredentials | null>(() => loadDcsCredentials());
   const [user, setUser] = useState<Door43UserInfo | null>(null);
   const [repos, setRepos] = useState<Door43RepoRow[]>([]);
@@ -140,7 +143,7 @@ export function DcsModal({ open, onOpenChange }: Props) {
         setUser(u);
         await refreshRepos(c);
       } catch {
-        localStorage.removeItem(DCS_CREDS_KEY);
+        await removeDcsCredentialsAsync(kv);
         setCreds(null);
         setUser(null);
         setRepos([]);
@@ -156,8 +159,8 @@ export function DcsModal({ open, onOpenChange }: Props) {
   async function onLogout() {
     // Do not call Gitea `DELETE …/tokens/{id}` here: authenticating with the same PAT
     // often returns 403 and spams the console. Revoke the token under Door43 → Settings if needed.
-    localStorage.removeItem(DCS_CREDS_KEY);
-    localStorage.removeItem(DCS_TARGET_KEY);
+    await removeDcsCredentialsAsync(kv);
+    await removeDcsTargetAsync(kv);
     setCreds(null);
     setUser(null);
     setRepos([]);
@@ -199,8 +202,7 @@ export function DcsModal({ open, onOpenChange }: Props) {
 
   function onSave() {
     if (!selectedRepo) {
-      localStorage.removeItem(DCS_TARGET_KEY);
-      onOpenChange(false);
+      void removeDcsTargetAsync(kv).then(() => onOpenChange(false));
       return;
     }
     if (!usfmPath.trim()) {
@@ -215,8 +217,7 @@ export function DcsModal({ open, onOpenChange }: Props) {
       journalPath: journalPath.trim() || 'usfm-ast/journal.json',
       syncEnabled,
     };
-    localStorage.setItem(DCS_TARGET_KEY, JSON.stringify(next));
-    window.location.reload();
+    void saveDcsTargetAsync(kv, next).then(() => window.location.reload());
   }
 
   const filteredRepos = repos.filter((r) =>

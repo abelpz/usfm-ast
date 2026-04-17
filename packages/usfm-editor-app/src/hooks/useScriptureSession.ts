@@ -11,6 +11,7 @@ import {
   HeadlessCollabSession,
   RealtimeSyncEngine,
   WebSocketRelayTransport,
+  type JournalStore,
   type UsjDocument,
 } from '@usfm-tools/editor-core';
 import type { EditorView } from 'prosemirror-view';
@@ -28,6 +29,7 @@ import {
   setStoredMarkerPaletteTrigger,
 } from '@/marker-palette-trigger';
 import { getStoredMarkerShortcuts } from '@/marker-shortcuts';
+import { directionForLang } from '@/lib/lang-direction';
 import type { DcsStoredCredentials, DcsStoredTarget } from '@/lib/dcs-storage';
 
 export type UseScriptureSessionArgs = {
@@ -39,6 +41,15 @@ export type UseScriptureSessionArgs = {
   dcsTarget: DcsStoredTarget | null;
   /** Fired after local document edits (same timing as vanilla `session.onChange`). */
   onEditorChange?: () => void;
+  /** Project target language (BCP-47) — sets ProseMirror `dir` / `lang` for RTL layout. */
+  targetLanguage?: string;
+  /**
+   * When editing a local translation project, persists {@link OperationJournal} to `journal/<BOOK>.jsonl`.
+   * Takes precedence over single-file DCS journal + git sync when both are configured.
+   */
+  projectBookJournalStore?: JournalStore;
+  /** Realtime room id for collab (defaults to `TIT` when omitted). */
+  localBookCode?: string;
 };
 
 export type ScriptureSessionController = {
@@ -57,12 +68,32 @@ export function useScriptureSession({
   dcsCreds,
   dcsTarget,
   onEditorChange,
+  targetLanguage,
+  projectBookJournalStore,
+  localBookCode,
 }: UseScriptureSessionArgs): ScriptureSessionController | null {
   const [ctrl, setCtrl] = useState<ScriptureSessionController | null>(null);
   const onEditorChangeRef = useRef(onEditorChange);
   useEffect(() => {
     onEditorChangeRef.current = onEditorChange;
   }, [onEditorChange]);
+
+  useEffect(() => {
+    const s = ctrl?.session;
+    if (!s) return;
+    const lang = targetLanguage?.trim();
+    if (!lang) {
+      s.applyLanguage({ dir: 'ltr' });
+      return;
+    }
+    let cancelled = false;
+    void directionForLang(lang, dcsCreds?.host).then((dir) => {
+      if (!cancelled) s.applyLanguage({ lang, dir });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ctrl, targetLanguage, dcsCreds?.host]);
 
   useLayoutEffect(() => {
     const el = mountRef.current;
@@ -103,7 +134,18 @@ export function useScriptureSession({
       current: null as null | (() => UsjDocument),
     };
 
-    if (dcsSyncEnabled && dcsCreds && dcsTarget) {
+    if (projectBookJournalStore) {
+      const headless = new HeadlessCollabSession({
+        userId: dcsCreds?.username?.trim() || 'local',
+        journalStore: projectBookJournalStore,
+        realtimeTransport: collabActive ? buildCollabTransport() : undefined,
+      });
+      headlessForConnect = headless;
+      sessionOptions.headlessSession = headless;
+      if (collabActive && headless.sync instanceof RealtimeSyncEngine) {
+        collabRealtimeEngine = headless.sync;
+      }
+    } else if (dcsSyncEnabled && dcsCreds && dcsTarget) {
       const baseUrl = `https://${dcsCreds.host}`;
       const remoteTransport = createDcsJournalTransport({
         baseUrl,
@@ -155,7 +197,9 @@ export function useScriptureSession({
     let cancelled = false;
     void (async () => {
       if (headlessForConnect) {
-        await session.connectHeadlessCollaboration(collabActive ? 'TIT' : undefined);
+        await session.connectHeadlessCollaboration(
+          collabActive ? (localBookCode?.trim() || 'TIT') : undefined,
+        );
       }
       if (cancelled) return;
       const view = session.contentView;
@@ -230,6 +274,8 @@ export function useScriptureSession({
     dcsTarget?.usfmPath,
     dcsTarget?.journalPath,
     dcsTarget?.syncEnabled,
+    projectBookJournalStore,
+    localBookCode,
   ]);
 
   return ctrl;

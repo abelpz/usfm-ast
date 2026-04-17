@@ -3,7 +3,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { loginAndCreateToken } from '@/dcs-client';
 import { dcsForgotPasswordUrl, dcsSignUpUrl } from '@/lib/dcs-auth-urls';
-import { DCS_CREDS_KEY, type DcsStoredCredentials } from '@/lib/dcs-storage';
+import { saveDcsCredentialsAsync, type DcsStoredCredentials } from '@/lib/dcs-storage';
+import { useKV } from '@/platform/PlatformContext';
 import { cn } from '@/lib/utils';
 import { BookOpen, ChevronDown, ChevronUp, KeyRound, Loader2, Lock, LogIn, User, UserPlus } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -30,6 +31,7 @@ export function DcsLoginForm({
   idPrefix = 'dcs-login',
   className,
 }: DcsLoginFormProps) {
+  const kv = useKV();
   const [host, setHost] = useState(defaultHost);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [username, setUsername] = useState('');
@@ -63,7 +65,7 @@ export function DcsLoginForm({
         username: username.trim(),
         tokenId: tok.id,
       };
-      localStorage.setItem(DCS_CREDS_KEY, JSON.stringify(next));
+      await saveDcsCredentialsAsync(kv, next);
       setPassword('');
       setSuccessFlash(true);
       window.setTimeout(() => {
@@ -75,7 +77,7 @@ export function DcsLoginForm({
     } finally {
       setBusy(false);
     }
-  }, [host, username, password, onSuccess]);
+  }, [host, username, password, onSuccess, kv]);
 
   const signUp = dcsSignUpUrl(host);
   const forgot = dcsForgotPasswordUrl(host);

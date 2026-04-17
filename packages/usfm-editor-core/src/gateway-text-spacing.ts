@@ -18,8 +18,8 @@ export function needsSpaceBetween(prev: string, next: string): boolean {
   const isWordContinue = (c: string) => isLetter(c) || isNum(c) || isMark(c);
 
   if (/\d$/u.test(a) && isLetter(b)) return true;
-  if (/[)\]\}\]"'»]/u.test(a) && isWordContinue(b)) return true;
-  if (isWordContinue(a) && /^[(\[{"'«„]/u.test(next)) return true;
+  if (/[)\]}"'»]/u.test(a) && isWordContinue(b)) return true;
+  if (isWordContinue(a) && /^[([{"'«„]/u.test(next)) return true;
   if (/[.!?:;]$/u.test(a) && isLetter(b)) return true;
   if (/[,;]$/u.test(a) && isLetter(b)) return true;
   if (isWordContinue(a) && isWordContinue(b)) return true;

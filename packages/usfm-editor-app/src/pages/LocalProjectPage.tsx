@@ -12,21 +12,26 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getProjectStorage } from '@/lib/project-storage';
 import type { ProjectLaunchConfig } from '@/lib/project-launch';
 import { blankUsfmForBook } from '@/lib/usfm-project';
+import { getLocalizedBookName, preloadBookNames } from '@/lib/book-names-locale';
 import { USFM_BOOK_CODES } from '@usfm-tools/editor';
 import {
   listRCBooks,
+  listSBBooks,
   parseResourceContainer,
+  parseScriptureBurrito,
   serializeResourceContainer,
   type ResourceContainerManifest,
 } from '@usfm-tools/project-formats';
 import type { ProjectMeta, ProjectRelease } from '@usfm-tools/types';
 import { useLocalProjectSync } from '@/hooks/useLocalProjectSync';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, BookOpen, Circle, Loader2, Plus, Tag } from 'lucide-react';
+import { ProjectBundleControls } from '@/components/ProjectBundleControls';
+import { ArrowLeft, BookOpen, Circle, FileText, Loader2, Plus, Tag } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -67,7 +72,7 @@ export function LocalProjectPage() {
 
   const localSync = useLocalProjectSync(projectId || undefined);
 
-  const [tab, setTab] = useState<'books' | 'releases'>('books');
+  const [tab, setTab] = useState<'books' | 'releases' | 'settings'>('books');
 
   const [meta, setMeta] = useState<ProjectMeta | null>(null);
   const [books, setBooks] = useState<{ code: string; name: string; path: string }[]>([]);
@@ -80,6 +85,7 @@ export function LocalProjectPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [addPick, setAddPick] = useState<string | null>(null);
   const [addBusy, setAddBusy] = useState(false);
+  const [bookNamesReady, setBookNamesReady] = useState(false);
 
   const [relOpen, setRelOpen] = useState(false);
   const [relVersion, setRelVersion] = useState('v1.0.0');
@@ -88,6 +94,14 @@ export function LocalProjectPage() {
   const [relBooks, setRelBooks] = useState<Record<string, boolean>>({});
   const [relBusy, setRelBusy] = useState(false);
   const [relErr, setRelErr] = useState<string | null>(null);
+
+  const [readmeDraft, setReadmeDraft] = useState('');
+  const [licenseDraft, setLicenseDraft] = useState('');
+  /** Which license file exists or should be written on save. */
+  const [licensePath, setLicensePath] = useState<'LICENSE' | 'LICENSE.md'>('LICENSE');
+  const [settingsErr, setSettingsErr] = useState<string | null>(null);
+  const [readmeSaving, setReadmeSaving] = useState(false);
+  const [licenseSaving, setLicenseSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!projectId.trim()) {
@@ -107,14 +121,40 @@ export function LocalProjectPage() {
       }
       setMeta(m);
       const yaml = await storage.readFile(projectId.trim(), 'manifest.yaml');
-      if (!yaml) {
-        setBooks([]);
-        setErr('manifest.yaml is missing.');
-      } else {
+      if (yaml) {
         const rc = parseResourceContainer(yaml);
         setBooks(listRCBooks(rc));
+      } else {
+        const md = await storage.readFile(projectId.trim(), 'metadata.json');
+        if (md) {
+          try {
+            const sb = parseScriptureBurrito(JSON.parse(md) as unknown);
+            setBooks(listSBBooks(sb));
+          } catch {
+            setBooks([]);
+            setErr('metadata.json could not be parsed.');
+          }
+        } else {
+          setBooks([]);
+          setErr('manifest.yaml or metadata.json is required.');
+        }
       }
       setReleases(await storage.listReleases(projectId.trim()));
+      const readme = await storage.readFile(projectId.trim(), 'README.md');
+      setReadmeDraft(readme ?? '');
+      const lic = await storage.readFile(projectId.trim(), 'LICENSE');
+      const licMd = await storage.readFile(projectId.trim(), 'LICENSE.md');
+      if (lic !== null) {
+        setLicenseDraft(lic);
+        setLicensePath('LICENSE');
+      } else if (licMd !== null) {
+        setLicenseDraft(licMd);
+        setLicensePath('LICENSE.md');
+      } else {
+        setLicenseDraft('');
+        setLicensePath('LICENSE');
+      }
+      setSettingsErr(null);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -125,6 +165,10 @@ export function LocalProjectPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void preloadBookNames().then(() => setBookNamesReady(true));
+  }, []);
 
   // Asynchronously read each book's USFM file and extract the translated title.
   useEffect(() => {
@@ -150,25 +194,29 @@ export function LocalProjectPage() {
 
   const existingCodes = useMemo(() => new Set(books.map((b) => b.code.toUpperCase())), [books]);
 
+  const lc = meta?.sourceRefLanguage ?? meta?.language ?? 'en';
+
   const addBookCandidates: BookComboRow[] = useMemo(
     () =>
-      USFM_BOOK_CODES.filter(([c]) => !existingCodes.has(c)).map(([code, name]) => ({
+      USFM_BOOK_CODES.filter(([c]) => !existingCodes.has(c)).map(([code, englishName]) => ({
         code,
-        name,
+        name: bookNamesReady ? getLocalizedBookName(lc, code, englishName) : englishName,
         path: code,
       })),
-    [existingCodes],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [existingCodes, lc, bookNamesReady],
   );
 
   async function onAddBook() {
     if (!meta || !addPick) return;
     const code = addPick.toUpperCase();
     const row = USFM_BOOK_CODES.find(([c]) => c === code);
-    const displayName = row?.[1] ?? code;
+    const englishName = row?.[1] ?? code;
+    const displayName = getLocalizedBookName(lc, code, englishName);
     setAddBusy(true);
     try {
       const yaml = await storage.readFile(meta.id, 'manifest.yaml');
-      if (!yaml) throw new Error('manifest.yaml not found');
+      if (!yaml) throw new Error('manifest.yaml not found (add book requires a Resource Container manifest).');
       const manifest: ResourceContainerManifest = parseResourceContainer(yaml);
       const sort = bookSortIndex(code);
       const path = `${String(sort).padStart(2, '0')}-${code}.usfm`;
@@ -251,6 +299,40 @@ export function LocalProjectPage() {
     }
   }
 
+  async function saveReadme() {
+    if (!meta) return;
+    setReadmeSaving(true);
+    setSettingsErr(null);
+    try {
+      await storage.writeFile(meta.id, 'README.md', readmeDraft);
+      const updated = new Date().toISOString();
+      await storage.updateProject(meta.id, { updated });
+      setMeta((m) => (m ? { ...m, updated } : null));
+      localSync.notifyChange();
+    } catch (e) {
+      setSettingsErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setReadmeSaving(false);
+    }
+  }
+
+  async function saveLicense() {
+    if (!meta) return;
+    setLicenseSaving(true);
+    setSettingsErr(null);
+    try {
+      await storage.writeFile(meta.id, licensePath, licenseDraft);
+      const updated = new Date().toISOString();
+      await storage.updateProject(meta.id, { updated });
+      setMeta((m) => (m ? { ...m, updated } : null));
+      localSync.notifyChange();
+    } catch (e) {
+      setSettingsErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLicenseSaving(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="bg-background text-foreground flex min-h-dvh items-center justify-center gap-2">
@@ -293,6 +375,11 @@ export function LocalProjectPage() {
               {' · '}
               {meta.language}
             </p>
+            {meta.syncConfig ? (
+              <p className="text-muted-foreground mt-0.5 font-mono text-[11px] break-all">
+                Door43: {meta.syncConfig.host}/{meta.syncConfig.owner}/{meta.syncConfig.repo}@{meta.syncConfig.branch}
+              </p>
+            ) : null}
           </div>
         </div>
         <DcsSyncButton meta={meta} storage={storage} localSync={localSync} onUpdated={() => void load()} />
@@ -305,8 +392,12 @@ export function LocalProjectPage() {
             [
               { key: 'books', label: 'Books', icon: BookOpen, count: books.length },
               { key: 'releases', label: 'Releases', icon: Tag, count: releases.length },
+              { key: 'settings', label: 'Settings', icon: FileText },
             ] as const
-          ).map(({ key, label, icon: Icon, count }) => (
+          ).map((item) => {
+            const { key, label, icon: Icon } = item;
+            const count = 'count' in item ? item.count : undefined;
+            return (
             <Tip key={key} label={label} side="bottom">
               <button
                 type="button"
@@ -320,6 +411,7 @@ export function LocalProjectPage() {
                 )}
               >
                 <Icon className="size-3.5" aria-hidden />
+                {typeof count === 'number' ? (
                 <span
                   className={cn(
                     'rounded-full px-1.5 py-0.5 text-xs',
@@ -328,9 +420,11 @@ export function LocalProjectPage() {
                 >
                   {count}
                 </span>
+                ) : null}
               </button>
             </Tip>
-          ))}
+            );
+          })}
         </nav>
       </div>
 
@@ -434,6 +528,77 @@ export function LocalProjectPage() {
                 ))}
               </ul>
             )}
+          </section>
+        ) : null}
+
+        {/* Settings tab */}
+        {tab === 'settings' ? (
+          <section className="flex flex-col gap-6">
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Offline bundle</h3>
+              <p className="text-muted-foreground text-sm">
+                Export or import a zip snapshot for offline handoff (no Door43 account required).
+              </p>
+              <ProjectBundleControls projectId={projectId.trim()} onImported={() => void load()} />
+            </div>
+            <p className="text-muted-foreground text-sm">
+              Edit repository documentation. Default license for new projects is CC BY-SA 4.0 (common for Door43 scripture
+              resources). Full legal text:{' '}
+              <a
+                href="https://creativecommons.org/licenses/by-sa/4.0/legalcode"
+                className="text-primary underline"
+                target="_blank"
+                rel="noreferrer"
+              >
+                creativecommons.org
+              </a>
+              .
+            </p>
+            {settingsErr ? <p className="text-destructive text-sm">{settingsErr}</p> : null}
+            <div className="space-y-2">
+              <Label htmlFor="proj-readme">README.md</Label>
+              <Textarea
+                id="proj-readme"
+                rows={12}
+                value={readmeDraft}
+                onChange={(e) => setReadmeDraft(e.target.value)}
+                className="font-mono text-sm"
+                spellCheck
+              />
+              <Button type="button" size="sm" disabled={readmeSaving} onClick={() => void saveReadme()}>
+                {readmeSaving ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                Save README
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="proj-license">
+                {licensePath}
+                {licensePath === 'LICENSE.md' ? ' (Markdown)' : ''}
+              </Label>
+              <Textarea
+                id="proj-license"
+                rows={14}
+                value={licenseDraft}
+                onChange={(e) => setLicenseDraft(e.target.value)}
+                className="font-mono text-sm"
+                spellCheck={false}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" size="sm" disabled={licenseSaving} onClick={() => void saveLicense()}>
+                  {licenseSaving ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                  Save license
+                </Button>
+                {licensePath === 'LICENSE.md' ? (
+                  <Button type="button" size="sm" variant="outline" onClick={() => setLicensePath('LICENSE')}>
+                    Use plain LICENSE filename next save
+                  </Button>
+                ) : (
+                  <Button type="button" size="sm" variant="outline" onClick={() => setLicensePath('LICENSE.md')}>
+                    Use LICENSE.md next save
+                  </Button>
+                )}
+              </div>
+            </div>
           </section>
         ) : null}
       </main>
