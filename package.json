@@ -67,7 +67,7 @@
     "prettier": "^3.0.0",
     "ts-jest": "^29.1.0",
     "turbo": "^2.8.20",
-    "typescript": "5.9.3",
+    "typescript": "6.0.3",
     "usfm3": "0.1.8"
   },
   "engines": {

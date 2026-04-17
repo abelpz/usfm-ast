@@ -19,7 +19,7 @@
     "@cloudflare/workers-types": "^4.20250424.0",
     "eslint": "^8.0.0",
     "rimraf": "^5.0.0",
-    "typescript": "^5.0.0",
+    "typescript": "^6.0.3",
     "vitest": "~3.0.0",
     "wrangler": "^4.0.0"
   },
