@@ -68,6 +68,8 @@ export interface DcsSourceTextOptions {
   filePath: string;
   ref?: string;
   token?: string;
+  /** Block text direction when known (overrides inference from repo name). */
+  direction?: 'ltr' | 'rtl';
 }
 
 /**
@@ -93,11 +95,13 @@ export class DcsSourceTextProvider implements SourceTextProvider {
   readonly displayName: string;
   /** BCP 47 language code inferred from the repository name (e.g. `es-419`). */
   readonly langCode: string | undefined;
+  readonly direction?: 'ltr' | 'rtl';
 
   constructor(private readonly options: DcsSourceTextOptions) {
     const { owner, repo, filePath } = options;
     this.displayName = `DCS: ${owner}/${repo}/${filePath}`;
     this.langCode = extractLangFromDcsRepo(repo);
+    if (options.direction) this.direction = options.direction;
   }
 
   async load(): Promise<UsjDocument> {

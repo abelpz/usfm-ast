@@ -14,7 +14,7 @@ export type AnnotatedVerseModel = {
  */
 export function useAnnotatedVerse(
   targetSession: ScriptureSession | null,
-  sourceSession: SourceTextSession | null,
+  _sourceSession: SourceTextSession | null,
   /** Kept for API stability; helps are pushed via {@link useHelpsDecorations}. */
   _twl: HelpEntry[],
   _tn: HelpEntry[],
@@ -23,14 +23,16 @@ export function useAnnotatedVerse(
 ): AnnotatedVerseModel | null {
   return useMemo(() => {
     void revision;
-    void sourceSession;
     void _twl;
     void _tn;
     if (!targetSession) return null;
     const ctx = getPrimaryVerseContext(targetSession);
     if (!ctx) return null;
     return { chapter: ctx.chapter, verse: ctx.verse };
-  }, [targetSession, sourceSession, _twl, _tn, revision]);
+    // sourceSession is intentionally excluded: this memo only reads from
+    // targetSession. Listing sourceSession caused an extra recompute on every
+    // tab switch even though the chapter:verse result was always the same.
+  }, [targetSession, _twl, _tn, revision]);
 }
 
 /**

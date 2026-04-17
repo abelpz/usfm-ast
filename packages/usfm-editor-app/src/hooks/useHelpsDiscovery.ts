@@ -123,11 +123,12 @@ export function useHelpsDiscovery(options: {
 
     void (async () => {
       try {
+        // TN and TWL are language-specific; TW and TA article repos are always English.
         const [tnRows, twlRows, twCatalogRows, taCatalogRows] = await Promise.all([
           searchCatalogSources({ host, lang, topic: DEFAULT_CATALOG_TOPIC, subject: CATALOG_SUBJECT_TN }),
           searchCatalogSources({ host, lang, topic: DEFAULT_CATALOG_TOPIC, subject: CATALOG_SUBJECT_TWL }),
-          searchCatalogSources({ host, lang, topic: DEFAULT_CATALOG_TOPIC, subject: CATALOG_SUBJECT_TW }),
-          searchCatalogSources({ host, lang, topic: DEFAULT_CATALOG_TOPIC, subject: CATALOG_SUBJECT_TA }),
+          searchCatalogSources({ host, lang: 'en', topic: DEFAULT_CATALOG_TOPIC, subject: CATALOG_SUBJECT_TW }),
+          searchCatalogSources({ host, lang: 'en', topic: DEFAULT_CATALOG_TOPIC, subject: CATALOG_SUBJECT_TA }),
         ]);
         if (cancelled) return;
 

@@ -55,7 +55,7 @@ export function normalizeHelpsText(s: string): string {
     .replace(/\u05BE/g, ' ')
     // Zero-width chars: ZWSP, ZWNJ, ZWJ, Word-Joiner, BOM/ZWNBSP
     // These appear as intra-word prefix markers (e.g. conjunction ו + root) — just delete.
-    .replace(/[\u200B\u200C\u200D\u2060\uFEFF]/g, '')
+    .replace(/\u200B|\u200C|\u200D|\u2060|\uFEFF/g, '')
     .normalize('NFC')
     .replace(/\s+/g, ' ')
     // Strip leading/trailing non-letter/non-digit/non-mark characters.
