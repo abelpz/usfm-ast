@@ -12,6 +12,8 @@ This package is the **Layer 5 adapter surface** for editor apps: format helpers,
 
 - **`createDcsJournalTransport`** — implements `JournalRemoteTransport`: read/write a journal JSON file in a repo branch. Pair with `JournalMergeSyncEngine` / `HeadlessCollabSession` options from editor-core.
 - **`DcsGitSyncAdapter`** — implements `GitSyncAdapter`: commit USFM snapshots, `checkout`, `diffRevisions`, three-way merge via OT (`DocumentStore` + `diffUsjDocuments` in core).
+- **`DcsRestProjectSync`** — implements `ProjectSyncAdapter` for whole-repo sync over the Gitea Contents/tree APIs: `getRemoteHeadCommit`, `pullFilesAt(ref)`, and CAS `pushFiles` via `expectedBaseShaByPath` (stale → `{ kind: 'stale' }` instead of overwriting).
+- **`mergeProjectMaps` / `mergeUsfmFile`** (`three-way-merge-project.ts`) — per-file three-way merge for local translation projects (USFM via OT; JSON/YAML best-effort; conflicts surfaced as `FileConflict` for the app UI).
 
 Use a personal access token with `repo` scope. Live integration tests live under `packages/usfm-editor-core/tests/door43/` (see repo `.env.door43.example`).
 
@@ -32,6 +34,7 @@ Reach for **`@usfm-tools/adapters`** directly when you need visitors (`USFMVisit
 
 ## Related docs
 
+- [Bidirectional project sync](./29-bidirectional-sync.md) — Tier‑2 pull, three-way merge, CAS push, `journal/*.jsonl`, bundles.
 - [Editor UI toolkit](./25-editor-ui-toolkit.md)
 - [Marker registry](./24-marker-registry.md)
 - [Parsing quickstart](./10-parsing-quickstart.md)

@@ -11,5 +11,6 @@
 | [`17-oracle-comparison.md`](./17-oracle-comparison.md)               | usfmtc / usfm3 oracle batches, PYTHON, interpreting metrics & gaps          |
 | [`21-collab-relay-server.md`](./21-collab-relay-server.md)           | Cloudflare WebSocket relay for real-time collaboration                     |
 | [`29-alignment-patterns-english-spanish.md`](./29-alignment-patterns-english-spanish.md) | Bilingual EN↔ES alignment patterns, bracket notation, USFM examples |
+| [`30-project-format.md`](./30-project-format.md) | Enhanced DCS project layout: `alignments/`, `checking/`, manifests, SB/RC hooks |
 
 Upstream scripture format references: [unfoldingWord/uW-Tools-Collab](https://github.com/unfoldingWord/uW-Tools-Collab).
