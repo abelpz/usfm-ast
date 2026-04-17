@@ -4,3 +4,4 @@ export * from './resource-container';
 export * from './provenance';
 export * from './project-model';
 export * from './scaffold-enhanced-project';
+export * from './enhanced-bootstrap';

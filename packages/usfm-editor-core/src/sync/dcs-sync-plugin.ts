@@ -4,6 +4,7 @@ import type { OperationJournal } from './operation-journal';
 import { DefaultSyncEngine } from './sync-engine';
 import type { SyncResult } from './types';
 
+/** Options for {@link DcsSyncEngine}. Enhanced repos: use `DcsGitSyncAdapter` `extraFiles` for `alignments/` + `checking/`. */
 export interface DcsSyncOptions {
   /** Optional real {@link GitSyncAdapter} (DCS/Gitea API, isomorphic-git bridge, etc.). */
   adapter?: GitSyncAdapter;
@@ -37,6 +38,12 @@ export class DcsSyncEngine extends DefaultSyncEngine {
         ? `USFM-AST sync: ${entries.length} journal entr${entries.length === 1 ? 'y' : 'ies'}`
         : 'USFM-AST sync (snapshot)';
     try {
+      if (!getSnapshotUsj) {
+        console.warn(
+          '[DcsSyncEngine] push() called without getSnapshotUsj — alignments will be stripped. ' +
+          'Pass getSnapshotUsj: () => session.toUSJWithAlignments() when constructing DcsSyncEngine.',
+        );
+      }
       const snapshotUsj = getSnapshotUsj?.();
       await adapter.commit(store, message, ops, snapshotUsj);
       return {

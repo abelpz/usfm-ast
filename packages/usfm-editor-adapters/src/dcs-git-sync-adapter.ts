@@ -1,5 +1,6 @@
 /**
  * Gitea / DCS Contents API: commit USFM snapshots and three-way merge via OT.
+ * Supports optional extra repo-relative paths (e.g. `alignments/`, `checking/`) on each commit.
  */
 
 import { convertUSJDocumentToUSFM } from '@usfm-tools/adapters';
@@ -22,6 +23,11 @@ export interface DcsGitSyncAdapterOptions {
   /** Path to the USFM/USJ file in the repo. */
   path: string;
   branch?: string;
+  /**
+   * Additional repo-relative paths (UTF-8 text) committed with the same message after the primary USFM file.
+   * Used for enhanced projects (`alignments/`, `checking/`).
+   */
+  extraFiles?: () => Promise<Record<string, string>>;
 }
 
 interface GiteaFileResponse {
@@ -50,20 +56,30 @@ function parseUsjFromUsfm(usfm: string): UsjDocument {
   return parser.toJSON() as UsjDocument;
 }
 
+function contentsApiUrl(baseUrl: string, owner: string, repo: string, relativePath: string): string {
+  const base = baseUrl.replace(/\/$/, '');
+  const pathSeg = relativePath
+    .split('/')
+    .filter(Boolean)
+    .map(encodeURIComponent)
+    .join('/');
+  return `${base}/api/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${pathSeg}`;
+}
+
 export class DcsGitSyncAdapter implements GitSyncAdapter {
-  private lastSha: string | undefined;
-  private readonly api: string;
+  private readonly lastShaByPath = new Map<string, string | undefined>();
+  private readonly primaryApi: string;
   private readonly branch: string;
   private readonly headers: Record<string, string>;
+  private readonly baseUrl: string;
+  private readonly owner: string;
+  private readonly repo: string;
 
   constructor(private readonly opts: DcsGitSyncAdapterOptions) {
-    const base = opts.baseUrl.replace(/\/$/, '');
-    const pathSeg = opts.path
-      .split('/')
-      .filter(Boolean)
-      .map(encodeURIComponent)
-      .join('/');
-    this.api = `${base}/api/v1/repos/${encodeURIComponent(opts.owner)}/${encodeURIComponent(opts.repo)}/contents/${pathSeg}`;
+    this.baseUrl = opts.baseUrl.replace(/\/$/, '');
+    this.owner = opts.owner;
+    this.repo = opts.repo;
+    this.primaryApi = contentsApiUrl(this.baseUrl, this.owner, this.repo, opts.path);
     this.branch = opts.branch ?? 'main';
     this.headers = {
       Authorization: `token ${opts.token}`,
@@ -72,14 +88,59 @@ export class DcsGitSyncAdapter implements GitSyncAdapter {
     };
   }
 
-  private async fetchFile(ref: string): Promise<{ sha?: string; text: string } | null> {
-    const res = await fetch(`${this.api}?ref=${encodeURIComponent(ref)}`, { headers: this.headers });
+  private apiForPath(relativePath: string): string {
+    return contentsApiUrl(this.baseUrl, this.owner, this.repo, relativePath);
+  }
+
+  private async fetchFileAt(api: string, ref: string): Promise<{ sha?: string; text: string } | null> {
+    const res = await fetch(`${api}?ref=${encodeURIComponent(ref)}`, { headers: this.headers });
     if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`DCS GET ${this.opts.path}: ${res.status}`);
+    if (!res.ok) throw new Error(`DCS GET: ${res.status}`);
     const data = (await res.json()) as GiteaFileResponse;
     if (data.type !== 'file' || !data.content) return { sha: data.sha, text: '' };
-    this.lastSha = data.sha;
     return { sha: data.sha, text: decodeBase64Utf8(data.content) };
+  }
+
+  private async fetchFile(ref: string): Promise<{ sha?: string; text: string } | null> {
+    const file = await this.fetchFileAt(this.primaryApi, ref);
+    if (file?.sha) this.lastShaByPath.set(this.opts.path, file.sha);
+    return file;
+  }
+
+  /**
+   * PUT one file; retries once on SHA conflict. Updates per-path SHA cache.
+   */
+  private async putFileAt(relativePath: string, text: string, message: string): Promise<string> {
+    const api = this.apiForPath(relativePath);
+    let lastSha: string | undefined = this.lastShaByPath.get(relativePath);
+
+    const attempt = async (sha: string | undefined): Promise<Response> => {
+      const payload = {
+        branch: this.branch,
+        content: encodeBase64Utf8(text),
+        message,
+        ...(sha ? { sha } : {}),
+      };
+      return fetch(api, {
+        method: 'PUT',
+        headers: this.headers,
+        body: JSON.stringify(payload),
+      });
+    };
+
+    let res = await attempt(lastSha);
+
+    if (res.status === 409 || res.status === 422) {
+      const file = await this.fetchFileAt(api, this.branch);
+      lastSha = file?.sha ?? lastSha;
+      res = await attempt(lastSha);
+    }
+
+    if (!res.ok) throw new Error(`DCS commit ${relativePath}: ${res.status}`);
+    const out = (await res.json()) as { commit?: { sha?: string }; content?: { sha?: string } };
+    const newSha = out?.content?.sha ?? out?.commit?.sha;
+    if (newSha) this.lastShaByPath.set(relativePath, newSha);
+    return newSha ?? 'unknown';
   }
 
   async commit(
@@ -89,45 +150,34 @@ export class DcsGitSyncAdapter implements GitSyncAdapter {
     snapshotUsj?: UsjDocument
   ): Promise<string> {
     void _ops;
+    if (!snapshotUsj) {
+      console.warn(
+        '[DcsGitSyncAdapter] commit() called without snapshotUsj — alignment milestones ' +
+          'may be missing from this commit. Ensure DcsSyncEngine is constructed with getSnapshotUsj.',
+      );
+    }
     const usfm = convertUSJDocumentToUSFM(snapshotUsj ?? doc.getFullUSJ());
-    const commitSha = await this.putFile(usfm, message);
-    return commitSha;
-  }
+    const primarySha = await this.putFileAt(this.opts.path, usfm, message);
 
-  /**
-   * PUT the file content to DCS, retrying once if the cached SHA is stale
-   * (409 conflict or 422 unprocessable — Gitea returns 422 on SHA mismatch).
-   * Avoids a redundant GET on every sync by trusting {@link lastSha} after a
-   * successful read or prior commit.
-   */
-  private async putFile(usfm: string, message: string): Promise<string> {
-    const attempt = async (sha: string | undefined): Promise<Response> => {
-      const payload = {
-        branch: this.branch,
-        content: encodeBase64Utf8(usfm),
-        message,
-        ...(sha ? { sha } : {}),
-      };
-      return fetch(this.api, {
-        method: 'PUT',
-        headers: this.headers,
-        body: JSON.stringify(payload),
-      });
-    };
-
-    let res = await attempt(this.lastSha);
-
-    // SHA mismatch: re-fetch to get the current SHA and retry once.
-    if (res.status === 409 || res.status === 422) {
-      const file = await this.fetchFile(this.branch);
-      res = await attempt(file?.sha ?? this.lastSha);
+    const extras = await this.opts.extraFiles?.();
+    if (extras && Object.keys(extras).length > 0) {
+      for (const [rel, content] of Object.entries(extras)) {
+        const p = rel.replace(/\\/g, '/').replace(/^\/+/, '');
+        if (!p) continue;
+        await this.putFileAt(p, content, message);
+      }
     }
 
-    if (!res.ok) throw new Error(`DCS commit: ${res.status}`);
-    const out = (await res.json()) as { commit?: { sha?: string }; content?: { sha?: string } };
-    const newSha = out?.commit?.sha ?? out?.content?.sha;
-    if (newSha) this.lastSha = newSha;
-    return newSha ?? 'unknown';
+    return primarySha;
+  }
+
+  /** Upload extra paths without touching the primary USFM (e.g. alignment-only save). */
+  async commitExtraFiles(files: Record<string, string>, message: string): Promise<void> {
+    for (const [rel, content] of Object.entries(files)) {
+      const p = rel.replace(/\\/g, '/').replace(/^\/+/, '');
+      if (!p) continue;
+      await this.putFileAt(p, content, message);
+    }
   }
 
   async checkout(rev: string): Promise<string> {

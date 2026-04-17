@@ -15,8 +15,16 @@ export type RepoProjectDescriptor =
 
 export type RepoProjectDescriptorWithRef = RepoProjectDescriptor & { ref: string };
 
+/** Layout flags for `alignments/` + `checking/` (see docs/30-project-format.md). */
+export type EnhancedLayoutFlags = {
+  /** Both `alignments/manifest.json` and `checking/manifest.json` exist */
+  enhanced: boolean;
+  alignmentsManifest: boolean;
+  checkingManifest: boolean;
+};
+
 /** Loaded repo descriptor + git ref (editor / DCS I/O). */
-export type DetectedDcsProject = RepoProjectDescriptorWithRef;
+export type DetectedDcsProject = RepoProjectDescriptorWithRef & EnhancedLayoutFlags;
 
 function normPath(p: string): string {
   return p.replace(/\\/g, '/');
@@ -87,6 +95,51 @@ export function detectRepoFormatFromRootEntries(
   return 'raw-usfm';
 }
 
+/**
+ * From a **root** listing only: detect presence of enhanced marker files.
+ * Prefer {@link probeEnhancedLayoutWithFetcher} when using the DCS API (paths may not appear as root files).
+ */
+export function probeEnhancedLayoutFromRootEntries(
+  entries: Array<{ name: string; path?: string; type: 'file' | 'dir' | string }>,
+): EnhancedLayoutFlags {
+  const normalize = (p: string) => p.replace(/\\/g, '/').replace(/^\/+/, '');
+  let alignmentsManifest = false;
+  let checkingManifest = false;
+  for (const e of entries) {
+    const p = normalize(e.path ?? e.name);
+    if (p === 'alignments/manifest.json' || p.toLowerCase() === 'alignments/manifest.json') {
+      alignmentsManifest = true;
+    }
+    if (p === 'checking/manifest.json' || p.toLowerCase() === 'checking/manifest.json') {
+      checkingManifest = true;
+    }
+  }
+  const enhanced = alignmentsManifest && checkingManifest;
+  return { enhanced, alignmentsManifest, checkingManifest };
+}
+
+/**
+ * Probe enhanced layout by fetching manifest paths (works when root listing omits nested paths).
+ */
+export async function probeEnhancedLayoutWithFetcher(fetchText: (path: string) => Promise<string>): Promise<EnhancedLayoutFlags> {
+  let alignmentsManifest = false;
+  let checkingManifest = false;
+  try {
+    await fetchText('alignments/manifest.json');
+    alignmentsManifest = true;
+  } catch {
+    /* missing */
+  }
+  try {
+    await fetchText('checking/manifest.json');
+    checkingManifest = true;
+  } catch {
+    /* missing */
+  }
+  const enhanced = alignmentsManifest && checkingManifest;
+  return { enhanced, alignmentsManifest, checkingManifest };
+}
+
 export function booksFromDetectedProject(project: RepoProjectDescriptor): { code: string; name: string; path: string }[] {
   if (project.format === 'scripture-burrito') return listSBBooks(project.meta);
   if (project.format === 'resource-container') return listRCBooks(project.manifest);
@@ -141,8 +194,8 @@ export function summarizeEnhancedProject(project: RepoProjectDescriptor): Enhanc
       books: booksFromDetectedProject(project),
       alignmentSources: alignmentSourcesFromRc(m),
       activeAlignmentByBook: activeAlignmentBooksFromRc(m),
-      checkingsPath: xe?.checkings?.path,
-      stagesFile: xe?.checkings?.stagesFile,
+      checkingsPath: xe?.checking?.path ?? xe?.checkings?.path,
+      stagesFile: xe?.checking?.stagesFile ?? xe?.checkings?.stagesFile,
       resourcesPath: xe?.resources?.path,
     };
   }
@@ -150,5 +203,35 @@ export function summarizeEnhancedProject(project: RepoProjectDescriptor): Enhanc
     format: 'raw-usfm',
     books: booksFromDetectedProject(project),
     alignmentSources: [],
+  };
+}
+
+/** When the manifest has no alignment sources yet, the editor still uses `alignments/` like new projects from the app. */
+const CANONICAL_ALIGNMENT_PLACEHOLDER: AlignmentDirectoryEntry = {
+  identifier: 'alignments',
+  path: 'alignments/',
+};
+
+/**
+ * Dashboard summary aligned with projects created on the home page: canonical `checking/`, `alignments/`, `resources/`
+ * paths, plus whether this **branch** already contains the marker files on the server.
+ */
+export function summarizeEditorCanonicalProject(
+  project: RepoProjectDescriptor,
+  remoteEnhancedLayout: boolean,
+): EnhancedProjectSummary {
+  const base = summarizeEnhancedProject(project);
+  if (base.format === 'raw-usfm') {
+    return { ...base, remoteEnhancedLayout };
+  }
+  const alignmentSources =
+    base.alignmentSources.length > 0 ? base.alignmentSources : [CANONICAL_ALIGNMENT_PLACEHOLDER];
+  return {
+    ...base,
+    alignmentSources,
+    checkingsPath: base.checkingsPath ?? 'checking/',
+    stagesFile: base.stagesFile ?? 'checking/stages.json',
+    resourcesPath: base.resourcesPath ?? 'resources/',
+    remoteEnhancedLayout,
   };
 }

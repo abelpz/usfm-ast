@@ -9,7 +9,7 @@ export type CcrV2StageId =
   | 'armonizacion'
   | 'aprobacion'
   | 'publicacion'
-  | (string & {});
+  | (string & NonNullable<unknown>);
 
 export interface ReviewStage {
   id: string;

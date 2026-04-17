@@ -38,6 +38,11 @@ export interface EnhancedProjectSummary {
   checkingsPath?: string;
   resourcesPath?: string;
   stagesFile?: string;
+  /**
+   * True when the remote repo already has `alignments/manifest.json` and `checking/manifest.json`.
+   * False/undefined when the branch still needs the standard editor folder layout uploaded.
+   */
+  remoteEnhancedLayout?: boolean;
 }
 
 /** RC `x_extensions` block (pragmatic) */
@@ -46,6 +51,9 @@ export interface RcXExtensions {
     active?: Record<string, string>;
     sources?: AlignmentDirectoryEntry[];
   };
+  /** Legacy name; prefer {@link checking} for docs/30-project-format.md layout */
   checkings?: { path: string; stagesFile?: string };
+  /** Enhanced project format: `checking/` append-only JSON (plan §RC extensions) */
+  checking?: { schema_version?: string; path: string; stagesFile?: string };
   resources?: { path: string };
 }

@@ -32,6 +32,11 @@ export interface SourceTextProvider {
    */
   readonly langCode?: string;
   /**
+   * Block text direction when known (e.g. from Door43 `ld` or manifest).
+   * If omitted, the app may infer direction from {@link langCode}.
+   */
+  readonly direction?: 'ltr' | 'rtl';
+  /**
    * Load (or reload) the source document.
    * Must resolve to a full-book {@link UsjDocument}; may reject on failure.
    */
