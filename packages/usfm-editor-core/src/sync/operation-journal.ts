@@ -77,6 +77,19 @@ export class OperationJournal {
     return [...this.entries];
   }
 
+  /** Count of in-memory entries — use as a watermark before a long async operation. */
+  get entryCount(): number {
+    return this.entries.length;
+  }
+
+  /**
+   * Entries appended after `fromIndex` (exclusive).
+   * Use with `entryCount` to detect ops written during an async sync window.
+   */
+  getEntriesAfter(fromIndex: number): JournalEntry[] {
+    return this.entries.slice(fromIndex);
+  }
+
   /** Entries for one chapter (any layer), in order. */
   getEntriesForChapter(chapter: number): JournalEntry[] {
     return this.entries.filter((e) => e.chapter === chapter);
@@ -134,13 +147,18 @@ export class OperationJournal {
   /**
    * After a successful remote push, fold the journal into a snapshot if it grows too large.
    * Saves full USJ, clears in-memory entries (vector clock preserved), and records {@link baseSnapshotId}.
+   *
+   * Triggers when either `maxEntries` (default 200) OR `maxBytes` (default 1 MiB) is exceeded.
    */
   async maybeCompactAfterPush(
     docStore: DocumentStore,
-    options?: { maxEntries?: number }
+    options?: { maxEntries?: number; maxBytes?: number }
   ): Promise<void> {
     const maxEntries = options?.maxEntries ?? 200;
-    if (this.entries.length <= maxEntries || this.store.ready === false) return;
+    const maxBytes = options?.maxBytes ?? 1_048_576; // 1 MiB
+    const entryBytes = this.entries.reduce((sum, e) => sum + JSON.stringify(e).length, 0);
+    const exceedsLimit = this.entries.length > maxEntries || entryBytes > maxBytes;
+    if (!exceedsLimit || this.store.ready === false) return;
     const snapshotJson = JSON.stringify(docStore.getFullUSJ());
     const snapshotId = randomId();
     try {
@@ -238,6 +256,21 @@ export class OperationJournal {
     const fromStore = await this.store.loadVectorClock();
     if (Object.keys(fromStore).length > 0) {
       this.vectorClock = mergeClocks(this.vectorClock, fromStore);
+    }
+  }
+
+  /** One JSON object per line — for offline bundles and optional `journal/*.jsonl` in repo. */
+  serializeForExport(): string {
+    return this.entries.map((e) => JSON.stringify(e)).join('\n');
+  }
+
+  /** Merge exported lines via {@link ingestRemote} (skips duplicate ids). */
+  loadFromExport(jsonl: string): void {
+    for (const line of jsonl.split('\n')) {
+      const t = line.trim();
+      if (!t) continue;
+      const entry = JSON.parse(t) as JournalEntry;
+      this.ingestRemote(entry);
     }
   }
 }
