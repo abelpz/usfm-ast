@@ -346,6 +346,17 @@ export class ScriptureSession {
     this.loadAlignmentsFromDocument();
   }
 
+  /**
+   * Sets `lang` and `dir` on the ProseMirror root for correct RTL/LTR block layout
+   * (verse markers, paragraph alignment).
+   */
+  applyLanguage(opts: { lang?: string; dir: 'ltr' | 'rtl' }): void {
+    const root = this.contentView.dom as HTMLElement;
+    if (opts.lang) root.setAttribute('lang', opts.lang);
+    else root.removeAttribute('lang');
+    root.setAttribute('dir', opts.dir);
+  }
+
   private subsetOptions() {
     if (this.paginatedEditor) {
       return {
@@ -1074,6 +1085,45 @@ export class ScriptureSession {
     this.loadAlignmentDocument(parseAlignmentJson(json));
   }
 
+  /**
+   * The alignment source identifier that the translation's `\rem alignment-source:` records.
+   * Returns `null` when the embedded layer has no meaningful provenance (e.g. never aligned).
+   *
+   * Used by the alignment picker to highlight the "best match" reference slot.
+   */
+  getExpectedAlignmentKey(): string | null {
+    const embDoc = this.alignmentDocs.get(ScriptureSession.EMBEDDED_ALIGNMENT_KEY);
+    if (!embDoc) return null;
+    const key = alignmentDocumentSourceKey(embDoc);
+    // The embedded layer's default 'embedded' id means no meaningful provenance.
+    if (key === 'embedded') return null;
+    return key;
+  }
+
+  /**
+   * Create a brand-new empty alignment layer against a source USJ document.
+   * The layer's `source.id` is derived from the document's `\id` line.
+   * The new layer is registered in {@link alignmentDocs} and immediately made active.
+   *
+   * @returns the alignment document key for the new layer.
+   */
+  createLayerForSource(sourceUsj: UsjDocument): string {
+    const sourceId = parseDocumentIdentityFromUsj(sourceUsj) ?? 'unknown';
+    const translationId =
+      parseDocumentIdentityFromUsj(this.store.getFullUSJ() as UsjDocument) ?? 'UNK';
+    const now = new Date().toISOString();
+    const doc: AlignmentDocument = createAlignmentDocument(
+      { id: translationId },
+      { id: sourceId },
+      {},
+    );
+    const key = alignmentDocumentSourceKey(doc);
+    this.alignmentDocs.set(key, { ...doc, created: now, updated: now });
+    this.activeAlignmentKey = key;
+    for (const l of this.alignmentDocumentListeners) l();
+    return key;
+  }
+
   /** Switch which alignment layer receives edits and is used as the default export source. */
   setActiveAlignmentDocumentKey(key: string): boolean {
     if (!this.alignmentDocs.has(key)) return false;
@@ -1679,6 +1729,60 @@ export class ScriptureSession {
    */
   connectHeadlessCollaboration(roomId?: string): Promise<void> {
     return this.headless?.connect(roomId) ?? Promise.resolve();
+  }
+
+  /** Current vector clock snapshot — written to `.sync/<BOOK>.json` on debounced save. */
+  getJournalVectorClock(): Record<string, number> {
+    return this.journal.getVectorClock();
+  }
+
+  /** Stable journal identity (base-snapshot id or empty string) for sidecar tracking. */
+  getJournalBaseSnapshotId(): string {
+    return this.journal.getBaseSnapshotId() ?? '';
+  }
+
+  /**
+   * Count of in-memory journal entries.  Capture before an async operation as a
+   * watermark; pass the result to {@link replayJournalEntriesAfter} once the
+   * async operation completes so edits made during the window are re-applied.
+   */
+  journalEntryWatermark(): number {
+    return this.journal.entryCount;
+  }
+
+  /**
+   * Re-apply journal entries appended after `watermark` onto the current document
+   * state.  Call this after {@link loadUSFM} so that edits made during a sync
+   * window (between when sync started and when the merged USFM was loaded) are
+   * not silently lost.
+   *
+   * Entries are applied via `DocumentStore.applyOperations`; failures are swallowed
+   * (the entries stay in the journal for the next sync to integrate).
+   */
+  replayJournalEntriesAfter(watermark: number): void {
+    const entries = this.journal.getEntriesAfter(watermark);
+    if (entries.length === 0) return;
+    try {
+      const ops = entries.flatMap((e) => e.operations);
+      this.store.applyOperations(ops);
+      this.rebuildEditorDoc();
+    } catch {
+      // Best-effort replay; stale ops will be carried by the journal
+      // and reconciled on the next successful push.
+    }
+  }
+
+  /** Reload persisted journal entries (e.g. after project sync wrote merged `journal/<BOOK>.jsonl`). */
+  async reloadJournalFromDisk(): Promise<void> {
+    await this.journal.loadFromDisk();
+  }
+
+  /**
+   * Fold the operation journal after a successful remote push when the log grows large
+   * (see {@link OperationJournal.maybeCompactAfterPush}).
+   */
+  async maybeCompactJournalAfterPush(): Promise<void> {
+    await this.journal.maybeCompactAfterPush(this.store);
   }
 
   destroy(): void {

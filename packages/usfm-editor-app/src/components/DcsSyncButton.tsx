@@ -137,11 +137,12 @@ export function DcsSyncButton({ meta, storage, localSync, onUpdated, className }
   const sc = meta.syncConfig;
 
   // Derive status
+  const fileConflicts = localSync.pendingFileConflicts?.length ?? 0;
   const status: SyncStatus = !sc
     ? 'no-config'
     : localSync.isSyncing
       ? 'syncing'
-      : localSync.conflictPrUrl
+      : localSync.conflictPrUrl || fileConflicts > 0
         ? 'conflict'
         : meta.pendingSyncAt
           ? 'pending'
@@ -333,6 +334,13 @@ export function DcsSyncButton({ meta, storage, localSync, onUpdated, className }
                     <a href={localSync.conflictPrUrl} target="_blank" rel="noreferrer" className="underline underline-offset-2">
                       Resolve conflict ↗
                     </a>
+                  </p>
+                ) : null}
+
+                {fileConflicts > 0 && !localSync.isSyncing ? (
+                  <p className="text-destructive flex items-center gap-1">
+                    <AlertTriangle className="size-3 shrink-0" aria-hidden />
+                    {fileConflicts} file merge conflict{fileConflicts === 1 ? '' : 's'}
                   </p>
                 ) : null}
 

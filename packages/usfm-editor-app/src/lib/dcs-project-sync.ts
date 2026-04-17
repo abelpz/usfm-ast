@@ -4,9 +4,18 @@ import {
   ensureBranch,
   createDcsRelease,
   ensureOpenPullRequest,
-  mergePullRequest,
+  mergePullRequestOrCloseIfNothingToMerge,
 } from '@usfm-tools/door43-rest';
-import type { ProjectMeta, ProjectStorage, ProjectSyncConfig } from '@usfm-tools/types';
+import { isProjectPushStale } from '@usfm-tools/types';
+import type {
+  FileConflict,
+  ProjectMeta,
+  ProjectPushResult,
+  ProjectStorage,
+  ProjectSyncConfig,
+  RemoteFileEntry,
+} from '@usfm-tools/types';
+import { mergeProjectMaps } from '@usfm-tools/editor-adapters';
 
 /** Default Door43 repo name: `{language}_{id}` (BCP-47 + project id), normalized for Gitea. */
 export function suggestedDoor43RepoName(meta: Pick<ProjectMeta, 'language' | 'id'>): string {
@@ -36,8 +45,28 @@ export async function gatherProjectFileMap(
   return map;
 }
 
-/** Extensions that are eligible for sync. Kept in sync with DcsRestProjectSync. */
-const TEXT_EXTS = new Set(['.md', '.yaml', '.yml', '.json', '.usfm', '.sfm', '.txt', '.tsv', '.css', '.html']);
+/**
+ * Extensions that are eligible for sync. Kept in sync with DcsRestProjectSync.
+ *
+ * Note: `.json` covers `.alignment.json` sidecar files written by
+ * `alignment-layer-persistence.syncAlignmentsToProject`. These files live at
+ * `alignments/<lang>/<BOOK>.alignment.json` and are automatically picked up
+ * by `gatherProjectFileMap` → `listFiles` when the project is pushed.
+ * The book USFM always embeds the active alignment layer via `session.toUSFM()`.
+ */
+const TEXT_EXTS = new Set([
+  '.md',
+  '.yaml',
+  '.yml',
+  '.json',
+  '.jsonl',
+  '.usfm',
+  '.sfm',
+  '.txt',
+  '.tsv',
+  '.css',
+  '.html',
+]);
 
 function isTextSyncPath(path: string): boolean {
   const lower = path.toLowerCase();
@@ -92,6 +121,14 @@ export async function detectLocalChanges(
   const deletedPaths = [...storedKeys].filter(isTextSyncPath);
 
   return { changedPaths, newPaths, deletedPaths };
+}
+
+function isLocalDeltaEmpty(summary: LocalChangeSummary): boolean {
+  return (
+    summary.changedPaths.length === 0 &&
+    summary.newPaths.length === 0 &&
+    summary.deletedPaths.length === 0
+  );
 }
 
 /** Returns `true` if any local file differs from the last recorded remote state. */
@@ -193,6 +230,9 @@ export type AutoMergeResult =
  * Returns `{ merged: true }` when both hops succeed, or
  * `{ merged: false, conflictPrUrl }` pointing to the first PR that could not
  * be automatically merged.
+ *
+ * If a hop’s merge fails but the head is already fully contained in the base
+ * (nothing left to integrate), that PR is closed and the hop is treated as success.
  */
 export async function autoMergeToDcs(options: {
   token: string;
@@ -223,7 +263,7 @@ export async function autoMergeToDcs(options: {
     body: `Automatic PR from translator branch \`${tier1}\` into book branch \`${tier2}\`.`,
   });
 
-  const merge1 = await mergePullRequest({
+  const merge1 = await mergePullRequestOrCloseIfNothingToMerge({
     host,
     token,
     owner,
@@ -231,6 +271,8 @@ export async function autoMergeToDcs(options: {
     index: pr1.number,
     method: 'merge',
     message: `Auto-merge ${tier1} → ${tier2}`,
+    baseRef: tier2,
+    headRef: tier1,
   });
 
   if (!merge1.merged) {
@@ -249,7 +291,7 @@ export async function autoMergeToDcs(options: {
     body: `Automatic PR from book branch \`${tier2}\` into \`${mainBranch}\`.`,
   });
 
-  const merge2 = await mergePullRequest({
+  const merge2 = await mergePullRequestOrCloseIfNothingToMerge({
     host,
     token,
     owner,
@@ -257,6 +299,8 @@ export async function autoMergeToDcs(options: {
     index: pr2.number,
     method: 'merge',
     message: `Auto-merge ${tier2} → ${mainBranch}`,
+    baseRef: mainBranch,
+    headRef: tier2,
   });
 
   if (!merge2.merged) {
@@ -270,6 +314,47 @@ export async function autoMergeToDcs(options: {
 // Push
 // ---------------------------------------------------------------------------
 
+/** Remote changed between read and PUT — caller should pull/merge and retry. */
+export class StalePushError extends Error {
+  constructor(public readonly staleByPath: Record<string, string>) {
+    super('Remote file(s) changed since last read — sync again');
+    this.name = 'StalePushError';
+  }
+}
+
+/** Unresolved three-way merge — user must resolve in UI. */
+export class SyncConflictsError extends Error {
+  constructor(public readonly conflicts: FileConflict[]) {
+    super('Merge conflicts require resolution');
+    this.name = 'SyncConflictsError';
+  }
+}
+
+/** Build CAS expectations: local paths we update + previously-synced paths we may delete. */
+export function buildExpectedBaseShasForPush(options: {
+  remoteIndex: RemoteFileEntry[];
+  localMap: Map<string, string>;
+  previouslySyncedPaths: ReadonlySet<string>;
+}): Record<string, string> {
+  const { remoteIndex, localMap, previouslySyncedPaths } = options;
+  const byLocal = new Map<string, RemoteFileEntry>();
+  for (const e of remoteIndex) {
+    const lk = e.path.startsWith('content/') ? e.path.slice('content/'.length) : e.path;
+    byLocal.set(lk, e);
+  }
+  const out: Record<string, string> = {};
+  for (const path of localMap.keys()) {
+    const e = byLocal.get(path);
+    if (e) out[path] = e.sha;
+  }
+  for (const path of previouslySyncedPaths) {
+    if (localMap.has(path)) continue;
+    const e = byLocal.get(path);
+    if (e) out[path] = e.sha;
+  }
+  return out;
+}
+
 export async function pushLocalProjectToDcs(options: {
   storage: ProjectStorage;
   projectId: string;
@@ -282,7 +367,12 @@ export async function pushLocalProjectToDcs(options: {
    * by `autoMergeToDcs`.
    */
   workingBranch?: string;
-}): Promise<import('@usfm-tools/types').ProjectPushResult> {
+  /**
+   * When set, push fails with {@link StalePushError} if any remote blob SHA
+   * differs (optimistic locking). Omit for legacy best-effort push.
+   */
+  expectedBaseShaByPath?: Record<string, string>;
+}): Promise<ProjectPushResult> {
   const { storage, projectId, token, sync } = options;
   const pushBranch = options.workingBranch ?? sync.branch;
 
@@ -317,7 +407,16 @@ export async function pushLocalProjectToDcs(options: {
     targetType: sync.targetType,
   });
   const map = await gatherProjectFileMap(storage, projectId);
-  const result = await adapter.pushFiles(map, 'Project sync');
+  const storedShas = await storage.getSyncShas(projectId);
+  const previouslySyncedPaths = new Set(Object.keys(storedShas));
+  const result = await adapter.pushFiles(map, 'Project sync', {
+    previouslySyncedPaths,
+    expectedBaseShaByPath: options.expectedBaseShaByPath,
+  });
+
+  if (isProjectPushStale(result)) {
+    throw new StalePushError(result.staleByPath);
+  }
 
   // Use the post-push remote index returned by pushFiles to avoid a second API round-trip.
   // Fall back to a fresh getRemoteFileIndex() only if the implementation didn't return one.
@@ -333,4 +432,170 @@ export async function pushLocalProjectToDcs(options: {
   }
   await storage.setSyncShas(projectId, next);
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Pull + merge + push (Tier-2 → local → Tier-1)
+// ---------------------------------------------------------------------------
+
+/** Outcome of {@link syncLocalProjectWithDcs}: full merge+push vs nothing to do. */
+export type SyncLocalProjectWithDcsResult =
+  | { kind: 'synced'; pushResult: ProjectPushResult; tier2HeadSha: string }
+  | { kind: 'noop'; tier2HeadSha: string };
+
+/**
+ * Merge Tier-2 (`bookCode` branch) into local storage, then CAS-push to Tier-1 (or `sync.branch`).
+ * Updates `lastRemoteCommit[tier2]` after a successful merge+push.
+ */
+export async function syncLocalProjectWithDcs(options: {
+  storage: ProjectStorage;
+  projectId: string;
+  token: string;
+  sync: ProjectSyncConfig;
+  username: string;
+  bookCode?: string;
+}): Promise<SyncLocalProjectWithDcsResult> {
+  const { storage, projectId, token, sync, username, bookCode } = options;
+
+  const meta = await storage.getProject(projectId);
+  if (!meta) throw new Error(`Project not found: ${projectId}`);
+
+  const tier2 = bookCode ? bookBranchName(bookCode) : sync.branch;
+  const wb = bookCode ? workingBranchName(username, bookCode) : undefined;
+
+  if (sync.branch.trim().toLowerCase() === 'main') {
+    await ensureRepoUsesMainDefaultBranch({
+      host: sync.host,
+      token,
+      owner: sync.owner,
+      repo: sync.repo,
+    });
+  }
+
+  if (wb && wb !== sync.branch) {
+    await ensureBranch({
+      host: sync.host,
+      token,
+      owner: sync.owner,
+      repo: sync.repo,
+      branch: wb,
+      fromBranch: sync.branch,
+    });
+  }
+
+  const adapterTier2 = new DcsRestProjectSync({
+    host: sync.host,
+    token,
+    owner: sync.owner,
+    repo: sync.repo,
+    branch: tier2,
+    targetType: sync.targetType,
+  });
+
+  const tier2HeadSha = await adapterTier2.getRemoteHeadCommit();
+  const lastBase = meta.lastRemoteCommit?.[tier2];
+
+  const localDelta = await detectLocalChanges(storage, projectId);
+  if (lastBase && lastBase === tier2HeadSha && isLocalDeltaEmpty(localDelta)) {
+    return { kind: 'noop', tier2HeadSha };
+  }
+
+  const theirsFiles = await adapterTier2.pullFilesAt(tier2HeadSha);
+  /** When we already merged at this Tier-2 tip, `base` and `theirs` are the same snapshot — skip a second tree fetch. */
+  const baseFiles: Map<string, string> =
+    !lastBase || lastBase === tier2HeadSha
+      ? new Map(theirsFiles)
+      : await adapterTier2.pullFilesAt(lastBase);
+
+  const oursFiles = await gatherProjectFileMap(storage, projectId);
+  const allPaths = new Set<string>([
+    ...baseFiles.keys(),
+    ...theirsFiles.keys(),
+    ...oursFiles.keys(),
+  ]);
+
+  const { merged, conflicts, deleted } = mergeProjectMaps({
+    paths: allPaths,
+    getBase: (p) => baseFiles.get(p),
+    getOurs: (p) => oursFiles.get(p),
+    getTheirs: (p) => theirsFiles.get(p),
+  });
+
+  if (conflicts.length > 0) {
+    await storage.updateProject(projectId, { pendingConflicts: conflicts });
+    throw new SyncConflictsError(conflicts);
+  }
+
+  await storage.updateProject(projectId, { pendingConflicts: [] });
+
+  for (const [path, content] of merged) {
+    const prev = await storage.readFile(projectId, path);
+    if (prev !== content) {
+      await storage.writeFile(projectId, path, content);
+    }
+  }
+
+  // Remove files silently deleted by the merge (one side deleted, other unchanged).
+  for (const path of deleted) {
+    await storage.deleteFile(projectId, path);
+  }
+
+  const pushBranch = wb ?? sync.branch;
+  const adapterPush = new DcsRestProjectSync({
+    host: sync.host,
+    token,
+    owner: sync.owner,
+    repo: sync.repo,
+    branch: pushBranch,
+    targetType: sync.targetType,
+  });
+  const map = await gatherProjectFileMap(storage, projectId);
+  const storedShas = await storage.getSyncShas(projectId);
+  const previouslySyncedPaths = new Set(Object.keys(storedShas));
+  let expectedBaseShaByPath = buildExpectedBaseShasForPush({
+    remoteIndex: await adapterPush.getRemoteFileIndex(),
+    localMap: map,
+    previouslySyncedPaths,
+  });
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const pushResult = await pushLocalProjectToDcs({
+        storage,
+        projectId,
+        token,
+        sync,
+        workingBranch: wb,
+        expectedBaseShaByPath,
+      });
+
+      const nextCommits = {
+        ...(meta.lastRemoteCommit ?? {}),
+        [tier2]: tier2HeadSha,
+      };
+
+      await storage.updateProject(projectId, {
+        lastRemoteCommit: nextCommits,
+        pendingConflicts: [],
+      });
+
+      return { kind: 'synced' as const, pushResult, tier2HeadSha };
+    } catch (e) {
+      lastError = e;
+      if (e instanceof StalePushError && attempt < 2) {
+        const fresh = await adapterPush.getRemoteFileIndex();
+        const mapNow = await gatherProjectFileMap(storage, projectId);
+        const shasNow = await storage.getSyncShas(projectId);
+        expectedBaseShaByPath = buildExpectedBaseShasForPush({
+          remoteIndex: fresh,
+          localMap: mapNow,
+          previouslySyncedPaths: new Set(Object.keys(shasNow)),
+        });
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }

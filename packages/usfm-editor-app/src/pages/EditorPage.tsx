@@ -6,6 +6,7 @@ import { CollaborateModal } from '@/components/CollaborateModal';
 import { DcsLoginDialog } from '@/components/DcsLoginDialog';
 import { DcsModal } from '@/components/DcsModal';
 import { DcsSyncButton } from '@/components/DcsSyncButton';
+import { SyncConflictDialog } from '@/components/SyncConflictDialog';
 import { EditorPanel } from '@/components/EditorPanel';
 import { SectionPicker } from '@/components/SectionPicker';
 import { ReferenceColumn } from '@/components/ReferenceColumn';
@@ -20,9 +21,17 @@ import {
 } from '@/components/ui/dialog';
 import { fetchAuthenticatedUser, getFileContent, type Door43UserInfo } from '@/dcs-client';
 import { loadDcsCredentials, loadDcsTarget, type DcsStoredCredentials, type DcsStoredTarget } from '@/lib/dcs-storage';
+import { getOfflineSyncQueue } from '@/lib/offline-sync-queue';
+import { bookBranchName, syncLocalProjectWithDcs } from '@/lib/dcs-project-sync';
+import { syncAlignmentsToProject, loadAlignmentLayersForBook } from '@/lib/alignment-layer-persistence';
+import { useKV } from '@/platform/PlatformContext';
 import type { SyncStatusSnapshot } from '@/hooks/useSyncStatus';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { useLocalProjectSync } from '@/hooks/useLocalProjectSync';
+import { useTauriMenuEvents } from '@/hooks/useTauriMenuEvents';
+import { useTauriCloseGuard } from '@/hooks/useTauriCloseGuard';
+import { useTauriFileDrop } from '@/hooks/useTauriFileDrop';
+import { ProjectBookJournalStore, SyncScheduler } from '@usfm-tools/editor-adapters';
 import type { ScriptureSessionController } from '@/hooks/useScriptureSession';
 import {
   formatMarkerPaletteTriggerForHelp,
@@ -35,7 +44,15 @@ import type { EditorMode, SourceTextSession } from '@usfm-tools/editor';
 import { mountConflictReview, readEditorMode, writeEditorMode } from '@usfm-tools/editor-ui';
 import { isProjectLaunchConfig } from '@/lib/project-launch';
 import { getProjectStorage } from '@/lib/project-storage';
+import { nativeOpenFile, nativeSaveFile } from '@/lib/tauri-file-dialog';
+import { notifySyncFailure } from '@/lib/tauri-notifications';
+import { usePlatform } from '@/platform/PlatformContext';
 import { blankUsfmForBook } from '@/lib/usfm-project';
+import {
+  makeSyncSidecar,
+  serializeSyncSidecar,
+  syncSidecarPathForBook,
+} from '@/lib/sync-sidecar';
 import { cn } from '@/lib/utils';
 import { listRCBooks, parseResourceContainer } from '@usfm-tools/project-formats';
 import { USFM_BOOK_CODES } from '@usfm-tools/editor';
@@ -48,7 +65,7 @@ import {
   type ChangeEvent,
   type MouseEvent,
 } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const DCS_INITIAL_FETCH_MS = 18_000;
 
@@ -80,7 +97,10 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 
 export function EditorPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const launch = isProjectLaunchConfig(location.state) ? location.state : null;
+  const kv = useKV();
+  const { platform } = usePlatform();
 
   const [dcsCreds, setDcsCreds] = useState<DcsStoredCredentials | null>(() => loadDcsCredentials());
   const [dcsTarget] = useState<DcsStoredTarget | null>(() => loadDcsTarget());
@@ -98,12 +118,14 @@ export function EditorPage() {
     return launch?.initialUsfm ?? SAMPLE_USFM;
   });
   const [ctrl, setCtrl] = useState<ScriptureSessionController | null>(null);
+  const ctrlRef = useRef<ScriptureSessionController | null>(null);
+  ctrlRef.current = ctrl;
   const onController = useCallback((c: ScriptureSessionController | null) => {
     setCtrl(c);
   }, []);
 
   const [collabActive] = useState(() => sessionStorage.getItem('usfm-collab') === '1');
-  const [wsRelay] = useState(() => localStorage.getItem('usfm-ws-relay') ?? '');
+  const [wsRelay] = useState(() => kv.getSync('usfm-ws-relay') ?? '');
 
   const [dcsOpen, setDcsOpen] = useState(false);
   const [collabOpen, setCollabOpen] = useState(false);
@@ -132,6 +154,8 @@ export function EditorPage() {
   const [checkingOpen, setCheckingOpen] = useState(false);
   const [exportUsfmOpen, setExportUsfmOpen] = useState(false);
   const [sourceTextSession, setSourceTextSession] = useState<SourceTextSession | null>(null);
+  const [allSourceSlots, setAllSourceSlots] = useState<ReadonlyArray<{ id: string; label: string; session: SourceTextSession | null }>>([]);
+  const referenceColumnRef = useRef<import('@/components/ReferenceColumn').ReferenceColumnHandle>(null);
 
   const [usfmTheme, setUsfmTheme] = useState<'document' | 'document-dark'>('document');
   const [editorMode, setEditorMode] = useState<EditorMode>(() => readEditorMode());
@@ -140,15 +164,96 @@ export function EditorPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const conflictHostRef = useRef<HTMLDivElement>(null);
   const focusedOnceRef = useRef(false);
+  // Ref to the active save timer so it can be flushed before window close.
+  const pendingSaveRef = useRef<{ timer: ReturnType<typeof setTimeout>; run: () => Promise<void> } | null>(null);
 
   const [hasLocalProjectDcs, setHasLocalProjectDcs] = useState(false);
   const [localProjectMeta, setLocalProjectMeta] = useState<import('@usfm-tools/types').ProjectMeta | null>(null);
   const localProjectStorage = useMemo(() => launch?.localProject ? getProjectStorage() : null, [launch?.localProject]);
 
-  const localSync = useLocalProjectSync(
-    launch?.localProject?.projectId,
-    launch?.localProject?.bookCode,
+  /** OT journal persisted to `journal/<BOOK>.jsonl` and synced with the rest of the project. */
+  const projectBookJournalStore = useMemo(
+    () =>
+      launch?.localProject
+        ? new ProjectBookJournalStore({
+            storage: getProjectStorage(),
+            projectId: launch.localProject.projectId,
+            bookCode: launch.localProject.bookCode,
+          })
+        : undefined,
+    [launch?.localProject?.projectId, launch?.localProject?.bookCode],
   );
+
+  const offlineSyncQueue = useMemo(() => getOfflineSyncQueue(), []);
+
+  const onProjectSyncSucceeded = useCallback(async (_result: unknown, journalWatermark = 0) => {
+    const session = ctrlRef.current?.session;
+    const lp = launch?.localProject;
+    if (!session || !lp) return;
+    const storage = getProjectStorage();
+    const manifest = await storage.readFile(lp.projectId, 'manifest.yaml');
+    if (!manifest) return;
+    const rc = parseResourceContainer(manifest);
+    const book = listRCBooks(rc).find((b) => b.code === lp.bookCode);
+    if (!book) return;
+    const rel = book.path.replace(/^\.\//, '');
+    const usfm = await storage.readFile(lp.projectId, rel);
+    if (!usfm) return;
+    session.loadUSFM(usfm);
+    // Re-apply any edits that the user made during the sync window so they are
+    // not silently discarded by the loadUSFM call above.
+    session.replayJournalEntriesAfter(journalWatermark);
+    await session.reloadJournalFromDisk();
+    await loadAlignmentLayersForBook({ storage, projectId: lp.projectId, bookCode: lp.bookCode, session });
+    await session.maybeCompactJournalAfterPush();
+  }, [launch?.localProject]);
+
+  const getSyncWatermark = useCallback(
+    () => ctrlRef.current?.session.journalEntryWatermark() ?? 0,
+    [],
+  );
+
+  const localSync = useLocalProjectSync(launch?.localProject?.projectId, launch?.localProject?.bookCode, {
+    onProjectSyncSucceeded,
+    getSyncWatermark,
+  });
+
+  const { network } = usePlatform();
+
+  // Start the offline sync scheduler so queued file-change operations are
+  // delivered when the device comes back online.
+  useEffect(() => {
+    const scheduler = new SyncScheduler({
+      queue: offlineSyncQueue,
+      // Use the platform network adapter (Tauri: HEAD-probe-backed;
+      // web: navigator.onLine) so the scheduler responds to actual
+      // reachability, not just link-level events.
+      network,
+      deliver: async (op) => {
+        if (op.type === 'file-change') {
+          const creds = loadDcsCredentials();
+          if (!creds?.token) throw new Error('No DCS credentials for queued sync');
+          const meta = await getProjectStorage().getProject(op.projectId);
+          if (!meta?.syncConfig) throw new Error('No sync config for queued project');
+          const payload = op.payload as { bookCode?: string } | undefined;
+          await syncLocalProjectWithDcs({
+            storage: getProjectStorage(),
+            projectId: op.projectId,
+            token: creds.token,
+            sync: meta.syncConfig,
+            username: creds.username,
+            bookCode: typeof payload?.bookCode === 'string' ? payload.bookCode : undefined,
+          });
+        }
+      },
+      onPermanentFailure: (op, error) => {
+        console.warn('[SyncScheduler] Permanent failure for op', op.id, error.message);
+        notifySyncFailure(op.projectId, error.message);
+      },
+    });
+    scheduler.start();
+    return () => scheduler.stop();
+  }, [offlineSyncQueue]);
 
   const dcsSyncEnabled = Boolean(dcsCreds && dcsTarget?.syncEnabled);
 
@@ -177,8 +282,16 @@ export function EditorPage() {
       const collabDetail = collabActive
         ? 'Collaboration (BroadcastChannel + optional relay)'
         : undefined;
+      const localConflict =
+        (localSync.pendingFileConflicts?.length ?? 0) > 0 || Boolean(localSync.conflictPrUrl);
       return {
-        state: !online ? 'offline' : localSync.isSyncing ? 'syncing' : 'synced',
+        state: !online
+          ? 'offline'
+          : localConflict
+            ? 'conflict'
+            : localSync.isSyncing
+              ? 'syncing'
+              : 'synced',
         peerCount: collabActive ? peers : undefined,
         detail: [dcsDetail, localDcsDetail, collabDetail].filter(Boolean).join(' · ') || undefined,
       };
@@ -195,6 +308,8 @@ export function EditorPage() {
     localSync.detail,
     localSync.isSyncing,
     localSync.autoSync,
+    localSync.pendingFileConflicts,
+    localSync.conflictPrUrl,
   ]);
 
   const {
@@ -251,13 +366,42 @@ export function EditorPage() {
       const rc = parseResourceContainer(manifest);
       const book = listRCBooks(rc).find((b) => b.code === bookCode);
       if (!book) return;
-      const usfm = await storage.readFile(projectId, book.path);
+      let usfm = await storage.readFile(projectId, book.path);
+      if (!usfm && meta?.syncConfig) {
+        const creds = loadDcsCredentials();
+        if (creds?.token) {
+          try {
+            const rel = book.path.replace(/^\.\//, '');
+            const file = await getFileContent({
+              host: meta.syncConfig.host,
+              token: creds.token,
+              owner: meta.syncConfig.owner,
+              repo: meta.syncConfig.repo,
+              path: rel,
+              ref: meta.syncConfig.branch,
+            });
+            usfm = file.content;
+            await storage.writeFile(projectId, rel, file.content);
+          } catch (e) {
+            console.warn('DCS: could not fetch book USFM for local project', e);
+          }
+        }
+      }
       if (usfm && !cancelled) setInitialUsfm(usfm);
+      // Alignment layers are loaded separately once the session is mounted (see below).
     })();
     return () => {
       cancelled = true;
     };
   }, [launch?.localProject?.projectId, launch?.localProject?.bookCode]);
+
+  // Load alignment sidecar files and restore active layer once the session is ready.
+  useEffect(() => {
+    if (!launch?.localProject || !ctrl?.session) return;
+    const { projectId, bookCode } = launch.localProject;
+    const storage = getProjectStorage();
+    void loadAlignmentLayersForBook({ storage, projectId, bookCode, session: ctrl.session });
+  }, [ctrl?.session, launch?.localProject?.projectId, launch?.localProject?.bookCode]);
 
   useEffect(() => {
     if (!launch?.localProject || !ctrl?.session) return;
@@ -266,26 +410,61 @@ export function EditorPage() {
     let saveTimer: ReturnType<typeof setTimeout> | undefined;
     const session = ctrl.session;
 
-    const unsub = session.onChange(() => {
-      // 2 s debounce: persist current book USFM to IndexedDB.
-      if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        void (async () => {
-          const usfm = session.toUSFM();
-          const manifest = await storage.readFile(projectId, 'manifest.yaml');
-          if (!manifest) return;
-          const rc = parseResourceContainer(manifest);
-          const book = listRCBooks(rc).find((b) => b.code === bookCode);
-          if (book) await storage.writeFile(projectId, book.path, usfm);
-        })();
-      }, 2000);
+    const doSave = async () => {
+      const usfm = session.toUSFM();
+      const manifest = await storage.readFile(projectId, 'manifest.yaml');
+      if (!manifest) return;
+      const rc = parseResourceContainer(manifest);
+      const book = listRCBooks(rc).find((b) => b.code === bookCode);
+      if (!book) return;
+      await storage.writeFile(projectId, book.path, usfm);
+      const pm = await storage.getProject(projectId);
+      const tier2Branch = bookBranchName(bookCode);
+      const baseCommit = pm?.lastRemoteCommit?.[tier2Branch];
+      const syncShas = await storage.getSyncShas(projectId);
+      const bookRel = book.path.replace(/^\.\//, '');
+      const baseBlobSha = syncShas[bookRel];
+      await storage.writeFile(
+        projectId,
+        syncSidecarPathForBook(bookCode),
+        serializeSyncSidecar(
+          makeSyncSidecar({
+            docId: `${projectId}:${bookCode}`,
+            baseCommit,
+            baseBlobSha,
+            vectorClock: session.getJournalVectorClock(),
+            journalId: session.getJournalBaseSnapshotId() || undefined,
+          }),
+        ),
+      );
+      // Persist any non-embedded alignment layers to sidecar JSON files
+      await syncAlignmentsToProject({ storage, projectId, bookCode, session });
+      await offlineSyncQueue.enqueue({
+        type: 'file-change',
+        projectId,
+        payload: { bookCode },
+      });
+    };
 
+    const scheduleDoSave = () => {
+      // 2 s debounce: persist current book USFM to storage, then enqueue a
+      // file-change operation so the intent survives an app restart.
+      if (saveTimer) clearTimeout(saveTimer);
+      const run = doSave;
+      saveTimer = setTimeout(() => { pendingSaveRef.current = null; void run(); }, 2000);
+      // Register the flush function so the close guard can flush before exit.
+      pendingSaveRef.current = { timer: saveTimer, run };
       // Notify the sync hook so it can update dirty state and schedule an auto-push.
       localSync.notifyChange();
-    });
+    };
+
+    const unsub = session.onChange(scheduleDoSave);
+    // Also save when new alignment layers are created or removed
+    const unsubAlign = session.onAlignmentDocumentsChange(scheduleDoSave);
 
     return () => {
       unsub();
+      unsubAlign();
       if (saveTimer) clearTimeout(saveTimer);
     };
   }, [launch?.localProject, ctrl?.session, localSync.notifyChange]);
@@ -293,7 +472,13 @@ export function EditorPage() {
   // Keep the topbar status indicator in sync with localSync state changes.
   useEffect(() => {
     syncUpdate();
-  }, [localSync.isSyncing, localSync.detail, syncUpdate]);
+  }, [
+    localSync.isSyncing,
+    localSync.detail,
+    localSync.pendingFileConflicts,
+    localSync.conflictPrUrl,
+    syncUpdate,
+  ]);
 
   useEffect(() => {
     document.body.setAttribute('data-usfm-theme', usfmTheme);
@@ -342,17 +527,16 @@ export function EditorPage() {
     }
   }, []);
 
-  const onFileInputChange = useCallback(async (ev: ChangeEvent<HTMLInputElement>) => {
-    const f = ev.target.files?.[0];
-    if (!f || !ctrl) return;
-    const name = f.name.toLowerCase();
+  /** Load text content into the editor (shared by file-input and native dialog paths). */
+  const loadFileContent = useCallback((name: string, text: string) => {
+    if (!ctrl) return;
+    const lower = name.toLowerCase();
     try {
-      const text = await f.text();
-      if (name.endsWith('.alignment.json') || (name.endsWith('.json') && text.includes('"usfm-alignment"'))) {
+      if (lower.endsWith('.alignment.json') || (lower.endsWith('.json') && text.includes('"usfm-alignment"'))) {
         ctrl.session.loadAlignmentDocumentFromJson(text);
-      } else if (name.endsWith('.usx') || name.endsWith('.xml')) {
+      } else if (lower.endsWith('.usx') || lower.endsWith('.xml')) {
         ctrl.session.loadUSX(text);
-      } else if (name.endsWith('.usj') || (name.endsWith('.json') && text.trim().startsWith('{'))) {
+      } else if (lower.endsWith('.usj') || (lower.endsWith('.json') && text.trim().startsWith('{'))) {
         ctrl.session.loadUSJ(JSON.parse(text) as UsjDocument);
       } else {
         ctrl.session.loadUSFM(text);
@@ -363,15 +547,34 @@ export function EditorPage() {
     }
   }, [ctrl]);
 
-  const onExportUsx = useCallback(() => {
+  const onFileInputChange = useCallback(async (ev: ChangeEvent<HTMLInputElement>) => {
+    const f = ev.target.files?.[0];
+    if (!f) return;
+    try {
+      const text = await f.text();
+      loadFileContent(f.name, text);
+    } catch {
+      /* ignore */
+    }
+  }, [loadFileContent]);
+
+  const onExportUsx = useCallback(async () => {
     if (!ctrl) return;
-    const blob = new Blob([ctrl.session.toUSX()], { type: 'application/xml;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'edited.usx';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }, [ctrl]);
+    const content = ctrl.session.toUSX();
+    if (platform === 'tauri') {
+      await nativeSaveFile(content, {
+        defaultPath: 'export.usx',
+        filters: [{ name: 'USX', extensions: ['usx', 'xml'] }],
+      });
+    } else {
+      const blob = new Blob([content], { type: 'application/xml;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'edited.usx';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+  }, [ctrl, platform]);
 
   const onSyncNow = useCallback(async () => {
     if (!ctrl) return;
@@ -466,6 +669,56 @@ export function EditorPage() {
     />
   ) : undefined, [localProjectMeta, localProjectStorage, localSync, onLocalProjectUpdated]);
 
+  const onMenuNewProject = useCallback(() => navigate('/'), [navigate]);
+  const onMenuOpenFile = useCallback(async () => {
+    if (platform === 'tauri') {
+      const result = await nativeOpenFile();
+      if (result) {
+        const parts = result.path.split(/[\\/]/);
+        loadFileContent(parts[parts.length - 1] ?? 'file', result.content);
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
+  }, [platform, loadFileContent]);
+  const onMenuExportUsfm = useCallback(() => setExportUsfmOpen(true), []);
+  const onMenuOpenSourceCache = useCallback(() => navigate('/source-cache'), [navigate]);
+  const onMenuHelpDocs = useCallback(() => {
+    void import('@tauri-apps/plugin-shell').then(({ open }) =>
+      open('https://github.com/usfm-tools/usfm-ast/wiki'),
+    );
+  }, []);
+
+  // Intercept window close: flush pending save and confirm if dirty.
+  useTauriCloseGuard({
+    flushPendingSave: useCallback(async () => {
+      const pending = pendingSaveRef.current;
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      pendingSaveRef.current = null;
+      await pending.run();
+    }, []),
+    isDirty: useCallback(() => localSync.isDirty, [localSync.isDirty]),
+  });
+
+  // Handle file drop: load the first dropped file into the editor.
+  useTauriFileDrop(useCallback((files) => {
+    const first = files[0];
+    if (first) loadFileContent(first.name, first.content);
+  }, [loadFileContent]));
+
+  // Wire native application menu events to editor actions.
+  useTauriMenuEvents({
+    onNewProject: onMenuNewProject,
+    onOpenFile: onMenuOpenFile,
+    onExportUsfm: onMenuExportUsfm,
+    onToggleReference,
+    onToggleUsfmSource,
+    onOpenSourceCache: onMenuOpenSourceCache,
+    onHelp,
+    onHelpDocs: onMenuHelpDocs,
+  });
+
   return (
     <div
       className="bg-background text-foreground flex h-dvh max-h-dvh min-h-0 w-full flex-col overflow-hidden antialiased"
@@ -519,6 +772,15 @@ export function EditorPage() {
         localSyncSlot={localSyncSlot}
       />
 
+      {launch?.localProject && localSync.pendingFileConflicts.length > 0 ? (
+        <SyncConflictDialog
+          open
+          conflicts={localSync.pendingFileConflicts}
+          onClose={() => {}}
+          onResolve={(path, choice) => void localSync.resolveConflict(path, choice)}
+        />
+      ) : null}
+
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div ref={conflictHostRef} className="conflict-host" />
 
@@ -534,8 +796,10 @@ export function EditorPage() {
             {referencePanel && ctrl ? (
               <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                 <ReferenceColumn
+                  ref={referenceColumnRef}
                   session={ctrl.session}
                   onSourceSession={setSourceTextSession}
+                  onSourceSessionsChange={setAllSourceSlots}
                   prefillSourceUsfm={launch?.sourceReferenceUsfm}
                   targetSession={ctrl.session}
                   dcsAuth={dcsCreds ? { host: dcsCreds.host, token: dcsCreds.token } : null}
@@ -558,6 +822,9 @@ export function EditorPage() {
                 wsRelay={wsRelay}
                 dcsCreds={dcsCreds}
                 dcsTarget={dcsTarget}
+                targetLanguage={localProjectMeta?.language}
+                projectBookJournalStore={projectBookJournalStore}
+                localBookCode={launch?.localProject?.bookCode}
                 onController={onController}
                 className="min-w-0"
               />
@@ -578,7 +845,12 @@ export function EditorPage() {
           open={alignmentOpen}
           onClose={onCloseAlignment}
           session={ctrl.session}
-          sourceTextSession={sourceTextSession}
+          sourceSlots={allSourceSlots}
+          dcsAuth={dcsCreds ? { host: dcsCreds.host, token: dcsCreds.token } : null}
+          onRequestAddDcsLanguage={(lang) => {
+            setReferencePanel(true);
+            referenceColumnRef.current?.addDcsLanguage(lang);
+          }}
           usfmTheme={usfmTheme}
         />
       ) : null}

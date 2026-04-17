@@ -1,14 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getProjectStorage } from '@/lib/project-storage';
+import { getOfflineSyncQueue } from '@/lib/offline-sync-queue';
 import { loadDcsCredentials } from '@/lib/dcs-storage';
 import {
-  pushLocalProjectToDcs,
   publishPendingReleasesToDcs,
   hasLocalChanges,
   autoMergeToDcs,
   workingBranchName,
+  syncLocalProjectWithDcs,
+  type SyncLocalProjectWithDcsResult,
+  SyncConflictsError,
+  StalePushError,
 } from '@/lib/dcs-project-sync';
-import type { ProjectSyncConfig } from '@usfm-tools/types';
+import {
+  notifySyncSuccess,
+  notifySyncConflict,
+  notifySyncFailure,
+} from '@/lib/tauri-notifications';
+import type { FileConflict, ProjectSyncConfig } from '@usfm-tools/types';
 
 /** How long after a save (ms) before we attempt an auto-push to DCS. */
 const AUTO_PUSH_DEBOUNCE_MS = 15_000;
@@ -32,6 +41,9 @@ export type LocalProjectSyncState = {
    * auto-merges will proceed.
    */
   conflictPrUrl: string | undefined;
+  /** File-level merge conflicts (three-way); resolve via {@link resolveConflict}. */
+  pendingFileConflicts: FileConflict[];
+  resolveConflict: (path: string, choice: 'ours' | 'theirs') => Promise<void>;
   /** Enable or disable auto-sync (persists to project meta). */
   setAutoSync: (enabled: boolean) => void;
   /** Immediately trigger a push regardless of the debounce or toggle. */
@@ -45,23 +57,25 @@ export type LocalProjectSyncState = {
 
 /**
  * Manages auto-sync of a local translation project to Door43 using a
- * 3-tier branch strategy:
- *
- *   {username}/{bookCode}  →  {bookCode}  →  main
- *
- * - When `bookCode` is provided, pushes land on `{username}/{bookCode}` and
- *   auto-merge PRs are opened up the chain.
- * - When `bookCode` is absent (e.g. project dashboard), falls back to pushing
- *   directly to `sync.branch` (main) without branching.
- * - Debounces pushes 15 s after any change notification.
- * - Re-triggers on `window: online` event when there are pending local changes.
- * - Persists `pendingSyncAt` on failure so reconnect retries automatically.
- * - Publishes any un-pushed releases after every successful sync to main.
- * - Respects the `autoSync` preference stored on `ProjectMeta`.
+ * 3-tier branch strategy with pull/merge before push.
  */
 export function useLocalProjectSync(
   projectId: string | undefined,
   bookCode?: string,
+  options?: {
+    /** After IndexedDB was updated by a successful merge+push (not no-op). */
+    onProjectSyncSucceeded?: (
+      result: Extract<SyncLocalProjectWithDcsResult, { kind: 'synced' }>,
+      /** Journal entry watermark captured just before sync started (for race replay). */
+      journalWatermark: number,
+    ) => void | Promise<void>;
+    /**
+     * Called once per sync attempt immediately before `syncLocalProjectWithDcs` is
+     * invoked.  Return an opaque watermark that is forwarded to `onProjectSyncSucceeded`
+     * so the caller can replay edits made during the sync window.
+     */
+    getSyncWatermark?: () => number;
+  },
 ): LocalProjectSyncState {
   const storage = getProjectStorage();
 
@@ -72,8 +86,8 @@ export function useLocalProjectSync(
   const [lastSyncAt, setLastSyncAt] = useState<string | undefined>();
   const [pendingReleaseCount, setPendingReleaseCount] = useState(0);
   const [conflictPrUrl, setConflictPrUrl] = useState<string | undefined>();
+  const [pendingFileConflicts, setPendingFileConflicts] = useState<FileConflict[]>([]);
 
-  // Refs so callbacks always see current values without re-creating effects.
   const isDirtyRef = useRef(isDirty);
   isDirtyRef.current = isDirty;
   const autoSyncRef = useRef(autoSync);
@@ -81,8 +95,13 @@ export function useLocalProjectSync(
   const isSyncingRef = useRef(isSyncing);
   isSyncingRef.current = isSyncing;
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const syncInFlightRef = useRef(false);
+  const dirtyDuringSyncRef = useRef(false);
+  const onProjectSyncSucceededRef = useRef(options?.onProjectSyncSucceeded);
+  onProjectSyncSucceededRef.current = options?.onProjectSyncSucceeded;
+  const getSyncWatermarkRef = useRef(options?.getSyncWatermark);
+  getSyncWatermarkRef.current = options?.getSyncWatermark;
 
-  // Load initial meta values.
   useEffect(() => {
     if (!projectId) return;
     void (async () => {
@@ -90,76 +109,131 @@ export function useLocalProjectSync(
       if (!meta) return;
       setAutoSyncState(meta.autoSync !== false);
       setLastSyncAt(meta.lastRemoteSyncAt);
+      setPendingFileConflicts(meta.pendingConflicts ?? []);
       const releases = await storage.listReleases(projectId);
       setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
     })();
   }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Core push logic — shared by auto and force paths.
-  const runPush = useCallback(
+  const resolveConflict = useCallback(
+    async (path: string, choice: 'ours' | 'theirs') => {
+      if (!projectId) return;
+      const meta = await storage.getProject(projectId);
+      const list = meta?.pendingConflicts ?? [];
+      const c = list.find((x) => x.path === path);
+      if (!c) return;
+      const text = choice === 'ours' ? c.oursText : c.theirsText;
+      // An empty string means the chosen side deleted the file.
+      if (text === '') {
+        await storage.deleteFile(projectId, path);
+      } else {
+        await storage.writeFile(projectId, path, text);
+      }
+      const next = list.filter((x) => x.path !== path);
+      await storage.updateProject(projectId, {
+        pendingConflicts: next.length > 0 ? next : undefined,
+      });
+      setPendingFileConflicts(next);
+      void hasLocalChanges(storage, projectId).then(setIsDirty);
+    },
+    [projectId, storage],
+  );
+
+  const runSync = useCallback(
     async (sync: ProjectSyncConfig, token: string, username: string) => {
       if (isSyncingRef.current) return;
       setIsSyncing(true);
       isSyncingRef.current = true;
+      syncInFlightRef.current = true;
       setConflictPrUrl(undefined);
 
-      // Determine which branch this session writes to.
       const wb = bookCode ? workingBranchName(username, bookCode) : undefined;
       const branchLabel = wb ?? sync.branch;
 
-      setDetail(`Local project: pushing to ${branchLabel}…`);
+      setDetail(`Local project: syncing with Door43 (${branchLabel})…`);
       try {
-        await pushLocalProjectToDcs({
+        const journalWatermark = getSyncWatermarkRef.current?.() ?? 0;
+        const syncResult = await syncLocalProjectWithDcs({
           storage,
           projectId: projectId!,
           token,
           sync,
-          workingBranch: wb,
+          username,
+          bookCode,
         });
+
+        if (syncResult.kind === 'synced') {
+          await onProjectSyncSucceededRef.current?.(syncResult, journalWatermark);
+        }
 
         const now = new Date().toISOString();
         await storage.updateProject(projectId!, {
           lastRemoteSyncAt: now,
           pendingSyncAt: undefined,
         });
+        await getOfflineSyncQueue().clearProject(projectId!);
         setLastSyncAt(now);
         setIsDirty(false);
         isDirtyRef.current = false;
+        setPendingFileConflicts([]);
+
+        const projectMeta = await storage.getProject(projectId!);
+        const projectLabel = projectMeta?.name ?? projectId!;
 
         if (wb && bookCode) {
-          // Attempt the 3-tier auto-merge chain.
-          setDetail(`Local project: pushed to ${branchLabel} — merging…`);
+          setDetail(`Local project: pushed to ${branchLabel} — merging PRs…`);
           const mergeResult = await autoMergeToDcs({ token, sync, username, bookCode });
           if (mergeResult.merged) {
             setDetail(`Local project: merged → ${sync.owner}/${sync.repo} (${sync.branch})`);
-            // Publish pending releases now that main is up to date.
+            notifySyncSuccess(projectLabel, `${sync.owner}/${sync.repo}`);
             await publishPendingReleasesToDcs({ storage, projectId: projectId!, token, sync });
             const releases = await storage.listReleases(projectId!);
             setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
           } else {
             setConflictPrUrl(mergeResult.conflictPrUrl);
             setDetail(`Local project: pushed to ${branchLabel} — merge conflict, resolve on DCS`);
+            if (mergeResult.conflictPrUrl) {
+              notifySyncConflict(projectLabel, mergeResult.conflictPrUrl);
+            }
           }
         } else {
-          // No branching — direct push to main; publish releases immediately.
-          setDetail(`Local project: pushed → ${sync.owner}/${sync.repo}`);
+          setDetail(`Local project: synced → ${sync.owner}/${sync.repo}`);
+          notifySyncSuccess(projectLabel, `${sync.owner}/${sync.repo}`);
           await publishPendingReleasesToDcs({ storage, projectId: projectId!, token, sync });
           const releases = await storage.listReleases(projectId!);
           setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
         }
       } catch (err) {
+        if (err instanceof SyncConflictsError) {
+          setPendingFileConflicts(err.conflicts);
+          await storage.updateProject(projectId!, { pendingConflicts: err.conflicts });
+          setDetail('Local project: merge conflicts — choose which version to keep');
+          return;
+        }
+        if (err instanceof StalePushError) {
+          setDetail('Local project: remote changed during sync — try again');
+          await storage.updateProject(projectId!, { pendingSyncAt: new Date().toISOString() });
+          return;
+        }
         const msg = err instanceof Error ? err.message : String(err);
-        setDetail(`Local project: Door43 push failed — ${msg}`);
+        setDetail(`Local project: Door43 sync failed — ${msg}`);
         await storage.updateProject(projectId!, { pendingSyncAt: new Date().toISOString() });
+        if (projectId) {
+          notifySyncFailure(projectId, msg);
+        }
       } finally {
         setIsSyncing(false);
         isSyncingRef.current = false;
+        syncInFlightRef.current = false;
+        if (dirtyDuringSyncRef.current) {
+          dirtyDuringSyncRef.current = false;
+          void hasLocalChanges(storage, projectId!).then(setIsDirty);
+        }
       }
     },
     [bookCode, projectId, storage],
   );
 
-  // Attempt a push if conditions are met (online, meta has syncConfig, token present).
   const tryPush = useCallback(async () => {
     if (!projectId) return;
     const meta = await storage.getProject(projectId);
@@ -170,12 +244,15 @@ export function useLocalProjectSync(
       setDetail('Local project: offline — will retry on reconnect');
       return;
     }
-    await runPush(meta.syncConfig, creds.token, creds.username);
-  }, [projectId, runPush, storage]);
+    await runSync(meta.syncConfig, creds.token, creds.username);
+  }, [projectId, runSync, storage]);
 
-  // Re-check dirty state after each change and schedule a debounced auto-push.
   const notifyChange = useCallback(() => {
     if (!projectId) return;
+
+    if (syncInFlightRef.current) {
+      dirtyDuringSyncRef.current = true;
+    }
 
     void hasLocalChanges(storage, projectId).then(setIsDirty);
 
@@ -187,7 +264,6 @@ export function useLocalProjectSync(
     }, AUTO_PUSH_DEBOUNCE_MS);
   }, [projectId, storage, tryPush]);
 
-  // Reconnect handler: push immediately when coming back online if there are pending changes.
   useEffect(() => {
     const onOnline = () => {
       if (!isDirtyRef.current || !autoSyncRef.current) return;
@@ -197,7 +273,6 @@ export function useLocalProjectSync(
     return () => window.removeEventListener('online', onOnline);
   }, [tryPush]);
 
-  // On mount (or project change), check whether there is already a pending sync to retry.
   useEffect(() => {
     if (!projectId) return;
     void (async () => {
@@ -218,7 +293,6 @@ export function useLocalProjectSync(
     })();
   }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cleanup debounce on unmount.
   useEffect(() => {
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -252,6 +326,8 @@ export function useLocalProjectSync(
     lastSyncAt,
     pendingReleaseCount,
     conflictPrUrl,
+    pendingFileConflicts,
+    resolveConflict,
     setAutoSync,
     forceSync,
     notifyChange,
