@@ -19,7 +19,7 @@
     "clean": "rimraf dist tsconfig.tsbuildinfo",
     "check-types": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "node -e \"console.log('no tests')\""
+    "test": "jest"
   },
   "keywords": ["door43", "gitea", "dcs"],
   "license": "MIT",
@@ -28,9 +28,14 @@
     "url": "https://github.com/abelpz/usfm-ast.git",
     "directory": "packages/usfm-door43-rest"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
+    "@types/jest": "30.0.0",
+    "jest": "30.3.0",
     "rimraf": "^5.0.0",
+    "ts-jest": "29.4.9",
     "typescript": "5.9.3"
   }
 }

@@ -6,11 +6,17 @@ import {
   deleteRepoFile,
   getFileContent,
   getRepoInfo,
+  getBranchHeadCommit,
   listRepoGitTree,
   DOOR43_SCRIPTURE_DEFAULT_BRANCH,
   type GitTreeEntry,
 } from '@usfm-tools/door43-rest';
-import type { ProjectPushResult, ProjectSyncAdapter, RemoteFileEntry } from '@usfm-tools/types';
+import type {
+  ProjectPushOutcome,
+  ProjectSyncAdapter,
+  PushFilesOptions,
+  RemoteFileEntry,
+} from '@usfm-tools/types';
 
 export type DcsRestProjectSyncOptions = {
   host: string;
@@ -53,6 +59,7 @@ function isTextSyncPath(path: string): boolean {
       '.tsv',
       '.css',
       '.html',
+      '.jsonl',
     ].includes(ext);
   return textish;
 }
@@ -61,6 +68,16 @@ function treeEntriesToRemoteFiles(entries: GitTreeEntry[]): RemoteFileEntry[] {
   return entries
     .filter((e) => e.type === 'blob' && isTextSyncPath(e.path))
     .map((e) => ({ path: e.path, sha: e.sha, size: e.size }));
+}
+
+/** True if this remote blob path was recorded in a prior successful sync (local storage keys). */
+function wasPreviouslySynced(
+  remotePath: string,
+  previouslySyncedPaths: ReadonlySet<string>,
+): boolean {
+  const rp = remotePath.replace(/\\/g, '/');
+  const localKey = rp.startsWith('content/') ? rp.slice('content/'.length) : rp;
+  return previouslySyncedPaths.has(localKey) || previouslySyncedPaths.has(rp);
 }
 
 /** Local project paths (e.g. `56-TIT.usfm`) vs Door43 RC paths (`content/56-TIT.usfm`). */
@@ -150,10 +167,61 @@ export class DcsRestProjectSync implements ProjectSyncAdapter {
     return treeEntriesToRemoteFiles(entries);
   }
 
+  /** Tip commit SHA for `branch` (defaults to this adapter's branch). */
+  async getRemoteHeadCommit(branch?: string): Promise<string> {
+    const b = branch ?? this.branch;
+    return getBranchHeadCommit({
+      host: this.host,
+      token: this.token,
+      owner: this.owner,
+      repo: this.repo,
+      branch: b,
+      fetch: this.fetchImpl,
+    });
+  }
+
+  /**
+   * List tree at `ref` (branch name or commit SHA) and fetch text file contents.
+   * When `pathFilter` is set, only those **local** path keys are read (still lists full tree for keys).
+   */
+  async pullFilesAt(ref: string, pathFilter?: ReadonlySet<string>): Promise<Map<string, string>> {
+    const entries = await listRepoGitTree({
+      host: this.host,
+      token: this.token,
+      owner: this.owner,
+      repo: this.repo,
+      ref,
+      recursive: true,
+      fetch: this.fetchImpl,
+    });
+    const blobs = treeEntriesToRemoteFiles(entries);
+    const out = new Map<string, string>();
+    for (const r of blobs) {
+      const localPath = r.path.startsWith('content/') ? r.path.slice('content/'.length) : r.path;
+      if (pathFilter && !pathFilter.has(localPath) && !pathFilter.has(r.path)) {
+        continue;
+      }
+      const fc = await getFileContent({
+        host: this.host,
+        token: this.token,
+        owner: this.owner,
+        repo: this.repo,
+        path: r.path,
+        ref,
+        fetch: this.fetchImpl,
+      });
+      out.set(localPath, fc.content);
+    }
+    return out;
+  }
+
   async pushFiles(
     localFiles: Map<string, string>,
     message: string,
-  ): Promise<ProjectPushResult> {
+    options?: PushFilesOptions,
+  ): Promise<ProjectPushOutcome> {
+    const previouslySyncedPaths = options?.previouslySyncedPaths;
+    const expectedBaseShaByPath = options?.expectedBaseShaByPath;
     const remoteIndex = await this.getRemoteFileIndex();
     const remoteByPath = new Map(remoteIndex.map((e) => [e.path, e]));
 
@@ -175,6 +243,24 @@ export class DcsRestProjectSync implements ProjectSyncAdapter {
       normPaths.add(p.replace(/\\/g, '/').replace(/^\.\//, ''));
     }
 
+    /** When set, remote blob must still match these SHAs before any write/delete (optimistic lock). */
+    if (expectedBaseShaByPath && Object.keys(expectedBaseShaByPath).length > 0) {
+      const staleByPath: Record<string, string> = {};
+      for (const [localKey, expectedSha] of Object.entries(expectedBaseShaByPath)) {
+        const pathNorm = localKey.replace(/\\/g, '/').replace(/^\.\//, '');
+        const remoteAtRoot = remoteByPath.get(pathNorm);
+        const remoteInContent = remoteByPath.get(`content/${pathNorm}`);
+        const rem = remoteAtRoot ?? remoteInContent;
+        if (!rem) continue;
+        if (rem.sha !== expectedSha) {
+          staleByPath[localKey] = rem.sha;
+        }
+      }
+      if (Object.keys(staleByPath).length > 0) {
+        return { kind: 'stale', staleByPath };
+      }
+    }
+
     for (const [rawPath, content] of localFiles) {
       const path = rawPath.replace(/\\/g, '/').replace(/^\.\//, '');
       if (!isTextSyncPath(path)) continue;
@@ -190,31 +276,44 @@ export class DcsRestProjectSync implements ProjectSyncAdapter {
       if (remote && remote.sha === blobSha) continue;
 
       let res: Awaited<ReturnType<typeof createRepoFile>>;
-      if (remote) {
-        res = await updateRepoFile({
-          host: this.host,
-          token: this.token,
-          owner: this.owner,
-          repo: this.repo,
-          path: remotePath,
-          content,
-          message: `${message} (${path})`,
-          branch: this.branch,
-          sha: remote.sha,
-          fetch: this.fetchImpl,
-        });
-      } else {
-        res = await createRepoFile({
-          host: this.host,
-          token: this.token,
-          owner: this.owner,
-          repo: this.repo,
-          path,
-          content,
-          message: `${message} (${path})`,
-          branch: this.branch,
-          fetch: this.fetchImpl,
-        });
+      try {
+        if (remote) {
+          res = await updateRepoFile({
+            host: this.host,
+            token: this.token,
+            owner: this.owner,
+            repo: this.repo,
+            path: remotePath,
+            content,
+            message: `${message} (${path})`,
+            branch: this.branch,
+            sha: remote.sha,
+            fetch: this.fetchImpl,
+          });
+        } else {
+          res = await createRepoFile({
+            host: this.host,
+            token: this.token,
+            owner: this.owner,
+            repo: this.repo,
+            path,
+            content,
+            message: `${message} (${path})`,
+            branch: this.branch,
+            fetch: this.fetchImpl,
+          });
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const isConflict =
+          /\b409\b/.test(msg) || /\b422\b/.test(msg) || /conflict/i.test(msg);
+        if (expectedBaseShaByPath && Object.keys(expectedBaseShaByPath).length > 0 && isConflict) {
+          return {
+            kind: 'stale',
+            staleByPath: { [path]: remote?.sha ?? 'unknown' },
+          };
+        }
+        throw err;
       }
       lastCommitSha = res.commit.sha;
       if (remote) {
@@ -232,7 +331,13 @@ export class DcsRestProjectSync implements ProjectSyncAdapter {
 
     const localSet = new Set(normPaths);
     for (const r of remoteIndex) {
-      if (!localPathCoversRemote(r.path, localSet) && isTextSyncPath(r.path)) {
+      const shouldConsiderDelete =
+        !localPathCoversRemote(r.path, localSet) &&
+        isTextSyncPath(r.path) &&
+        (previouslySyncedPaths === undefined || wasPreviouslySynced(r.path, previouslySyncedPaths));
+      if (!shouldConsiderDelete) continue;
+      const delLocalKey = r.path.startsWith('content/') ? r.path.slice('content/'.length) : r.path;
+      try {
         await deleteRepoFile({
           host: this.host,
           token: this.token,
@@ -244,10 +349,20 @@ export class DcsRestProjectSync implements ProjectSyncAdapter {
           branch: this.branch,
           fetch: this.fetchImpl,
         });
-        filesDeleted += 1;
-        const localKey = r.path.startsWith('content/') ? r.path.slice('content/'.length) : r.path;
-        syncedByLocalPath.delete(localKey);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const isConflict =
+          /\b409\b/.test(msg) || /\b422\b/.test(msg) || /conflict/i.test(msg);
+        if (expectedBaseShaByPath && Object.keys(expectedBaseShaByPath).length > 0 && isConflict) {
+          return {
+            kind: 'stale',
+            staleByPath: { [delLocalKey]: r.sha },
+          };
+        }
+        throw err;
       }
+      filesDeleted += 1;
+      syncedByLocalPath.delete(delLocalKey);
     }
 
     return {

@@ -59,6 +59,17 @@ export async function listRepoContents(options: ListRepoContentsOptions): Promis
   throw new Error('Invalid Door43 contents response');
 }
 
+/**
+ * Gitea/GitHub contents API returns `type: 'file' | 'dir'` for normal entries.
+ * Some repos also return `symlink` or `submodule` (e.g. git submodule at repo root).
+ * We normalize those so listing never throws and callers can still match paths.
+ */
+function normalizeContentType(t: unknown): 'file' | 'dir' {
+  if (t === 'file' || t === 'symlink') return 'file';
+  if (t === 'dir' || t === 'submodule') return 'dir';
+  throw new Error(`Invalid content entry type: ${String(t)}`);
+}
+
 function parseContentEntry(raw: unknown): Door43ContentEntry {
   if (typeof raw !== 'object' || raw === null) {
     throw new Error('Invalid content entry');
@@ -66,14 +77,11 @@ function parseContentEntry(raw: unknown): Door43ContentEntry {
   const o = raw as Record<string, unknown>;
   const name = o.name;
   const path = o.path;
-  const type = o.type;
+  const type = normalizeContentType(o.type);
   const sha = o.sha;
   const size = o.size;
   if (typeof name !== 'string' || typeof path !== 'string' || typeof sha !== 'string') {
     throw new Error('Invalid content entry fields');
-  }
-  if (type !== 'file' && type !== 'dir') {
-    throw new Error('Invalid content entry type');
   }
   const sizeNum = typeof size === 'number' ? size : 0;
   return { name, path, type, sha, size: sizeNum };

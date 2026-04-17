@@ -6,3 +6,5 @@ export * from './helps';
 export * from './extension';
 export * from './storage';
 export * from './sync';
+export * from './sync-queue';
+export * from './source-cache';

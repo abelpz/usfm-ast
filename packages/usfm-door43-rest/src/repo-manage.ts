@@ -165,6 +165,38 @@ export async function ensureBranch(options: EnsureBranchOptions): Promise<void> 
   });
 }
 
+export type GetBranchHeadCommitOptions = {
+  host?: string;
+  token: string;
+  owner: string;
+  repo: string;
+  branch: string;
+  fetch?: typeof fetch;
+};
+
+/**
+ * Resolves a branch to its tip commit SHA (`GET …/branches/{branch}`).
+ */
+export async function getBranchHeadCommit(options: GetBranchHeadCommitOptions): Promise<string> {
+  const host = options.host ?? DOOR43_HOST_DEFAULT;
+  const base = door43ApiV1BaseUrl(host);
+  const enc = encodeURIComponent;
+  const fetchFn = options.fetch ?? globalThis.fetch;
+  const url = `${base}/repos/${enc(options.owner)}/${enc(options.repo)}/branches/${enc(options.branch)}`;
+  const res = await fetchFn(url, {
+    headers: authHeaders(options.token),
+    cache: 'no-store',
+  });
+  if (!res.ok) await door43HttpError('Door43 get branch', res);
+  const raw: unknown = await res.json();
+  if (!isRecord(raw)) throw new Error('Door43 get branch: invalid JSON');
+  const commit = raw.commit;
+  if (!isRecord(commit)) throw new Error('Door43 get branch: missing commit');
+  const sha = typeof commit.sha === 'string' ? commit.sha.trim() : '';
+  if (!sha) throw new Error('Door43 get branch: missing commit.sha');
+  return sha;
+}
+
 export type UpdateRepoDefaultBranchOptions = {
   host?: string;
   token: string;

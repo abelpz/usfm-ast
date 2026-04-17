@@ -44,6 +44,8 @@ export type PullRequestInfo = {
   htmlUrl: string;
   /** Whether the PR can be merged automatically (no conflicts). */
   mergeable: boolean | null;
+  /** True when the PR has been merged (or squash/rebase-merge completed). */
+  merged: boolean;
   head: { label: string; ref: string; sha: string };
   base: { label: string; ref: string; sha: string };
 };
@@ -107,6 +109,7 @@ function mapPullRequest(raw: Record<string, unknown>): PullRequestInfo {
     state: typeof raw.state === 'string' ? raw.state : 'open',
     htmlUrl: typeof raw.html_url === 'string' ? raw.html_url : '',
     mergeable: typeof raw.mergeable === 'boolean' ? raw.mergeable : null,
+    merged: typeof raw.merged === 'boolean' ? raw.merged : false,
     head: {
       label: typeof head.label === 'string' ? head.label : '',
       ref: typeof head.ref === 'string' ? head.ref : '',
@@ -272,6 +275,153 @@ export async function mergePullRequest(
 
   // Exhausted retries (all 405s) — treat as not mergeable.
   return { merged: false, prHtmlUrl };
+}
+
+export type CompareRefsOptions = {
+  host?: string;
+  token: string;
+  owner: string;
+  repo: string;
+  /** Base ref (merge target), e.g. book branch or `main`. */
+  base: string;
+  /** Head ref (source branch), e.g. `user/tit`. */
+  head: string;
+  fetch?: typeof globalThis.fetch;
+};
+
+/** Result of `GET …/compare/{base}…{head}` (Gitea repo compare API). */
+export type CompareRefsResult = {
+  /** Commits reachable from `head` but not in `base` for this merge direction. */
+  totalCommits: number;
+  aheadBy: number | null;
+  behindBy: number | null;
+};
+
+/**
+ * Compare two refs in the same repository (same semantics as the Gitea compare tab).
+ * Used to detect a redundant PR: `totalCommits === 0` means there is nothing left to merge.
+ */
+export async function compareRefs(options: CompareRefsOptions): Promise<CompareRefsResult> {
+  const host = options.host ?? DOOR43_HOST_DEFAULT;
+  const base = door43ApiV1BaseUrl(host);
+  const enc = encodeURIComponent;
+  const fetchFn = options.fetch ?? globalThis.fetch;
+  const spec = `${options.base}...${options.head}`;
+  const url = `${base}/repos/${enc(options.owner)}/${enc(options.repo)}/compare/${enc(spec)}`;
+  const res = await fetchFn(url, { headers: authHeaders(options.token) });
+  if (!res.ok) await door43HttpError('Door43 compare refs', res);
+  const raw: unknown = await res.json();
+  if (!isRecord(raw)) {
+    return { totalCommits: 0, aheadBy: null, behindBy: null };
+  }
+  const commitsLen = Array.isArray(raw.commits) ? raw.commits.length : 0;
+  const totalCommits =
+    typeof raw.total_commits === 'number' ? raw.total_commits : commitsLen;
+  const aheadBy = typeof raw.ahead_by === 'number' ? raw.ahead_by : null;
+  const behindBy = typeof raw.behind_by === 'number' ? raw.behind_by : null;
+  return { totalCommits, aheadBy, behindBy };
+}
+
+export type GetPullRequestOptions = {
+  host?: string;
+  token: string;
+  owner: string;
+  repo: string;
+  index: number;
+  fetch?: typeof globalThis.fetch;
+};
+
+/** Fetch a single pull request by number (for refresh after failed merge). */
+export async function getPullRequest(options: GetPullRequestOptions): Promise<PullRequestInfo> {
+  const host = options.host ?? DOOR43_HOST_DEFAULT;
+  const base = door43ApiV1BaseUrl(host);
+  const enc = encodeURIComponent;
+  const fetchFn = options.fetch ?? globalThis.fetch;
+  const url = `${base}/repos/${enc(options.owner)}/${enc(options.repo)}/pulls/${options.index}`;
+  const res = await fetchFn(url, { headers: authHeaders(options.token) });
+  if (!res.ok) await door43HttpError('Door43 get pull request', res);
+  const raw: unknown = await res.json();
+  if (!isRecord(raw)) throw new Error('Door43 get pull request: unexpected response shape');
+  return mapPullRequest(raw);
+}
+
+export type ClosePullRequestOptions = {
+  host?: string;
+  token: string;
+  owner: string;
+  repo: string;
+  index: number;
+  fetch?: typeof globalThis.fetch;
+};
+
+/** Close an open pull request without merging (e.g. redundant / already integrated). */
+export async function closePullRequest(options: ClosePullRequestOptions): Promise<void> {
+  const host = options.host ?? DOOR43_HOST_DEFAULT;
+  const base = door43ApiV1BaseUrl(host);
+  const enc = encodeURIComponent;
+  const fetchFn = options.fetch ?? globalThis.fetch;
+  const url = `${base}/repos/${enc(options.owner)}/${enc(options.repo)}/pulls/${options.index}`;
+  const res = await fetchFn(url, {
+    method: 'PATCH',
+    headers: authHeaders(options.token),
+    body: JSON.stringify({ state: 'closed' }),
+  });
+  if (!res.ok) await door43HttpError('Door43 close pull request', res);
+}
+
+export type MergePullRequestOrCloseIfNothingOptions = MergePullRequestOptions & {
+  /** Target branch ref (PR base), e.g. `tit` or `main`. */
+  baseRef: string;
+  /** Source branch ref (PR head), e.g. `abelper8/tit`. */
+  headRef: string;
+};
+
+/**
+ * Merge a pull request. If the merge API reports failure but the head is already fully
+ * contained in the base (`compare` has zero commits to integrate), close the PR and return
+ * `{ merged: true }` so the pipeline can continue.
+ *
+ * Also treats the PR as merged if a fresh GET shows `merged: true` (race with another client).
+ */
+export async function mergePullRequestOrCloseIfNothingToMerge(
+  options: MergePullRequestOrCloseIfNothingOptions,
+): Promise<MergePullRequestResult> {
+  const attempt = await mergePullRequest(options);
+  if (attempt.merged) return attempt;
+
+  const { host, token, owner, repo, index, baseRef, headRef } = options;
+  const fetchFn = options.fetch ?? globalThis.fetch;
+
+  try {
+    const pr = await getPullRequest({ host, token, owner, repo, index, fetch: fetchFn });
+    if (pr.merged) {
+      return { merged: true, prHtmlUrl: attempt.prHtmlUrl };
+    }
+  } catch {
+    // ignore — fall through to compare
+  }
+
+  try {
+    const cmp = await compareRefs({
+      host,
+      token,
+      owner,
+      repo,
+      base: baseRef,
+      head: headRef,
+      fetch: fetchFn,
+    });
+    const noCommitsToIntegrate =
+      cmp.totalCommits === 0 || (cmp.aheadBy !== null && cmp.aheadBy === 0);
+    if (noCommitsToIntegrate) {
+      await closePullRequest({ host, token, owner, repo, index, fetch: fetchFn });
+      return { merged: true, prHtmlUrl: attempt.prHtmlUrl };
+    }
+  } catch {
+    // compare failed — keep original merge failure
+  }
+
+  return attempt;
 }
 
 /**

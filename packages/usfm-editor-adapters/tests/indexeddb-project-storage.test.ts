@@ -40,11 +40,11 @@ describe('IndexedDbProjectStorage', () => {
     await s.createProject(sampleMeta('F1'));
     await s.writeFile('F1', 'manifest.yaml', 'hello');
     await expect(s.readFile('F1', 'manifest.yaml')).resolves.toBe('hello');
-    await s.writeFile('F1', 'checkings/stages.json', '{}');
+    await s.writeFile('F1', 'checking/stages.json', '{}');
     const all = await s.listFiles('F1');
-    expect(all.sort()).toEqual(['checkings/stages.json', 'manifest.yaml']);
-    const prefixed = await s.listFiles('F1', 'checkings/');
-    expect(prefixed).toEqual(['checkings/stages.json']);
+    expect(all.sort()).toEqual(['checking/stages.json', 'manifest.yaml']);
+    const prefixed = await s.listFiles('F1', 'checking/');
+    expect(prefixed).toEqual(['checking/stages.json']);
     await s.deleteFile('F1', 'manifest.yaml');
     await expect(s.readFile('F1', 'manifest.yaml')).resolves.toBeNull();
   });

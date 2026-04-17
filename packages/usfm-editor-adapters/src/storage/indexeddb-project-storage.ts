@@ -1,7 +1,8 @@
 import type { ProjectMeta, ProjectRelease, ProjectStorage } from '@usfm-tools/types';
 
 export const DEFAULT_PROJECT_STORAGE_DB_NAME = 'usfm-projects-v1';
-const DB_VERSION = 2;
+/** Bump when `ProjectMeta` shape needs migration (v3: lastRemoteCommit, pendingConflicts). */
+const DB_VERSION = 3;
 const STORE_PROJECTS = 'projects';
 const STORE_FILES = 'files';
 const STORE_RELEASES = 'releases';

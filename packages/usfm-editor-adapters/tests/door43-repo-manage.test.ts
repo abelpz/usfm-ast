@@ -62,7 +62,6 @@ describe('@usfm-tools/door43-rest repo-manage', () => {
           commit: { tree: { sha: 'tree-root' } },
         }),
       },
-      { ok: false, status: 404, json: async () => ({}) },
       {
         ok: true,
         status: 200,
@@ -88,11 +87,11 @@ describe('@usfm-tools/door43-rest repo-manage', () => {
       fetch: fetchMock as unknown as typeof fetch,
     });
     expect(out).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
     expect(String(fetchMock.mock.calls[0]![0])).toContain('/branches/main');
     expect(String(fetchMock.mock.calls[1]![0])).toContain('/repos/o/r');
     expect(String(fetchMock.mock.calls[2]![0])).toContain('/branches/master');
-    expect(String(fetchMock.mock.calls[3]![0])).toContain('/commits/master');
+    expect(String(fetchMock.mock.calls[3]![0])).toContain('/git/trees/tree-root');
   });
 
   it('listRepoGitTree resolves tree via git/commits when branch payload omits commit.tree', async () => {
@@ -164,7 +163,6 @@ describe('@usfm-tools/door43-rest repo-manage', () => {
           },
         }),
       },
-      { ok: false, status: 404, json: async () => ({}) },
       {
         ok: true,
         status: 200,
@@ -190,9 +188,9 @@ describe('@usfm-tools/door43-rest repo-manage', () => {
       fetch: fetchMock as unknown as typeof fetch,
     });
     expect(out).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(String(fetchMock.mock.calls[1]![0])).toContain('/commits/main');
-    expect(String(fetchMock.mock.calls[2]![0])).toContain(`/git/trees/${treeOid}`);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0]![0])).toContain('/branches/main');
+    expect(String(fetchMock.mock.calls[1]![0])).toContain(`/git/trees/${treeOid}`);
   });
 
   it('ensureRepoUsesMainDefaultBranch creates main from default and PATCHes default', async () => {

@@ -14,6 +14,38 @@ export interface ProjectSyncConfig {
   targetType: 'user' | 'org';
 }
 
+/**
+ * Pending merge conflict for a project file (persisted in IndexedDB so the dialog can resume).
+ * Text snapshots are raw USFM / JSON / YAML as applicable — not USJ.
+ */
+export interface FileConflict {
+  /** Stable id for UI resume (e.g. `${path}#${chapterIndices.join(',')}` or random UUID). */
+  conflictId: string;
+  /** Repo-relative path (local key, no `content/` prefix). */
+  path: string;
+  /** Chapters in conflict (USFM); empty for non-chapter files. */
+  chapterIndices: number[];
+  baseText: string;
+  oursText: string;
+  theirsText: string;
+}
+
+/**
+ * Sidecar JSON at `.sync/<BOOK>.json` (repo-relative). Anchors three-way merge and bundle import.
+ * Not embedded in USFM — survives round-trips without parser loss.
+ */
+export interface ProjectDocSyncSidecar {
+  schema: 1;
+  docId: string;
+  /** Last Tier-2 (book branch) commit this document was merged with. */
+  baseCommit?: string;
+  /** Git blob SHA of the USFM at `baseCommit` (optional, for CAS debugging). */
+  baseBlobSha?: string;
+  vectorClock?: Record<string, number>;
+  journalId?: string;
+  savedAt: string;
+}
+
 /** Metadata for a locally-stored translation project. */
 export interface ProjectMeta {
   /** User-chosen 3-8 letter uppercase ID (e.g. "RVR"). */
@@ -46,6 +78,13 @@ export interface ProjectMeta {
    * Drives catalog scripture auto-load and translation-helps discovery in the reference panel.
    */
   sourceRefLanguage?: string;
+  /**
+   * Last known remote commit SHA per branch ref (e.g. `{ tit: "abc…", main: "def…" }`).
+   * Used to detect when Tier-2 moved and to fetch a consistent `base` snapshot for 3-way merge.
+   */
+  lastRemoteCommit?: Record<string, string>;
+  /** Unresolved sync merge conflicts (cleared after user resolution + successful push). */
+  pendingConflicts?: FileConflict[];
 }
 
 /** A versioned snapshot release of a project. */
