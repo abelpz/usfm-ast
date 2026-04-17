@@ -1,0 +1,32 @@
+{
+  "name": "@usfm-tools/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Capacitor mobile shell for the USFM editor (Android + iOS)",
+  "type": "module",
+  "scripts": {
+    "build:web": "vite build",
+    "sync:android": "cap sync android",
+    "sync:ios": "cap sync ios",
+    "open:android": "cap open android",
+    "open:ios": "cap open ios",
+    "run:android": "cap run android",
+    "run:ios": "cap run ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/filesystem": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "@capacitor/network": "^7.0.0",
+    "@capacitor/preferences": "^7.0.0",
+    "@capacitor-community/sqlite": "^7.0.0",
+    "@usfm-tools/platform-adapters": "workspace:*",
+    "@usfm-tools/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
+    "typescript": "5.9.3",
+    "vite": "^6.0.0"
+  }
+}

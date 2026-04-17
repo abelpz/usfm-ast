@@ -1,0 +1,59 @@
+{
+  "name": "@usfm-tools/platform-adapters",
+  "version": "0.1.0",
+  "description": "Platform abstraction layer — swappable adapters for storage, KV settings, network, filesystem, and fonts across web, Tauri desktop, and Capacitor mobile",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./web": {
+      "types": "./dist/web/index.d.ts",
+      "import": "./dist/web/index.mjs",
+      "require": "./dist/web/index.js"
+    },
+    "./tauri": {
+      "types": "./dist/tauri/index.d.ts",
+      "import": "./dist/tauri/index.mjs",
+      "require": "./dist/tauri/index.js"
+    },
+    "./capacitor": {
+      "types": "./dist/capacitor/index.d.ts",
+      "import": "./dist/capacitor/index.mjs",
+      "require": "./dist/capacitor/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rimraf dist",
+    "check-types": "tsc --noEmit -p tsconfig.json",
+    "test": "jest"
+  },
+  "keywords": ["usfm", "platform", "adapter", "offline"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abelpz/usfm-ast.git",
+    "directory": "packages/platform-adapters"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@usfm-tools/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "jest": "^29.5.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.1.0",
+    "tsup": "^8.3.5",
+    "typescript": "5.9.3"
+  }
+}

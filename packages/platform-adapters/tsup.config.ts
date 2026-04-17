@@ -1,0 +1,55 @@
+import { defineConfig } from 'tsup';
+
+export default defineConfig([
+  {
+    tsconfig: './tsconfig.json',
+    entry: { index: 'src/index.ts' },
+    format: ['cjs', 'esm'],
+    dts: true,
+    splitting: false,
+    sourcemap: true,
+    clean: true,
+    external: ['@usfm-tools/types'],
+  },
+  {
+    tsconfig: './tsconfig.json',
+    entry: { 'web/index': 'src/web/index.ts' },
+    format: ['cjs', 'esm'],
+    dts: true,
+    splitting: false,
+    sourcemap: true,
+    external: ['@usfm-tools/types'],
+  },
+  {
+    tsconfig: './tsconfig.json',
+    entry: { 'tauri/index': 'src/tauri/index.ts' },
+    format: ['cjs', 'esm'],
+    dts: true,
+    splitting: false,
+    sourcemap: true,
+    external: [
+      '@usfm-tools/types',
+      '@tauri-apps/api',
+      '@tauri-apps/plugin-fs',
+      '@tauri-apps/plugin-shell',
+      '@tauri-apps/plugin-sql',
+      '@tauri-apps/plugin-store',
+    ],
+  },
+  {
+    tsconfig: './tsconfig.json',
+    entry: { 'capacitor/index': 'src/capacitor/index.ts' },
+    format: ['cjs', 'esm'],
+    dts: true,
+    splitting: false,
+    sourcemap: true,
+    external: [
+      '@usfm-tools/types',
+      '@capacitor/core',
+      '@capacitor/filesystem',
+      '@capacitor/network',
+      '@capacitor/preferences',
+      '@capacitor-community/sqlite',
+    ],
+  },
+]);
