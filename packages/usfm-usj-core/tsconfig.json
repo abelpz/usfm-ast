@@ -3,15 +3,8 @@
   "compilerOptions": {
     "lib": ["ES2020", "DOM"],
     "rootDir": "./src",
-    "outDir": "./dist",
-    "composite": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "module": "commonjs",
-    "noEmit": false
+    "noEmit": true
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "**/*.test.ts"],
-  "references": [{ "path": "../shared-types" }]
+  "exclude": ["dist", "**/*.test.ts"]
 }

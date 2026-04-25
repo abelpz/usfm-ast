@@ -16,7 +16,6 @@
   "references": [
     { "path": "../shared-types" },
     { "path": "../usfm-parser" },
-    { "path": "../usfm-adapters" },
-    { "path": "../usfm-usj-core" }
+    { "path": "../usfm-adapters" }
   ]
 }
