@@ -2,7 +2,7 @@
  * Word-level identity for alignment: verse sid + surface + occurrence within verse.
  */
 
-import { stripAlignments } from './alignment-layer';
+import { stripAlignments } from '@usfm-tools/usj-core';
 import { collectVerseTextsFromContent } from './verse-text';
 import { findVerseInlineNodes } from './verse-ref';
 import { tokenizeWords } from './word-diff';

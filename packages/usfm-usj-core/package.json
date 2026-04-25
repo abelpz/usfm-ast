@@ -1,7 +1,7 @@
 {
-  "name": "@usfm-tools/editor-core",
+  "name": "@usfm-tools/usj-core",
   "version": "0.1.0",
-  "description": "Chapter chunking, alignment layer, and structured editing helpers for USJ",
+  "description": "USJ document helpers: chapter slicing and alignment stripping (no editor / OT)",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,18 +11,9 @@
       "import": "./dist/index.js",
       "require": "./dist/index.js",
       "default": "./dist/index.js"
-    },
-    "./node": {
-      "types": "./dist/node.d.ts",
-      "import": "./dist/node.js",
-      "require": "./dist/node.js",
-      "default": "./dist/node.js"
     }
   },
-  "files": [
-    "dist",
-    "README.md"
-  ],
+  "files": ["dist", "README.md"],
   "scripts": {
     "build": "bun run clean && tsc --build",
     "build:watch": "tsc --build --watch",
@@ -33,32 +24,22 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@usfm-tools/adapters": "workspace:*",
-    "@usfm-tools/parser": "workspace:*",
-    "@usfm-tools/types": "workspace:*",
-    "@usfm-tools/usj-core": "workspace:*",
-    "isomorphic-git": "1.27.1"
+    "@usfm-tools/types": "workspace:*"
   },
   "devDependencies": {
-    "@types/ws": "^8.5.13",
     "@types/jest": "^29.5.0",
+    "@usfm-tools/parser": "workspace:*",
     "jest": "^29.5.0",
     "rimraf": "^5.0.0",
     "ts-jest": "^29.1.0",
-    "typescript": "^5.0.0",
-    "ws": "^8.18.0"
+    "typescript": "^5.0.0"
   },
-  "keywords": [
-    "usfm",
-    "usj",
-    "alignment",
-    "editor"
-  ],
+  "keywords": ["usfm", "usj", "scripture", "alignment"],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/abelpz/usfm-ast.git",
-    "directory": "packages/usfm-editor-core"
+    "directory": "packages/usfm-usj-core"
   },
   "publishConfig": {
     "access": "public"

@@ -5,16 +5,16 @@
 import { convertUSJDocumentToUSFM } from '@usfm-tools/adapters';
 import { USFMParser } from '@usfm-tools/parser';
 import type { AlignmentMap, EditableUSJ } from '@usfm-tools/types';
-import { stripAlignments } from './alignment-layer';
+import type { UsjDocument } from '@usfm-tools/usj-core';
+import { stripAlignments, splitUsjByChapter, type ChapterSlice } from '@usfm-tools/usj-core';
 import { applyOperations as applyContentOpsToNodes } from './operation-engine';
 import type { Operation } from './operations';
 import { rebuildAlignedUsj } from './rebuild-aligned';
-import { splitUsjByChapter, type ChapterSlice } from './chapter-chunker';
 import type { USFMRef } from './types';
 import { findVerseInlineNodes, usfmRefToVerseSid } from './verse-ref';
 import { diffUsjDocuments } from './document-diff';
 
-export type UsjDocument = { type: 'USJ'; version: string; content: unknown[] };
+export type { UsjDocument };
 
 export type DocumentChangeListener = (ops: Operation[], chapter: number | undefined) => void;
 

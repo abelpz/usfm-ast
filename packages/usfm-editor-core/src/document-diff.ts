@@ -3,7 +3,7 @@
  */
 
 import type { Operation } from './operations';
-import { splitUsjByChapter } from './chapter-chunker';
+import { splitUsjByChapter } from '@usfm-tools/usj-core';
 
 type UsjDoc = { type: 'USJ'; version: string; content: unknown[] };
 

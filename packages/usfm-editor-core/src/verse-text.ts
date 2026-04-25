@@ -2,7 +2,7 @@
  * Collect verse `sid` → plain text for alignment reconciliation after content edits.
  */
 
-import { appendGatewayText } from './gateway-text-spacing';
+import { appendGatewayText } from '@usfm-tools/usj-core';
 import { findVerseInlineNodes } from './verse-ref';
 
 function flattenInlineToText(nodes: unknown[]): string {

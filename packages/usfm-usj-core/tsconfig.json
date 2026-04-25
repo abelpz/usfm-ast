@@ -13,10 +13,5 @@
   },
   "include": ["src/**/*"],
   "exclude": ["dist", "**/*.test.ts"],
-  "references": [
-    { "path": "../shared-types" },
-    { "path": "../usfm-parser" },
-    { "path": "../usfm-adapters" },
-    { "path": "../usfm-usj-core" }
-  ]
+  "references": [{ "path": "../shared-types" }]
 }

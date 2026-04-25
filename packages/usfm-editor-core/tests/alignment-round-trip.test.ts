@@ -3,7 +3,7 @@ import { join } from 'path';
 import { convertUSJDocumentToUSFM } from '@usfm-tools/adapters';
 import { USFMParser } from '@usfm-tools/parser';
 import { rebuildAlignedUsj } from '../src/rebuild-aligned';
-import { stripAlignments } from '../src/alignment-layer';
+import { stripAlignments } from '@usfm-tools/usj-core';
 import { collectVerseTextsFromContent } from '../src/verse-text';
 
 const titAligned = join(__dirname, '../../usfm-parser/tests/fixtures/usfm/tit.tpl-aligned.usfm');
