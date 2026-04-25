@@ -7,14 +7,35 @@
  *
  * Optional: npm 9+ provenance — `npm publish --access public --provenance` from each
  * package directory when OIDC / token allow (see docs/16-production-readiness.md).
+ *
+ * 2FA: pass a one-time password for every `npm publish` call:
+ *   NPM_OTP=123456 node scripts/publish-scope.cjs @usfm-tools
+ *   node scripts/publish-scope.cjs @usfm-tools --otp=123456
+ * (Use a fresh code; npm may accept the same OTP for several publishes within its window.)
  */
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const prefix = process.argv[2];
+/** @param {string[]} argv */
+function parseArgs(argv) {
+  /** @type {string[]} */
+  const positionals = [];
+  let otp = process.env.NPM_OTP || '';
+  for (const a of argv) {
+    if (a.startsWith('--otp=')) {
+      otp = a.slice('--otp='.length);
+    } else if (!a.startsWith('-')) {
+      positionals.push(a);
+    }
+  }
+  return { prefix: positionals[0] || '', otp };
+}
+
+const { prefix, otp } = parseArgs(process.argv.slice(2));
 if (!prefix) {
-  console.error('Usage: node scripts/publish-scope.cjs <@scope-prefix>');
+  console.error('Usage: node scripts/publish-scope.cjs <@scope-prefix> [--otp=<code>]');
+  console.error('   or: NPM_OTP=<code> node scripts/publish-scope.cjs <@scope-prefix>');
   process.exit(1);
 }
 
@@ -106,7 +127,8 @@ function orderByWorkspaceDeps(pkgs) {
 }
 
 const pkgs = orderByWorkspaceDeps(loadScopePackages());
+const otpArg = otp ? ` --otp=${otp.replace(/[^\d]/g, '')}` : '';
 for (const { name, dir } of pkgs) {
   console.log(`Publishing ${name}…`);
-  execSync('npm publish --access public', { cwd: dir, stdio: 'inherit' });
+  execSync(`npm publish --access public${otpArg}`, { cwd: dir, stdio: 'inherit' });
 }
