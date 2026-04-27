@@ -1,0 +1,57 @@
+/**
+ * Minimal read-only scripture layout.
+ *
+ * For **Paratext-style marker typography** (\\s1, \\r, \\q1, …) reuse the editor theme CSS:
+ *
+ *   import '@usfm-tools/editor-themes/base.css';
+ *   import '@usfm-tools/editor-themes/markers.css';
+ *
+ * Install `@usfm-tools/editor-themes` in your app. `UsfmReadonlyView` defaults to
+ * `class="ProseMirror usfm-ro-root"` and `data-usfm-theme="document"` so the same
+ * `.ProseMirror .usfm-para[data-marker='…']` rules apply as in the ProseMirror editor.
+ */
+
+.usfm-ro-root {
+  white-space: pre-wrap;
+}
+
+.usfm-ro-root .usfm-verse {
+  display: inline;
+}
+
+.usfm-ro-root .usfm-verse-num {
+  font-weight: 600;
+  margin-right: 0.35em;
+  user-select: none;
+}
+
+.usfm-ro-root .usfm-para {
+  margin: 0.45em 0;
+}
+
+.usfm-ro-root .usfm-ro-footnote {
+  cursor: help;
+}
+
+.usfm-ro-root .usfm-tok {
+  white-space: pre-wrap;
+}
+
+.usfm-ro-root .usfm-tok--clickable {
+  cursor: pointer;
+}
+
+.usfm-ro-root .usfm-tok--usfmw {
+  font-weight: 500;
+}
+
+.usfm-ro-root[data-word-click] .usfm-tok--clickable {
+  cursor: pointer;
+}
+
+.usfm-ro-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  font-style: italic;
+  opacity: 0.75;
+}

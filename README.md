@@ -33,9 +33,12 @@ A comprehensive toolkit for working with **USFM** (Unified Standard Format Marke
 | `packages/shared-types` | `@usfm-tools/types` | Shared TypeScript interfaces and visitor base classes |
 | `packages/usfm-validator` | `@usfm-tools/validator` | USFM linting CLI (`usfm-validate`) |
 | `packages/usfm-cli` | `@usfm-tools/cli` | `usfm parse` CLI — parse to USJ |
+| `packages/usfm-usj-core` | `@usfm-tools/usj-core` | USJ helpers: chapter slices, alignment strip/rebuild glue, gateway spacing (no editor / OT) |
 | `packages/usfm-editor-core` | `@usfm-tools/editor-core` | Document store, alignment layer, chapter slices, structured editing |
 | `packages/usfm-editor` | `@usfm-tools/editor` | ProseMirror USJ editor (headless): schema, USJ ↔ PM, alignment helpers |
 | `packages/usfm-editor-app` | `@usfm-tools/editor-app` (private) | Browser test app for the editor + alignment tool (`bun run editor-app`) |
+| `packages/usfm-readonly-react` | `@usfm-tools/usfm-readonly-react` | Read-only USFM → React (`UsfmReadonlyView`; no ProseMirror) |
+| `packages/demo-usfm-readonly` | `demo-usfm-readonly` (private) | Vite demo for the read-only reader (`bun run readonly-demo`) |
 | `packages/usj-core` | `@usj-tools/core` | `validateUsjStructure` — structural USJ validation |
 | `packages/usj-validator` | `@usj-tools/validator` | Re-exports `validateUsjStructure` |
 | `packages/usj-cli` | `@usj-tools/cli` | `usj pretty` / `usj validate` CLIs |
@@ -542,6 +545,9 @@ packages/
   usfm-editor-core/ @usfm-tools/editor-core — document store + alignment editing
   usfm-editor/      @usfm-tools/editor      — ProseMirror USJ editor (headless)
   usfm-editor-app/  @usfm-tools/editor-app  — browser test app (private)
+  usfm-usj-core/     @usfm-tools/usj-core    — chapter slices + alignment strip helpers
+  usfm-readonly-react/ @usfm-tools/usfm-readonly-react — read-only React USFM view
+  demo-usfm-readonly/ —                       — Vite demo for read-only reader (private)
   usj-core/         @usj-tools/core         — validateUsjStructure
   usj-validator/    @usj-tools/validator    — re-exports usj-core
   usj-cli/          @usj-tools/cli          — usj pretty / validate CLIs
@@ -562,6 +568,7 @@ packages/
 - [Package: @usfm-tools/parser](./packages/usfm-parser/README.md)
 - [Package: @usfm-tools/editor-core](./packages/usfm-editor-core/README.md)
 - [Package: @usfm-tools/editor (ProseMirror)](./packages/usfm-editor/README.md)
+- [Package: @usfm-tools/usfm-readonly-react](./packages/usfm-readonly-react/README.md)
 
 ---
 

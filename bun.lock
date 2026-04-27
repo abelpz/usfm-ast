@@ -26,6 +26,25 @@
         "usfm3": "0.1.8",
       },
     },
+    "packages/demo-usfm-readonly": {
+      "name": "demo-usfm-readonly",
+      "version": "0.0.1",
+      "dependencies": {
+        "@usfm-tools/editor-themes": "workspace:*",
+        "@usfm-tools/parser": "workspace:*",
+        "@usfm-tools/usfm-readonly-react": "workspace:*",
+        "@usfm-tools/usj-core": "workspace:*",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+      },
+      "devDependencies": {
+        "@types/react": "^19.0.10",
+        "@types/react-dom": "^19.0.4",
+        "@vitejs/plugin-react": "^4.3.4",
+        "typescript": "~5.6.0",
+        "vite": "^6.0.0",
+      },
+    },
     "packages/help-markdown": {
       "name": "@usfm-tools/help-markdown",
       "version": "0.1.0",
@@ -371,6 +390,26 @@
         "typescript": "5.9.3",
         "vite": "^6.0.0",
       },
+    },
+    "packages/usfm-readonly-react": {
+      "name": "@usfm-tools/usfm-readonly-react",
+      "version": "0.1.0",
+      "dependencies": {
+        "@usfm-tools/parser": "workspace:*",
+        "@usfm-tools/usj-core": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/react": "^19.0.10",
+        "react": "^19.0.0",
+        "typescript": "^5.6.0",
+      },
+      "peerDependencies": {
+        "@usfm-tools/editor-themes": ">=0.1.0",
+        "react": ">=18.0.0 <21",
+      },
+      "optionalPeers": [
+        "@usfm-tools/editor-themes",
+      ],
     },
     "packages/usfm-relay-server": {
       "name": "@usfm-tools/relay-server",
@@ -1164,6 +1203,8 @@
 
     "@usfm-tools/types": ["@usfm-tools/types@workspace:packages/shared-types"],
 
+    "@usfm-tools/usfm-readonly-react": ["@usfm-tools/usfm-readonly-react@workspace:packages/usfm-readonly-react"],
+
     "@usfm-tools/usj-core": ["@usfm-tools/usj-core@workspace:packages/usfm-usj-core"],
 
     "@usfm-tools/validator": ["@usfm-tools/validator@workspace:packages/usfm-validator"],
@@ -1407,6 +1448,8 @@
     "defu": ["defu@6.1.7", "", {}, "sha512-7z22QmUWiQ/2d0KkdYmANbRUVABpZ9SNYyH5vx6PZ+nE5bcC0l7uFvEfHlyld/HcGBFTL536ClDt3DEcSlEJAQ=="],
 
     "delayed-stream": ["delayed-stream@1.0.0", "", {}, "sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ=="],
+
+    "demo-usfm-readonly": ["demo-usfm-readonly@workspace:packages/demo-usfm-readonly"],
 
     "dequal": ["dequal@2.0.3", "", {}, "sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA=="],
 
@@ -2557,6 +2600,8 @@
     "compression/safe-buffer": ["safe-buffer@5.2.1", "", {}, "sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ=="],
 
     "cssstyle/rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
+
+    "demo-usfm-readonly/typescript": ["typescript@5.6.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-hjcS1mhfuyi4WW8IWtjP7brDrG2cuDZukyrYrSauoXGNgx0S7zceP07adYkJycEr56BOUTNPzbInooiN3fn1qw=="],
 
     "escodegen/source-map": ["source-map@0.6.1", "", {}, "sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g=="],
 
