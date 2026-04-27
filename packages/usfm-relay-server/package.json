@@ -5,11 +5,11 @@
   "description": "Cloudflare Workers WebSocket relay for USFM real-time collaboration",
   "main": "src/index.ts",
   "scripts": {
-    "build": "wrangler deploy --dry-run --outdir dist",
+    "build": "node ./node_modules/wrangler/bin/wrangler.js deploy --dry-run --outdir dist",
     "check-types": "tsc --noEmit",
     "clean": "rimraf dist .wrangler",
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
+    "deploy": "node ./node_modules/wrangler/bin/wrangler.js deploy",
+    "dev": "node ./node_modules/wrangler/bin/wrangler.js dev",
     "lint": "eslint src tests --ext .ts",
     "lint:fix": "eslint src tests --ext .ts --fix",
     "test": "vitest run"
