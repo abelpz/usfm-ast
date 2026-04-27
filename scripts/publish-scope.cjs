@@ -39,6 +39,13 @@ if (!prefix) {
   process.exit(1);
 }
 
+if (/^@[a-z0-9-]+$/i.test(prefix)) {
+  const org = prefix.slice(1);
+  console.warn(
+    `publish-scope: Publishing under "${prefix}". If npm returns E404 on PUT, create the npm org "${org}" and add your user with publish access: https://www.npmjs.com/org/create`,
+  );
+}
+
 const root = path.join(__dirname, '..', 'packages');
 
 /** @typedef {{ name: string, dir: string, json: Record<string, unknown> }} Pkg */
