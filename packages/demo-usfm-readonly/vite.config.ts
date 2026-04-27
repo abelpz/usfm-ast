@@ -20,10 +20,9 @@ function resolveUsfmToolsPackage(pkg: '@usfm-tools/usj-core' | '@usfm-tools/pars
 }
 
 /**
- * @usfm-tools/usj-core and @usfm-tools/parser ship CJS in dist but their
- * package.json "exports"."import" points at those files. Vite can treat them as
- * native ESM and the browser hits `exports is not defined`. Force pre-bundle +
- * interop in dev; Rollup still needs CJS handling for production.
+ * @usfm-tools/parser ships CJS; pre-bundle + interop avoids `exports is not defined` in dev.
+ * @usfm-tools/usj-core is real ESM (index.mjs); do not force `needsInterop` on it or namespace
+ * imports break (no synthetic `default`).
  *
  * **Dev only:** alias `@usfm-tools/usfm-readonly-react` → `src/` so edits apply without
  * rebuilding `dist/`. **Build** must use the real package (`exports` → `dist/`) so
@@ -70,8 +69,8 @@ export default defineConfig(({ command }) => {
       },
     },
     optimizeDeps: {
-      include: ['@usfm-tools/usj-core', '@usfm-tools/parser'],
-      needsInterop: ['@usfm-tools/usj-core', '@usfm-tools/parser'],
+      include: ['@usfm-tools/parser'],
+      needsInterop: ['@usfm-tools/parser'],
     },
     build: {
       commonjsOptions: {

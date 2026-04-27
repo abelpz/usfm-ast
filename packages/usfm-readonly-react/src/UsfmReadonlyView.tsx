@@ -7,20 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { ChapterSlice, UsjDocument } from '@usfm-tools/usj-core';
-import * as UsjCoreNs from '@usfm-tools/usj-core';
-import { cjsNamed } from './interop.js';
-
-const splitUsjByChapter = cjsNamed<
-  (doc: { content?: unknown[] }) => ChapterSlice[]
->(UsjCoreNs, 'splitUsjByChapter');
-
-const stripAlignments = cjsNamed<
-  (doc: {
-    type?: string;
-    version?: string;
-    content?: unknown[];
-  }) => { editable: unknown }
->(UsjCoreNs, 'stripAlignments');
+import { splitUsjByChapter, stripAlignments } from '@usfm-tools/usj-core';
 import { collectSegments, type RenderSegment } from './segments.js';
 import { parseUsfmToUsj, type ParseUsfmOptions } from './parseUsfm.js';
 import { scriptureSelectionFromDom, type ScriptureSelectionRef } from './selectionRef.js';

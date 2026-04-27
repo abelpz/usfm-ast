@@ -1,5 +1,5 @@
 import type { UsjDocument } from '@usfm-tools/usj-core';
-import * as UsjCoreNs from '@usfm-tools/usj-core';
+import { stripAlignments } from '@usfm-tools/usj-core';
 import * as ParserNs from '@usfm-tools/parser';
 import { cjsNamed } from './interop.js';
 
@@ -9,14 +9,6 @@ const USFMParser = cjsNamed<
     toJSON(): unknown;
   }
 >(ParserNs, 'USFMParser');
-
-const stripAlignments = cjsNamed<
-  (doc: {
-    type?: string;
-    version?: string;
-    content?: unknown[];
-  }) => { editable: unknown }
->(UsjCoreNs, 'stripAlignments');
 
 export type ParseUsfmOptions = {
   /**

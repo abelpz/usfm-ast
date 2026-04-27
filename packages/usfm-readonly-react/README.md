@@ -67,7 +67,7 @@ Use `stripAlignment={false}` when you need alignment milestones preserved in USJ
 
 ## Bundling (Vite / Rollup)
 
-`@usfm-tools/parser` and `@usfm-tools/usj-core` ship as CommonJS `exports` without reliable ESM named re-exports. This package uses a tiny **`cjsNamed()`** helper (`src/interop.ts`) with `import * as ns` so production bundles (e.g. Vite `build`) resolve correctly.
+`@usfm-tools/parser` still resolves as CJS in many bundlers without reliable ESM named metadata. **`parseUsfm.ts`** uses a tiny **`cjsNamed()`** helper (`src/interop.ts`) with `import * as ns` for the parser only. **`@usfm-tools/usj-core`** is consumed with normal **named imports** (it ships ESM via `dist/index.mjs`).
 
 ## Theming
 

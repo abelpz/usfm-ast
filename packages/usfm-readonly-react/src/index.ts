@@ -1,6 +1,3 @@
-import * as UsjCoreNs from '@usfm-tools/usj-core';
-import { cjsNamed } from './interop.js';
-
 export { UsfmReadonlyView, type UsfmReadonlyViewProps, type WordClickPayload } from './UsfmReadonlyView.js';
 export { normalizeWordIdentity } from './wordTokens.js';
 export { parseUsfmToUsj, type ParseUsfmOptions } from './parseUsfm.js';
@@ -16,8 +13,5 @@ export {
   type ScriptureSelectionWordToken,
 } from './selectionRef.js';
 
-export const splitUsjByChapter = cjsNamed<
-  (doc: { content?: unknown[] }) => import('@usfm-tools/usj-core').ChapterSlice[]
->(UsjCoreNs, 'splitUsjByChapter');
-
+export { splitUsjByChapter } from '@usfm-tools/usj-core';
 export type { ChapterSlice, UsjDocument } from '@usfm-tools/usj-core';
