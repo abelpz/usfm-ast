@@ -1,5 +1,13 @@
 /**
- * Per-file three-way merge for local project sync (USJ OT + resolvable-conflict filter).
+ * Per-file three-way merge for local project sync.
+ *
+ * Merge strategy (Phase 6 — CRDT-first):
+ *   1. USFM files: if companion `.ybin` (Yjs state) exists for all three
+ *      revisions, the CRDT 3-way merge is used — always deterministic, never
+ *      conflicts.  OT (`transformOpLists`) is the fallback when CRDT history
+ *      is absent or corrupted (e.g. files from before Phase 4 deployment).
+ *   2. `.ybin` files: always merged via `mergeYjsBase64ThreeWay`.
+ *   3. Everything else: journal JSONL, YAML manifest, JSON, binary (unchanged).
  */
 
 import { convertUSJDocumentToUSFM } from '@usfm-tools/adapters';
@@ -16,7 +24,7 @@ import {
 import type { FileConflict } from '@usfm-tools/types';
 import { mergeJournalJsonlThreeWay } from './storage/journal-jsonl';
 import { affectedChaptersFromUsfm } from './usfm-chapter-affect';
-import { isYbinPath } from './crdt-paths';
+import { isYbinPath, crdtPathFromUsfm } from './crdt-paths';
 import { mergeYjsBase64ThreeWay } from './yjs-codec';
 import * as jsYaml from 'js-yaml';
 
@@ -615,6 +623,27 @@ export function mergeProjectMaps(opts: {
     }
 
     const b = base ?? '';
+
+    // Phase 6: CRDT-first merge for USFM files.
+    // When all three revisions have a companion `.ybin` (Yjs state), use the
+    // CRDT 3-way merge as the primary strategy — it is always deterministic and
+    // never produces a conflict.  Fall through to OT only when CRDT history is
+    // absent (e.g. files written before Phase 4 was deployed) or corrupted.
+    if (isUsfmPath(path)) {
+      const ybinPath = crdtPathFromUsfm(path);
+      const ybinBase = opts.getBase(ybinPath);
+      const ybinOurs = opts.getOurs(ybinPath);
+      const ybinTheirs = opts.getTheirs(ybinPath);
+      if (ybinBase !== undefined && ybinOurs !== undefined && ybinTheirs !== undefined) {
+        const crdtResult = mergeYjsBase64ThreeWay(ybinBase, ybinOurs, ybinTheirs);
+        if (crdtResult.kind === 'merged') {
+          merged.set(path, crdtResult.usfm);
+          continue;
+        }
+        // CRDT merge returned an error (corrupted state) — fall through to OT.
+      }
+    }
+
     const r = mergeFileContent({ path, base: b, ours, theirs });
     if (r.kind === 'merged') {
       merged.set(path, r.text);

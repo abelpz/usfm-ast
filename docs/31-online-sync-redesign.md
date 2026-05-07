@@ -436,16 +436,24 @@ Implement a browser `GitLocalPersistenceAdapter` over OPFS/LightningFS. Implemen
 
 Flip [`useLocalProjectSync`](../packages/usfm-editor-app/src/hooks/useLocalProjectSync.ts) and [`dcs-project-sync.ts`](../packages/usfm-editor-app/src/lib/dcs-project-sync.ts) to call the Git adapter with the CRDT-aware merge driver. Keep REST as a transport fallback for environments without smart-HTTP access. Validate all acceptance criteria (§11).
 
-### Phase 6 — Decommission REST anchors and OT bridges
+### Phase 6 — CRDT-first merge (OT as fallback) ✅ **delivered**
 
-Remove:
+**Delivered:** `mergeProjectMaps` now uses CRDT as the primary merge strategy for USFM files.
+When all three revisions (base / ours / theirs) have a companion `.ybin` (Yjs state), the
+`mergeYjsBase64ThreeWay` result drives the USFM output — always deterministic, never a
+user-visible conflict. OT (`diffUsjDocuments` + `transformOpLists`) remains the fallback when
+`.ybin` companions are absent (files written before Phase 4 deployment) or corrupted.
+
+Touched:
+- `packages/usfm-editor-adapters/src/three-way-merge-project.ts` — CRDT-first branch in `mergeProjectMaps`
+- `packages/usfm-editor-adapters/tests/yjs-codec.test.ts` — 4 new Phase 6 tests (24/24 pass)
+
+**Deferred to Phase 6b** (full REST anchor decommission, once CRDT path has soaked in production):
 - Per-blob CAS (`expectedBaseShaByPath` push loop).
 - `lastRemoteCommit`, `lastPushedCommit`, `lastMergedBaseCommit` from `ProjectMeta`.
 - Persisted `pendingConflicts`.
-- Tier-1 branch creation and the `autoMergeToDcs` Tier-1 → Tier-2 hop.
-- The snapshot-OT bridge in `three-way-merge-project.ts` (`diffUsjDocuments` + `transformOpLists`); the per-key/object merges (`journal/*.jsonl`, `*.json`, `*.yaml`) remain.
-
-All sync logic collapses to: ref OIDs, object reachability, `Y.applyUpdate`, `mergeProjectMaps` for non-CRDT file kinds.
+- Remove `autoMergeToDcs` entirely (deprecated in Phase 5).
+- Remove OT bridge entirely once CRDT history coverage is confirmed.
 
 ### Phase 7 — Peer transport (first-class)
 

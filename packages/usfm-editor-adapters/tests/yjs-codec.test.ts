@@ -4,7 +4,7 @@ import {
   mergeYjsBase64ThreeWay,
 } from '../src/yjs-codec';
 import { isYbinPath, crdtPathFromUsfm, usfmPathFromCrdt } from '../src/crdt-paths';
-import { mergeFileContent } from '../src/three-way-merge-project';
+import { mergeFileContent, mergeProjectMaps } from '../src/three-way-merge-project';
 
 // ---------------------------------------------------------------------------
 // crdt-paths
@@ -207,5 +207,105 @@ describe('mergeFileContent — .ybin dispatch', () => {
     if (result.kind === 'merged') {
       expect(result.text).toBe(state);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 6: mergeProjectMaps — CRDT-first for USFM when .ybin companions exist
+// ---------------------------------------------------------------------------
+
+describe('mergeProjectMaps — Phase 6 CRDT-first for USFM', () => {
+  const USFM_PATH = 'files/TIT.usfm';
+  const YBIN_PATH = 'crdt/TIT.ybin';
+
+  function makeRevision(usfm: string) {
+    return { usfm, ybin: usfmToYjsBase64(usfm) };
+  }
+
+  it('uses CRDT merge when all three .ybin companions exist — no OT, no conflict', () => {
+    const base = makeRevision('\id TIT\n\c 1\n\p\n\v 1 Base.\n');
+    const ours = makeRevision('\id TIT\n\c 1\n\p\n\v 1 Ours edit.\n');
+    const theirs = makeRevision('\id TIT\n\c 1\n\p\n\v 1 Base.\n\v 2 Theirs added.\n');
+
+    const files = new Map([
+      [USFM_PATH + ':base', base.usfm], [USFM_PATH + ':ours', ours.usfm], [USFM_PATH + ':theirs', theirs.usfm],
+      [YBIN_PATH + ':base', base.ybin], [YBIN_PATH + ':ours', ours.ybin], [YBIN_PATH + ':theirs', theirs.ybin],
+    ]);
+
+    const result = mergeProjectMaps({
+      paths: new Set([USFM_PATH, YBIN_PATH]),
+      getBase: (p) => files.get(p + ':base'),
+      getOurs: (p) => files.get(p + ':ours'),
+      getTheirs: (p) => files.get(p + ':theirs'),
+    });
+
+    expect(result.conflicts).toHaveLength(0);
+    expect(result.merged.has(USFM_PATH)).toBe(true);
+    const mergedUsfm = result.merged.get(USFM_PATH)!;
+    // CRDT merge silently combines both edits
+    expect(mergedUsfm).toContain('Ours edit');
+    expect(mergedUsfm).toContain('Theirs added');
+  });
+
+  it('falls back to OT merge when .ybin companions are absent', () => {
+    // Only USFM paths — no .ybin in the file set
+    const base = '\id TIT\n\c 1\n\p\n\v 1 Base.\n';
+    const ours = '\id TIT\n\c 1\n\p\n\v 1 Ours.\n';
+    const theirs = '\id TIT\n\c 1\n\p\n\v 1 Base.\n';
+
+    const result = mergeProjectMaps({
+      paths: new Set([USFM_PATH]),
+      getBase: (p) => p === USFM_PATH ? base : undefined,
+      getOurs: (p) => p === USFM_PATH ? ours : undefined,
+      getTheirs: (p) => p === USFM_PATH ? theirs : undefined,
+    });
+
+    // base===theirs → OT one-sided shortcut → merged to ours
+    expect(result.conflicts).toHaveLength(0);
+    expect(result.merged.get(USFM_PATH)).toBeTruthy();
+  });
+
+  it('fast-forward: when only theirs changed, CRDT merge returns theirs content', () => {
+    const base = makeRevision('\id TIT\n\c 1\n\p\n\v 1 Base.\n');
+    const ours = makeRevision('\id TIT\n\c 1\n\p\n\v 1 Base.\n'); // unchanged
+    const theirs = makeRevision('\id TIT\n\c 1\n\p\n\v 1 Theirs only.\n');
+
+    const files = new Map([
+      [USFM_PATH + ':base', base.usfm], [USFM_PATH + ':ours', ours.usfm], [USFM_PATH + ':theirs', theirs.usfm],
+      [YBIN_PATH + ':base', base.ybin], [YBIN_PATH + ':ours', ours.ybin], [YBIN_PATH + ':theirs', theirs.ybin],
+    ]);
+
+    const result = mergeProjectMaps({
+      paths: new Set([USFM_PATH, YBIN_PATH]),
+      getBase: (p) => files.get(p + ':base'),
+      getOurs: (p) => files.get(p + ':ours'),
+      getTheirs: (p) => files.get(p + ':theirs'),
+    });
+
+    expect(result.conflicts).toHaveLength(0);
+    expect(result.merged.get(USFM_PATH)).toContain('Theirs only');
+  });
+
+  it('both .ybin and .usfm appear in merged output when CRDT path taken', () => {
+    const base = makeRevision('\id TIT\n\c 1\n\p\n\v 1 Base.\n');
+    const ours = makeRevision('\id TIT\n\c 1\n\p\n\v 1 Ours.\n');
+    const theirs = makeRevision('\id TIT\n\c 1\n\p\n\v 1 Base.\n');
+
+    const files = new Map([
+      [USFM_PATH + ':base', base.usfm], [USFM_PATH + ':ours', ours.usfm], [USFM_PATH + ':theirs', theirs.usfm],
+      [YBIN_PATH + ':base', base.ybin], [YBIN_PATH + ':ours', ours.ybin], [YBIN_PATH + ':theirs', theirs.ybin],
+    ]);
+
+    const result = mergeProjectMaps({
+      paths: new Set([USFM_PATH, YBIN_PATH]),
+      getBase: (p) => files.get(p + ':base'),
+      getOurs: (p) => files.get(p + ':ours'),
+      getTheirs: (p) => files.get(p + ':theirs'),
+    });
+
+    expect(result.conflicts).toHaveLength(0);
+    // Both USFM and .ybin paths produced merged output
+    expect(result.merged.has(USFM_PATH)).toBe(true);
+    expect(result.merged.has(YBIN_PATH)).toBe(true);
   });
 });
