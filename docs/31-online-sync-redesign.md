@@ -407,7 +407,16 @@ Implement a browser `GitLocalPersistenceAdapter` over OPFS/LightningFS. Implemen
 
 ### Phase 3 — Unified MergeAttempt + 3-pane UX
 
-Introduce `MergeAttempt` in `shared-types`. Build `ThreePaneConflictView` in `packages/usfm-editor-app/src/components/conflict-renderers/` as a shared component with Ours / Theirs / Custom panes. Rewire `SyncConflictDialog`, `ConflictSolverPanel`, and `ChapterConflictReviewPanel` to consume `MergeAttempt`. Route bundle import through the same primitive. Remove persisted `pendingConflicts` from `ProjectMeta`.
+**Partial ✓ — `ThreePaneConflictView` + Custom mode delivered.**
+
+- **Delivered:** `packages/usfm-editor-app/src/components/conflict-renderers/ThreePaneConflictView.tsx` — Ours (read-only) | Theirs (read-only) | Custom (editable) layout. Pre-populates the editable pane from the auto-stitch result (or `oursText` as fallback). Shows live line-diff badges against Ours/Theirs. Copy-from-side buttons.
+- **Delivered:** `ConflictSolverPanel` extended with a `'custom'` mode (Pencil button, keyboard shortcut `3`). When custom mode is active, `ThreePaneConflictView` replaces the paragraph-pick renderer; applying calls `onResolve(path, 'merged', customText)`.
+
+**Still pending:**
+- Introduce `MergeAttempt` in `shared-types` as a typed carrier for three-way merge outcomes.
+- Rewire `ChapterConflictReviewPanel` to consume `MergeAttempt`.
+- Route bundle import through the same conflict primitive.
+- Remove persisted `pendingConflicts` from `ProjectMeta` (gated on full CRDT phase).
 
 ### Phase 4 — CRDT (Yjs) as in-editor model
 
