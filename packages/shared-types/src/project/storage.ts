@@ -109,6 +109,13 @@ export interface ProjectMeta {
    * Key = book branch name. Stored for debug and future optimization.
    */
   lastMergedBaseCommit?: Record<string, string>;
+  /**
+   * Maps DCS commit OIDs → local `BrowserGitAdapter` commit OIDs for snapshots that
+   * have been committed into the per-project local git repo.
+   * Used by Phase 3 of the sync redesign to read base-tree files from local storage
+   * instead of round-tripping to DCS for `pullFilesAt(baseRef)`.
+   */
+  localGitOidByDcsRef?: Record<string, string>;
   /** Unresolved sync merge conflicts (cleared after user resolution + successful push). */
   pendingConflicts?: FileConflict[];
   /**

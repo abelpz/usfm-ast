@@ -7,6 +7,7 @@ import {
   mergePullRequestOrCloseIfNothingToMerge,
   compareRefs,
 } from '@usfm-tools/door43-rest';
+import type { IBrowserGitAdapter } from './browser-git-adapter';
 import { isProjectPushStale } from '@usfm-tools/types';
 import type {
   FileConflict,
@@ -469,8 +470,14 @@ const _syncPending = new Set<string>();
  * A second call that arrives while the first is in-flight queues one trailing
  * follow-up; additional callers share that queued promise.
  *
- * Updates `lastRemoteCommit[tier2]` and `lastPushedCommit[tier2]` after a
- * successful merge+push.
+ * **Local git (Phase 3):** when `gitAdapter` is supplied, the base-tree snapshot
+ * is read from the local git clone instead of fetching from DCS over REST.  After a
+ * successful push the merged file set is committed into the local repo and the
+ * `localGitOidByDcsRef` mapping in `ProjectMeta` is updated so future syncs can
+ * skip the base-tree REST call.
+ *
+ * Updates `lastRemoteCommit[tier2]`, `lastPushedCommit[tier2]`, and (when
+ * `gitAdapter` is provided) `localGitOidByDcsRef` after a successful merge+push.
  */
 export async function syncLocalProjectWithDcs(options: {
   storage: ProjectStorage;
@@ -479,6 +486,14 @@ export async function syncLocalProjectWithDcs(options: {
   sync: ProjectSyncConfig;
   username: string;
   bookCode?: string;
+  /**
+   * Optional local git adapter (Phase 3).  When supplied:
+   * - base-tree files are read from the local clone when a snapshot is available,
+   *   avoiding a REST `pullFilesAt` round-trip.
+   * - the merged file set is committed into the local clone after a successful push
+   *   so subsequent syncs can use the local snapshot.
+   */
+  gitAdapter?: IBrowserGitAdapter;
 }): Promise<SyncLocalProjectWithDcsResult> {
   const { projectId, sync, bookCode } = options;
   const tier2 = bookCode ? bookBranchName(bookCode) : sync.branch;
@@ -486,8 +501,6 @@ export async function syncLocalProjectWithDcs(options: {
 
   const existing = _syncInFlight.get(mutexKey);
   if (existing) {
-    // An in-flight sync is already running for this (project, branch). Queue at
-    // most one follow-up so we don't stack unboundedly.
     if (!_syncPending.has(mutexKey)) {
       _syncPending.add(mutexKey);
       const followUp = existing.then(() => {
@@ -496,7 +509,6 @@ export async function syncLocalProjectWithDcs(options: {
       });
       return followUp;
     }
-    // Already queued — just wait for whatever is in-flight (including the pending).
     return existing;
   }
 
@@ -522,6 +534,7 @@ async function _syncOnce(options: {
   sync: ProjectSyncConfig;
   username: string;
   bookCode?: string;
+  gitAdapter?: IBrowserGitAdapter;
 }): Promise<SyncLocalProjectWithDcsResult> {
   const { storage, projectId, token, sync, username, bookCode } = options;
 
@@ -617,10 +630,20 @@ async function _syncOnce(options: {
     const baseRef = mergeBaseOid ?? lastBase ?? tier2HeadSha;
 
     const theirsFiles = await adapterTier2.pullFilesAt(tier2HeadSha);
-    const baseFiles: Map<string, string> =
-      baseRef === tier2HeadSha
-        ? new Map(theirsFiles)
-        : await adapterTier2.pullFilesAt(baseRef);
+
+    // Phase 3: read base files from local git when a snapshot for this DCS OID is cached,
+    // avoiding a REST round-trip for `pullFilesAt(baseRef)`.
+    let baseFiles: Map<string, string>;
+    const localBaseOid = options.gitAdapter
+      ? (meta.localGitOidByDcsRef?.[baseRef] ?? null)
+      : null;
+    if (options.gitAdapter && localBaseOid) {
+      baseFiles = await options.gitAdapter.readFilesAt(localBaseOid);
+    } else if (baseRef === tier2HeadSha) {
+      baseFiles = new Map(theirsFiles);
+    } else {
+      baseFiles = await adapterTier2.pullFilesAt(baseRef);
+    }
 
     const oursFiles = await gatherProjectFileMap(storage, projectId);
     const allPaths = new Set<string>([
@@ -700,12 +723,33 @@ async function _syncOnce(options: {
         expectedBaseShaByPath,
       });
 
+      // Phase 3: commit the merged file snapshot into the local git adapter so
+      // subsequent syncs can read the base tree locally without a REST round-trip.
+      let newLocalOidByDcsRef: Record<string, string> | undefined;
+      if (options.gitAdapter) {
+        try {
+          const mergedMap = await gatherProjectFileMap(storage, projectId);
+          const localOid = await options.gitAdapter.commitAll(
+            mergedMap,
+            `sync ${tier2HeadSha.slice(0, 8)}`,
+            { name: username, email: `${username}@local` },
+          );
+          newLocalOidByDcsRef = {
+            ...(meta.localGitOidByDcsRef ?? {}),
+            [tier2HeadSha]: localOid,
+          };
+        } catch {
+          // Non-fatal — local git snapshot failure does not block the sync result.
+        }
+      }
+
       // Record the Tier-2 tip we synced from and the conservative lastPushedCommit.
       // The hook will overwrite lastPushedCommit with the post-autoMerge Tier-2 head
       // once autoMergeToDcs succeeds, giving us the most accurate anchor.
       await storage.updateProject(projectId, {
         lastRemoteCommit: { ...(meta.lastRemoteCommit ?? {}), [tier2]: tier2HeadSha },
         lastPushedCommit: { ...(meta.lastPushedCommit ?? {}), [tier2]: tier2HeadSha },
+        ...(newLocalOidByDcsRef ? { localGitOidByDcsRef: newLocalOidByDcsRef } : {}),
         pendingConflicts: [],
       });
 

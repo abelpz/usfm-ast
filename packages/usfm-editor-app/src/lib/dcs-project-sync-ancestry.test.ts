@@ -345,3 +345,133 @@ describe('syncLocalProjectWithDcs — ancestry-aware (Phase 1)', () => {
     expect(_compareRefsCallArgs.length).toBeLessThanOrEqual(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 3: local git adapter integration
+// ---------------------------------------------------------------------------
+
+describe('syncLocalProjectWithDcs — local git adapter (Phase 3)', () => {
+  beforeEach(() => {
+    _compareRefsCallArgs = [];
+    _compareRefsTotalCommits = 1;
+    _compareRefsMergeBase = 'mb-sha';
+    _pullFilesAtCalls = [];
+    _returnConflicts = false;
+    _pushCallCount = 0;
+    _remoteHeadSha = 'remote-head-sha';
+  });
+
+  /** Build a minimal IBrowserGitAdapter stub. */
+  function makeGitAdapter(snapshots: Map<string, Map<string, string>> = new Map()) {
+    const commits = new Map<string, Map<string, string>>(snapshots);
+    let counter = 0;
+    return {
+      async headCommit() { return counter > 0 ? `local-oid-${counter}` : null; },
+      async readFilesAt(ref: string) { return commits.get(ref) ?? new Map<string, string>(); },
+      async commitAll(files: Map<string, string>, _msg: string) {
+        counter++;
+        const oid = `local-oid-${counter}`;
+        commits.set(oid, new Map(files));
+        return oid;
+      },
+      async clone() {},
+      async fetch() {},
+      async push() {},
+      _commits: commits,
+      _counter: () => counter,
+    };
+  }
+
+  test('reads base from local git when localGitOidByDcsRef has mapping for baseRef', async () => {
+    // Pre-seed: local git has the base snapshot for 'mb-sha' mapped to 'local-base-oid'
+    const localBaseFiles = new Map([['files/TIT.usfm', '\\id TIT — local base\n']]);
+    const gitAdapter = makeGitAdapter(new Map([['local-base-oid', localBaseFiles]]));
+
+    const storage = makeStorage({
+      lastPushedCommit: { main: 'old-push-sha' },
+      localGitOidByDcsRef: { 'mb-sha': 'local-base-oid' },
+    });
+
+    await syncLocalProjectWithDcs({
+      storage,
+      projectId: 'TEST',
+      token: 'tok',
+      sync: SYNC,
+      username: 'user',
+      gitAdapter,
+    });
+
+    // The REST base-tree fetch (pullFilesAt) must NOT have been called for the merge-base OID.
+    expect(_pullFilesAtCalls).not.toContain('mb-sha');
+    // Theirs was still fetched from REST (that's always needed).
+    expect(_pullFilesAtCalls).toContain('remote-head-sha');
+  });
+
+  test('falls back to REST pullFilesAt when no local snapshot for baseRef', async () => {
+    const gitAdapter = makeGitAdapter(); // no pre-seeded snapshots
+    const storage = makeStorage({ lastPushedCommit: { main: 'old-push-sha' } });
+
+    await syncLocalProjectWithDcs({
+      storage,
+      projectId: 'TEST',
+      token: 'tok',
+      sync: SYNC,
+      username: 'user',
+      gitAdapter,
+    });
+
+    // No local mapping → REST base fetch must have run for 'mb-sha'.
+    expect(_pullFilesAtCalls).toContain('mb-sha');
+  });
+
+  test('commits merged snapshot and stores localGitOidByDcsRef after successful sync', async () => {
+    const gitAdapter = makeGitAdapter();
+    const storage = makeStorage({ lastPushedCommit: { main: 'old-push-sha' } });
+
+    const result = await syncLocalProjectWithDcs({
+      storage,
+      projectId: 'TEST',
+      token: 'tok',
+      sync: SYNC,
+      username: 'user',
+      gitAdapter,
+    });
+
+    expect(result.kind).toBe('synced');
+
+    // A local commit must have been made.
+    expect(gitAdapter._counter()).toBeGreaterThan(0);
+
+    // The mapping DCS OID → local OID must be persisted.
+    const meta = await storage.getProject('TEST');
+    expect(meta?.localGitOidByDcsRef?.['remote-head-sha']).toMatch(/^local-oid-/);
+  });
+
+  test('sync succeeds even when gitAdapter.commitAll throws', async () => {
+    const gitAdapter = {
+      async headCommit() { return null; },
+      async readFilesAt(_ref: string) { return new Map<string, string>(); },
+      async commitAll(_f: Map<string, string>, _m: string) {
+        throw new Error('simulated git failure');
+      },
+      async clone() {},
+      async fetch() {},
+      async push() {},
+    };
+
+    const storage = makeStorage({ lastPushedCommit: { main: 'old-push-sha' } });
+
+    // Must not throw despite git adapter failure.
+    const result = await syncLocalProjectWithDcs({
+      storage,
+      projectId: 'TEST',
+      token: 'tok',
+      sync: SYNC,
+      username: 'user',
+      gitAdapter,
+    });
+
+    // Sync still succeeds — local git is non-fatal.
+    expect(result.kind).toBe('synced');
+  });
+});

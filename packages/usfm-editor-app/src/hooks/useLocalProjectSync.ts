@@ -14,6 +14,7 @@ import {
   StalePushError,
 } from '@/lib/dcs-project-sync';
 import { DcsRestProjectSync } from '@usfm-tools/editor-adapters';
+import { createBrowserGitAdapter, type IBrowserGitAdapter } from '@/lib/browser-git-adapter';
 import {
   notifySyncSuccess,
   notifySyncConflict,
@@ -99,6 +100,8 @@ export function useLocalProjectSync(
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const syncInFlightRef = useRef(false);
   const dirtyDuringSyncRef = useRef(false);
+  // Phase 3: one BrowserGitAdapter per project, created lazily on first sync.
+  const gitAdapterRef = useRef<IBrowserGitAdapter | null>(null);
   const onProjectSyncSucceededRef = useRef(options?.onProjectSyncSucceeded);
   onProjectSyncSucceededRef.current = options?.onProjectSyncSucceeded;
   const getSyncWatermarkRef = useRef(options?.getSyncWatermark);
@@ -160,6 +163,15 @@ export function useLocalProjectSync(
       setDetail(`Local project: syncing with Door43 (${branchLabel})…`);
       try {
         const journalWatermark = getSyncWatermarkRef.current?.() ?? 0;
+        // Phase 3: lazily initialize the per-project local git adapter.
+        if (!gitAdapterRef.current && projectId) {
+          try {
+            gitAdapterRef.current = createBrowserGitAdapter(projectId);
+          } catch {
+            // Non-fatal — local git is an optimization; sync continues without it.
+          }
+        }
+
         const syncResult = await syncLocalProjectWithDcs({
           storage,
           projectId: projectId!,
@@ -167,6 +179,7 @@ export function useLocalProjectSync(
           sync,
           username,
           bookCode,
+          gitAdapter: gitAdapterRef.current ?? undefined,
         });
 
         if (syncResult.kind === 'synced') {
