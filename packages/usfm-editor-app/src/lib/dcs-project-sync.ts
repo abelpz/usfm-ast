@@ -8,6 +8,7 @@ import {
   compareRefs,
 } from '@usfm-tools/door43-rest';
 import type { IBrowserGitAdapter } from './browser-git-adapter';
+import { writeFileWithCrdt } from './crdt-storage';
 import { isProjectPushStale } from '@usfm-tools/types';
 import type {
   FileConflict,
@@ -669,7 +670,7 @@ async function _syncOnce(options: {
     for (const [path, content] of merged) {
       const prev = await storage.readFile(projectId, path);
       if (prev !== content) {
-        await storage.writeFile(projectId, path, content);
+        await writeFileWithCrdt(storage, projectId, path, content);
       }
     }
 
