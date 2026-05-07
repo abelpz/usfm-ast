@@ -63,6 +63,11 @@ mock.module('@usfm-tools/editor-adapters', () => {
     DcsRestProjectSync,
     // Constant sha so stored shas always match current content → local delta is empty by default.
     gitBlobShaHex: async (_content: string) => 'sha-unchanged',
+    // CRDT stubs — crdt-storage.ts imports these but they are not exercised in ancestry tests.
+    usfmToYjsBase64: (_usfm: string) => '',
+    yjsBase64ToUsfm: (_b64: string) => '',
+    crdtPathFromUsfm: (p: string) => `crdt/${p.split('/').pop()?.replace(/\.(usfm|sfm)$/i, '') ?? p}.ybin`,
+    isYbinPath: (p: string) => p.endsWith('.ybin'),
     mergeProjectMaps: ({
       paths,
       getBase,

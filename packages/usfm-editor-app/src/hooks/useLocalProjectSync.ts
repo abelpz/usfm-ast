@@ -5,19 +5,15 @@ import { loadDcsCredentials } from '@/lib/dcs-storage';
 import {
   publishPendingReleasesToDcs,
   hasLocalChanges,
-  autoMergeToDcs,
-  workingBranchName,
   bookBranchName,
   syncLocalProjectWithDcs,
   type SyncLocalProjectWithDcsResult,
   SyncConflictsError,
   StalePushError,
 } from '@/lib/dcs-project-sync';
-import { DcsRestProjectSync } from '@usfm-tools/editor-adapters';
 import { createBrowserGitAdapter, type IBrowserGitAdapter } from '@/lib/browser-git-adapter';
 import {
   notifySyncSuccess,
-  notifySyncConflict,
   notifySyncFailure,
 } from '@/lib/tauri-notifications';
 import type { FileConflict, ProjectSyncConfig } from '@usfm-tools/types';
@@ -59,8 +55,17 @@ export type LocalProjectSyncState = {
 };
 
 /**
- * Manages auto-sync of a local translation project to Door43 using a
- * 3-tier branch strategy with pull/merge before push.
+ * Manages auto-sync of a local translation project to Door43.
+ *
+ * **Offline-first:** all edits are stored locally (IndexedDB). A push to the
+ * Tier-2 book branch on DCS is attempted whenever the device is online and a
+ * debounce window elapses.  No additional relay server is required — the only
+ * online dependency is Door43 (DCS).
+ *
+ * **Phase 5 branch model:** pushes directly to `{bookCode}` (Tier-2).
+ * No personal Tier-1 branches are created; no PR auto-merge loop runs.
+ * File-level conflicts are resolved locally via the 3-pane conflict UI before
+ * the push is retried.
  */
 export function useLocalProjectSync(
   projectId: string | undefined,
@@ -157,10 +162,10 @@ export function useLocalProjectSync(
       syncInFlightRef.current = true;
       setConflictPrUrl(undefined);
 
-      const wb = bookCode ? workingBranchName(username, bookCode) : undefined;
-      const branchLabel = wb ?? sync.branch;
+      // Phase 5: push target is the book branch directly (no Tier-1 personal branch).
+      const tier2 = bookCode ? bookBranchName(bookCode) : sync.branch;
 
-      setDetail(`Local project: syncing with Door43 (${branchLabel})…`);
+      setDetail(`Local project: syncing with Door43 (${tier2})…`);
       try {
         const journalWatermark = getSyncWatermarkRef.current?.() ?? 0;
         // Phase 3: lazily initialize the per-project local git adapter.
@@ -200,52 +205,12 @@ export function useLocalProjectSync(
         const projectMeta = await storage.getProject(projectId!);
         const projectLabel = projectMeta?.name ?? projectId!;
 
-        if (wb && bookCode) {
-          setDetail(`Local project: pushed to ${branchLabel} — merging PRs…`);
-          const mergeResult = await autoMergeToDcs({ token, sync, username, bookCode });
-          if (mergeResult.merged) {
-            // autoMergeToDcs advanced Tier-2. Record the new tip as lastPushedCommit so
-            // the next ancestry check skips a spurious pull on already-integrated content.
-            const tier2Ref = bookBranchName(bookCode);
-            const tier2Adapter = new DcsRestProjectSync({
-              host: sync.host,
-              token,
-              owner: sync.owner,
-              repo: sync.repo,
-              branch: tier2Ref,
-              targetType: sync.targetType,
-            });
-            try {
-              const newTier2Sha = await tier2Adapter.getRemoteHeadCommit();
-              const latestMeta = await storage.getProject(projectId!);
-              await storage.updateProject(projectId!, {
-                lastPushedCommit: {
-                  ...(latestMeta?.lastPushedCommit ?? {}),
-                  [tier2Ref]: newTier2Sha,
-                },
-              });
-            } catch {
-              // Non-fatal: the conservative value recorded by syncLocalProjectWithDcs stands.
-            }
-            setDetail(`Local project: merged → ${sync.owner}/${sync.repo} (${sync.branch})`);
-            notifySyncSuccess(projectLabel, `${sync.owner}/${sync.repo}`);
-            await publishPendingReleasesToDcs({ storage, projectId: projectId!, token, sync });
-            const releases = await storage.listReleases(projectId!);
-            setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
-          } else {
-            setConflictPrUrl(mergeResult.conflictPrUrl);
-            setDetail(`Local project: pushed to ${branchLabel} — merge conflict, resolve on DCS`);
-            if (mergeResult.conflictPrUrl) {
-              notifySyncConflict(projectLabel, mergeResult.conflictPrUrl);
-            }
-          }
-        } else {
-          setDetail(`Local project: synced → ${sync.owner}/${sync.repo}`);
-          notifySyncSuccess(projectLabel, `${sync.owner}/${sync.repo}`);
-          await publishPendingReleasesToDcs({ storage, projectId: projectId!, token, sync });
-          const releases = await storage.listReleases(projectId!);
-          setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
-        }
+        // Phase 5: pushed directly to the book branch — no PR auto-merge loop.
+        setDetail(`Local project: synced → ${sync.owner}/${sync.repo} (${tier2})`);
+        notifySyncSuccess(projectLabel, `${sync.owner}/${sync.repo}`);
+        await publishPendingReleasesToDcs({ storage, projectId: projectId!, token, sync });
+        const releases = await storage.listReleases(projectId!);
+        setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
       } catch (err) {
         if (err instanceof SyncConflictsError) {
           setPendingFileConflicts(err.conflicts);

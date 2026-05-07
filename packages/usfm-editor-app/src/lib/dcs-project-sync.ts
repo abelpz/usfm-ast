@@ -461,15 +461,20 @@ const _syncInFlight = new Map<string, Promise<SyncLocalProjectWithDcsResult>>();
 const _syncPending = new Set<string>();
 
 /**
- * Merge Tier-2 (`bookCode` branch) into local storage, then CAS-push to Tier-1 (or `sync.branch`).
+ * Pull from the Tier-2 (`{bookCode}`) branch, 3-way merge into local storage,
+ * then CAS-push **directly back to the same Tier-2 branch** — no Tier-1 personal
+ * branch is created and no PR auto-merge loop is needed (Phase 5).
  *
  * **Ancestry-aware:** before running a full three-way merge, calls `compareRefs`
- * to check whether Tier-2 has any commits that are not already in our last push.
+ * to check whether Tier-2 has any commits not already in our last push.
  * If not, the pull step is skipped entirely (noop or push-only path).
  *
  * **Mutex:** at most one call per `(projectId, bookCode)` pair runs at a time.
  * A second call that arrives while the first is in-flight queues one trailing
  * follow-up; additional callers share that queued promise.
+ *
+ * **Offline-first:** all edits are stored locally (IndexedDB / LightningFS) and
+ * only Door43 (DCS) is contacted for online sync — no additional relay server.
  *
  * **Local git (Phase 3):** when `gitAdapter` is supplied, the base-tree snapshot
  * is read from the local git clone instead of fetching from DCS over REST.  After a
@@ -527,6 +532,10 @@ export async function syncLocalProjectWithDcs(options: {
 /**
  * Core sync implementation. Called exclusively from {@link syncLocalProjectWithDcs}
  * which owns the per-key mutex.
+ *
+ * Phase 5: pushes directly to the Tier-2 (`{bookCode}`) branch — no Tier-1 personal
+ * branch is created and no PR auto-merge loop is needed.  File-level conflicts are
+ * resolved locally via the 3-pane UI before the push is retried.
  */
 async function _syncOnce(options: {
   storage: ProjectStorage;
@@ -542,8 +551,8 @@ async function _syncOnce(options: {
   const meta = await storage.getProject(projectId);
   if (!meta) throw new Error(`Project not found: ${projectId}`);
 
+  // Phase 5: push target is the Tier-2 (book) branch directly — no Tier-1 personal branch.
   const tier2 = bookCode ? bookBranchName(bookCode) : sync.branch;
-  const wb = bookCode ? workingBranchName(username, bookCode) : undefined;
 
   if (sync.branch.trim().toLowerCase() === 'main') {
     await ensureRepoUsesMainDefaultBranch({
@@ -554,8 +563,7 @@ async function _syncOnce(options: {
     });
   }
 
-  // Tier-2 (book) branch must exist before we can read its tip; otherwise GET …/branches/{book} 404s
-  // on every sync until something else created it.
+  // Ensure the book branch exists before reading its tip or pushing to it.
   if (bookCode && tier2 !== sync.branch) {
     await ensureBranch({
       host: sync.host,
@@ -563,17 +571,6 @@ async function _syncOnce(options: {
       owner: sync.owner,
       repo: sync.repo,
       branch: tier2,
-      fromBranch: sync.branch,
-    });
-  }
-
-  if (wb && wb !== sync.branch) {
-    await ensureBranch({
-      host: sync.host,
-      token,
-      owner: sync.owner,
-      repo: sync.repo,
-      branch: wb,
       fromBranch: sync.branch,
     });
   }
@@ -694,7 +691,8 @@ async function _syncOnce(options: {
   }
   // else: needsMerge=false but localDelta non-empty → skip merge, fall through to push.
 
-  const pushBranch = wb ?? sync.branch;
+  // Phase 5: push directly to the book branch (tier2), not a personal Tier-1 branch.
+  const pushBranch = tier2;
   const adapterPush = new DcsRestProjectSync({
     host: sync.host,
     token,
@@ -720,7 +718,7 @@ async function _syncOnce(options: {
         projectId,
         token,
         sync,
-        workingBranch: wb,
+        workingBranch: pushBranch !== sync.branch ? pushBranch : undefined,
         expectedBaseShaByPath,
       });
 
