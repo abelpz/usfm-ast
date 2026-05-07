@@ -18,6 +18,9 @@ export interface ProjectSyncConfig {
  * Pending merge conflict for a project file (persisted in IndexedDB so the dialog can resume).
  * Text snapshots are raw USFM / JSON / YAML as applicable — not USJ.
  */
+/** How the base text for a bundle-import conflict was resolved. */
+export type ConflictBaseSource = 'sidecar-match' | 'receiver-commit' | 'none';
+
 export interface FileConflict {
   /** Stable id for UI resume (e.g. `${path}#${chapterIndices.join(',')}` or random UUID). */
   conflictId: string;
@@ -28,6 +31,17 @@ export interface FileConflict {
   baseText: string;
   oursText: string;
   theirsText: string;
+  /**
+   * How the base text was resolved for bundle-import conflicts.
+   * Absent means the conflict originated from a DCS sync (base is always known there).
+   */
+  baseSource?: ConflictBaseSource;
+  /** Human-readable label for the "ours" side shown in the conflict dialog. */
+  oursLabel?: string;
+  /** Human-readable label for the "theirs" side shown in the conflict dialog. */
+  theirsLabel?: string;
+  /** Human-readable label for the "base" side shown in the conflict dialog. */
+  baseLabel?: string;
 }
 
 /**
@@ -83,8 +97,30 @@ export interface ProjectMeta {
    * Used to detect when Tier-2 moved and to fetch a consistent `base` snapshot for 3-way merge.
    */
   lastRemoteCommit?: Record<string, string>;
+  /**
+   * Tier-2 (book branch) commit SHA after our last successful push + auto-merge.
+   * Used by `syncLocalProjectWithDcs` to detect when Tier-2 is already an ancestor
+   * of our work and skip a spurious 3-way merge.
+   * Key = book branch name (e.g. `"tit"`).
+   */
+  lastPushedCommit?: Record<string, string>;
+  /**
+   * True merge-base OID used in the last successful three-way merge per book branch.
+   * Key = book branch name. Stored for debug and future optimization.
+   */
+  lastMergedBaseCommit?: Record<string, string>;
   /** Unresolved sync merge conflicts (cleared after user resolution + successful push). */
   pendingConflicts?: FileConflict[];
+  /**
+   * Captured before a merge-mode bundle import applies writes, so the user can
+   * restore pre-import file contents and abandon an incomplete import.
+   */
+  bundleImportSnapshot?: {
+    /** ISO 8601 */
+    createdAt: string;
+    /** Repo-relative path → previous UTF-8 content; `null` means the file did not exist. */
+    files: Record<string, string | null>;
+  };
 }
 
 /** A versioned snapshot release of a project. */

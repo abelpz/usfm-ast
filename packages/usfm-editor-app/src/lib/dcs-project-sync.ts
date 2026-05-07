@@ -5,6 +5,7 @@ import {
   createDcsRelease,
   ensureOpenPullRequest,
   mergePullRequestOrCloseIfNothingToMerge,
+  compareRefs,
 } from '@usfm-tools/door43-rest';
 import { isProjectPushStale } from '@usfm-tools/types';
 import type {
@@ -444,10 +445,77 @@ export type SyncLocalProjectWithDcsResult =
   | { kind: 'noop'; tier2HeadSha: string };
 
 /**
+ * Per-(projectId, tier2) in-flight promise. Prevents concurrent sync calls from
+ * running a second 3-way merge while the first one is still pushing, which would
+ * use a stale base and surface spurious conflicts.
+ */
+const _syncInFlight = new Map<string, Promise<SyncLocalProjectWithDcsResult>>();
+
+/**
+ * Whether at least one additional call arrived while a sync was in-flight.
+ * Only one trailing follow-up is queued — callers that pile up share the
+ * same queued promise rather than stacking unboundedly.
+ */
+const _syncPending = new Set<string>();
+
+/**
  * Merge Tier-2 (`bookCode` branch) into local storage, then CAS-push to Tier-1 (or `sync.branch`).
- * Updates `lastRemoteCommit[tier2]` after a successful merge+push.
+ *
+ * **Ancestry-aware:** before running a full three-way merge, calls `compareRefs`
+ * to check whether Tier-2 has any commits that are not already in our last push.
+ * If not, the pull step is skipped entirely (noop or push-only path).
+ *
+ * **Mutex:** at most one call per `(projectId, bookCode)` pair runs at a time.
+ * A second call that arrives while the first is in-flight queues one trailing
+ * follow-up; additional callers share that queued promise.
+ *
+ * Updates `lastRemoteCommit[tier2]` and `lastPushedCommit[tier2]` after a
+ * successful merge+push.
  */
 export async function syncLocalProjectWithDcs(options: {
+  storage: ProjectStorage;
+  projectId: string;
+  token: string;
+  sync: ProjectSyncConfig;
+  username: string;
+  bookCode?: string;
+}): Promise<SyncLocalProjectWithDcsResult> {
+  const { projectId, sync, bookCode } = options;
+  const tier2 = bookCode ? bookBranchName(bookCode) : sync.branch;
+  const mutexKey = `${projectId}:${tier2}`;
+
+  const existing = _syncInFlight.get(mutexKey);
+  if (existing) {
+    // An in-flight sync is already running for this (project, branch). Queue at
+    // most one follow-up so we don't stack unboundedly.
+    if (!_syncPending.has(mutexKey)) {
+      _syncPending.add(mutexKey);
+      const followUp = existing.then(() => {
+        _syncPending.delete(mutexKey);
+        return syncLocalProjectWithDcs(options);
+      });
+      return followUp;
+    }
+    // Already queued — just wait for whatever is in-flight (including the pending).
+    return existing;
+  }
+
+  const run = _syncOnce(options);
+  _syncInFlight.set(mutexKey, run);
+  // Clean up the map when the run settles.  The cleanup chain must not propagate
+  // a rejection (which would create an unhandled-rejection noise in the process).
+  void run.then(
+    () => { if (_syncInFlight.get(mutexKey) === run) _syncInFlight.delete(mutexKey); },
+    () => { if (_syncInFlight.get(mutexKey) === run) _syncInFlight.delete(mutexKey); },
+  );
+  return run;
+}
+
+/**
+ * Core sync implementation. Called exclusively from {@link syncLocalProjectWithDcs}
+ * which owns the per-key mutex.
+ */
+async function _syncOnce(options: {
   storage: ProjectStorage;
   projectId: string;
   token: string;
@@ -472,6 +540,19 @@ export async function syncLocalProjectWithDcs(options: {
     });
   }
 
+  // Tier-2 (book) branch must exist before we can read its tip; otherwise GET …/branches/{book} 404s
+  // on every sync until something else created it.
+  if (bookCode && tier2 !== sync.branch) {
+    await ensureBranch({
+      host: sync.host,
+      token,
+      owner: sync.owner,
+      repo: sync.repo,
+      branch: tier2,
+      fromBranch: sync.branch,
+    });
+  }
+
   if (wb && wb !== sync.branch) {
     await ensureBranch({
       host: sync.host,
@@ -493,52 +574,101 @@ export async function syncLocalProjectWithDcs(options: {
   });
 
   const tier2HeadSha = await adapterTier2.getRemoteHeadCommit();
-  const lastBase = meta.lastRemoteCommit?.[tier2];
-
   const localDelta = await detectLocalChanges(storage, projectId);
-  if (lastBase && lastBase === tier2HeadSha && isLocalDeltaEmpty(localDelta)) {
+
+  // Legacy anchor (kept as fallback when lastPushedCommit is not yet populated).
+  const lastBase = meta.lastRemoteCommit?.[tier2];
+  // Ancestry anchor: Tier-2 SHA after our last successful push + autoMerge.
+  const lastPushed = meta.lastPushedCommit?.[tier2];
+
+  // --- Fast noop: Tier-2 hasn't moved since our last push and nothing changed locally ---
+  if (lastPushed && lastPushed === tier2HeadSha && isLocalDeltaEmpty(localDelta)) {
     return { kind: 'noop', tier2HeadSha };
   }
 
-  const theirsFiles = await adapterTier2.pullFilesAt(tier2HeadSha);
-  /** When we already merged at this Tier-2 tip, `base` and `theirs` are the same snapshot — skip a second tree fetch. */
-  const baseFiles: Map<string, string> =
-    !lastBase || lastBase === tier2HeadSha
-      ? new Map(theirsFiles)
-      : await adapterTier2.pullFilesAt(lastBase);
+  // --- Ancestry check via compareRefs ---
+  let needsMerge = true;
+  let mergeBaseOid: string | null = null;
 
-  const oursFiles = await gatherProjectFileMap(storage, projectId);
-  const allPaths = new Set<string>([
-    ...baseFiles.keys(),
-    ...theirsFiles.keys(),
-    ...oursFiles.keys(),
-  ]);
-
-  const { merged, conflicts, deleted } = mergeProjectMaps({
-    paths: allPaths,
-    getBase: (p) => baseFiles.get(p),
-    getOurs: (p) => oursFiles.get(p),
-    getTheirs: (p) => theirsFiles.get(p),
-  });
-
-  if (conflicts.length > 0) {
-    await storage.updateProject(projectId, { pendingConflicts: conflicts });
-    throw new SyncConflictsError(conflicts);
-  }
-
-  await storage.updateProject(projectId, { pendingConflicts: [] });
-
-  for (const [path, content] of merged) {
-    const prev = await storage.readFile(projectId, path);
-    if (prev !== content) {
-      await storage.writeFile(projectId, path, content);
+  if (lastPushed) {
+    const cmp = await compareRefs({
+      host: sync.host,
+      token,
+      owner: sync.owner,
+      repo: sync.repo,
+      base: lastPushed,   // what we last owned on Tier-2
+      head: tier2HeadSha, // current Tier-2 tip
+    });
+    if (cmp.totalCommits === 0) {
+      // Tier-2 has no commits beyond our last push — nothing new to pull.
+      needsMerge = false;
+    } else {
+      // Use the API-supplied merge-base as the true common ancestor for 3-way.
+      mergeBaseOid = cmp.mergeBaseCommit;
     }
+  } else if (lastBase && lastBase === tier2HeadSha && isLocalDeltaEmpty(localDelta)) {
+    // Legacy fallback noop (no lastPushed recorded yet).
+    return { kind: 'noop', tier2HeadSha };
   }
 
-  // Remove files silently deleted by the merge (one side deleted, other unchanged).
-  for (const path of deleted) {
-    await storage.deleteFile(projectId, path);
+  // --- Three-way merge (only when Tier-2 has genuinely new content) ---
+  if (needsMerge) {
+    // Prefer the true merge-base from compareRefs; fall back to the legacy lastBase anchor.
+    const baseRef = mergeBaseOid ?? lastBase ?? tier2HeadSha;
+
+    const theirsFiles = await adapterTier2.pullFilesAt(tier2HeadSha);
+    const baseFiles: Map<string, string> =
+      baseRef === tier2HeadSha
+        ? new Map(theirsFiles)
+        : await adapterTier2.pullFilesAt(baseRef);
+
+    const oursFiles = await gatherProjectFileMap(storage, projectId);
+    const allPaths = new Set<string>([
+      ...baseFiles.keys(),
+      ...theirsFiles.keys(),
+      ...oursFiles.keys(),
+    ]);
+
+    const { merged, conflicts, deleted } = mergeProjectMaps({
+      paths: allPaths,
+      getBase: (p) => baseFiles.get(p),
+      getOurs: (p) => oursFiles.get(p),
+      getTheirs: (p) => theirsFiles.get(p),
+    });
+
+    if (conflicts.length > 0) {
+      await storage.updateProject(projectId, { pendingConflicts: conflicts });
+      throw new SyncConflictsError(conflicts);
+    }
+
+    await storage.updateProject(projectId, { pendingConflicts: [] });
+
+    for (const [path, content] of merged) {
+      const prev = await storage.readFile(projectId, path);
+      if (prev !== content) {
+        await storage.writeFile(projectId, path, content);
+      }
+    }
+
+    // Remove files silently deleted by the merge (one side deleted, other unchanged).
+    for (const path of deleted) {
+      await storage.deleteFile(projectId, path);
+    }
+
+    // Record the merge-base used (for debug and future optimization).
+    if (mergeBaseOid) {
+      await storage.updateProject(projectId, {
+        lastMergedBaseCommit: {
+          ...(meta.lastMergedBaseCommit ?? {}),
+          [tier2]: mergeBaseOid,
+        },
+      });
+    }
+  } else if (isLocalDeltaEmpty(localDelta)) {
+    // Ancestry check said Tier-2 is not ahead of us, and nothing changed locally.
+    return { kind: 'noop', tier2HeadSha };
   }
+  // else: needsMerge=false but localDelta non-empty → skip merge, fall through to push.
 
   const pushBranch = wb ?? sync.branch;
   const adapterPush = new DcsRestProjectSync({
@@ -570,13 +700,12 @@ export async function syncLocalProjectWithDcs(options: {
         expectedBaseShaByPath,
       });
 
-      const nextCommits = {
-        ...(meta.lastRemoteCommit ?? {}),
-        [tier2]: tier2HeadSha,
-      };
-
+      // Record the Tier-2 tip we synced from and the conservative lastPushedCommit.
+      // The hook will overwrite lastPushedCommit with the post-autoMerge Tier-2 head
+      // once autoMergeToDcs succeeds, giving us the most accurate anchor.
       await storage.updateProject(projectId, {
-        lastRemoteCommit: nextCommits,
+        lastRemoteCommit: { ...(meta.lastRemoteCommit ?? {}), [tier2]: tier2HeadSha },
+        lastPushedCommit: { ...(meta.lastPushedCommit ?? {}), [tier2]: tier2HeadSha },
         pendingConflicts: [],
       });
 

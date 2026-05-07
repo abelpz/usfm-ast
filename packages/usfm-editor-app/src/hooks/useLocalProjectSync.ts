@@ -7,11 +7,13 @@ import {
   hasLocalChanges,
   autoMergeToDcs,
   workingBranchName,
+  bookBranchName,
   syncLocalProjectWithDcs,
   type SyncLocalProjectWithDcsResult,
   SyncConflictsError,
   StalePushError,
 } from '@/lib/dcs-project-sync';
+import { DcsRestProjectSync } from '@usfm-tools/editor-adapters';
 import {
   notifySyncSuccess,
   notifySyncConflict,
@@ -43,7 +45,7 @@ export type LocalProjectSyncState = {
   conflictPrUrl: string | undefined;
   /** File-level merge conflicts (three-way); resolve via {@link resolveConflict}. */
   pendingFileConflicts: FileConflict[];
-  resolveConflict: (path: string, choice: 'ours' | 'theirs') => Promise<void>;
+  resolveConflict: (path: string, choice: 'ours' | 'theirs' | 'merged', mergedText?: string) => Promise<void>;
   /** Enable or disable auto-sync (persists to project meta). */
   setAutoSync: (enabled: boolean) => void;
   /** Immediately trigger a push regardless of the debounce or toggle. */
@@ -116,13 +118,18 @@ export function useLocalProjectSync(
   }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resolveConflict = useCallback(
-    async (path: string, choice: 'ours' | 'theirs') => {
+    async (path: string, choice: 'ours' | 'theirs' | 'merged', mergedText?: string) => {
       if (!projectId) return;
       const meta = await storage.getProject(projectId);
       const list = meta?.pendingConflicts ?? [];
       const c = list.find((x) => x.path === path);
       if (!c) return;
-      const text = choice === 'ours' ? c.oursText : c.theirsText;
+      const text =
+        choice === 'merged' && mergedText !== undefined
+          ? mergedText
+          : choice === 'theirs'
+            ? c.theirsText
+            : c.oursText;
       // An empty string means the chosen side deleted the file.
       if (text === '') {
         await storage.deleteFile(projectId, path);
@@ -184,6 +191,29 @@ export function useLocalProjectSync(
           setDetail(`Local project: pushed to ${branchLabel} — merging PRs…`);
           const mergeResult = await autoMergeToDcs({ token, sync, username, bookCode });
           if (mergeResult.merged) {
+            // autoMergeToDcs advanced Tier-2. Record the new tip as lastPushedCommit so
+            // the next ancestry check skips a spurious pull on already-integrated content.
+            const tier2Ref = bookBranchName(bookCode);
+            const tier2Adapter = new DcsRestProjectSync({
+              host: sync.host,
+              token,
+              owner: sync.owner,
+              repo: sync.repo,
+              branch: tier2Ref,
+              targetType: sync.targetType,
+            });
+            try {
+              const newTier2Sha = await tier2Adapter.getRemoteHeadCommit();
+              const latestMeta = await storage.getProject(projectId!);
+              await storage.updateProject(projectId!, {
+                lastPushedCommit: {
+                  ...(latestMeta?.lastPushedCommit ?? {}),
+                  [tier2Ref]: newTier2Sha,
+                },
+              });
+            } catch {
+              // Non-fatal: the conservative value recorded by syncLocalProjectWithDcs stands.
+            }
             setDetail(`Local project: merged → ${sync.owner}/${sync.repo} (${sync.branch})`);
             notifySyncSuccess(projectLabel, `${sync.owner}/${sync.repo}`);
             await publishPendingReleasesToDcs({ storage, projectId: projectId!, token, sync });
