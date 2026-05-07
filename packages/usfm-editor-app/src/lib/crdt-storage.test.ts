@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { writeFileWithCrdt } from './crdt-storage';
-import { yjsBase64ToUsfm } from '@usfm-tools/editor-adapters';
+import { writeFileWithCrdt, readYbinAsUsfm } from './crdt-storage';
+import { usfmToYjsBase64, yjsBase64ToUsfm } from '@usfm-tools/editor-adapters';
 import type { ProjectStorage } from '@usfm-tools/types';
 
 // ---------------------------------------------------------------------------
@@ -92,5 +92,38 @@ describe('writeFileWithCrdt', () => {
     await expect(writeFileWithCrdt(storage, 'proj', 'files/JHN.usfm', USFM)).resolves.toBeUndefined();
     expect(storage.files.get('files/JHN.usfm')).toBe(USFM);
     expect(writeCount).toBe(2); // USFM write + failed .ybin attempt
+  });
+});
+
+// ---------------------------------------------------------------------------
+// readYbinAsUsfm
+// ---------------------------------------------------------------------------
+
+describe('readYbinAsUsfm', () => {
+  test('returns USFM decoded from stored .ybin', async () => {
+    const storage = makeStorage();
+    storage.files.set('crdt/JHN.ybin', usfmToYjsBase64(USFM));
+    const result = await readYbinAsUsfm(storage, 'proj', 'files/JHN.usfm');
+    expect(result).toBe(USFM);
+  });
+
+  test('returns null when no .ybin exists', async () => {
+    const storage = makeStorage();
+    const result = await readYbinAsUsfm(storage, 'proj', 'files/JHN.usfm');
+    expect(result).toBeNull();
+  });
+
+  test('returns null on storage error (non-fatal)', async () => {
+    const storage = makeStorage();
+    storage.readFile = async () => { throw new Error('I/O error'); };
+    const result = await readYbinAsUsfm(storage, 'proj', 'files/JHN.usfm');
+    expect(result).toBeNull();
+  });
+
+  test('round-trips: write with writeFileWithCrdt then read back', async () => {
+    const storage = makeStorage();
+    await writeFileWithCrdt(storage, 'proj', 'files/JHN.usfm', USFM);
+    const result = await readYbinAsUsfm(storage, 'proj', 'files/JHN.usfm');
+    expect(result).toBe(USFM);
   });
 });

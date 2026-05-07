@@ -112,6 +112,7 @@ export {
   mergeYjsBase64ThreeWay,
   type YjsMergeResult,
 } from './yjs-codec';
+export { YbinDocProvider } from './ybin-doc-provider';
 
 export {
   CatalogSyncEngine,

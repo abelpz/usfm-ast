@@ -11,11 +11,34 @@
  */
 
 import type { ProjectStorage } from '@usfm-tools/types';
-import { crdtPathFromUsfm, usfmToYjsBase64 } from '@usfm-tools/editor-adapters';
+import { crdtPathFromUsfm, usfmToYjsBase64, yjsBase64ToUsfm } from '@usfm-tools/editor-adapters';
 
 function isUsfmPath(path: string): boolean {
   const l = path.toLowerCase();
   return l.endsWith('.usfm') || l.endsWith('.sfm');
+}
+
+/**
+ * Read the CRDT-derived USFM text for a given USFM path.
+ *
+ * Reads `crdt/<BOOK>.ybin` and decodes it.  Returns `null` when no
+ * `.ybin` has been written yet (e.g. first launch before any sync).
+ * Use as a consistency check or to seed the editor before the OT
+ * journal is available.
+ */
+export async function readYbinAsUsfm(
+  storage: ProjectStorage,
+  projectId: string,
+  usfmPath: string,
+): Promise<string | null> {
+  try {
+    const crdtPath = crdtPathFromUsfm(usfmPath);
+    const base64 = await storage.readFile(projectId, crdtPath);
+    if (!base64) return null;
+    return yjsBase64ToUsfm(base64);
+  } catch {
+    return null;
+  }
 }
 
 /**
