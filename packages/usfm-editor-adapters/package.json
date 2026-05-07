@@ -38,10 +38,13 @@
     "@usfm-tools/editor-core": "workspace:*",
     "@usfm-tools/parser": "workspace:*",
     "@usfm-tools/types": "workspace:*",
-    "jszip": "3.10.1"
+    "js-yaml": "4.1.1",
+    "jszip": "3.10.1",
+    "yjs": "13.6.30"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
+    "@types/js-yaml": "4.0.9",
     "@types/jszip": "3.4.1",
     "fake-indexeddb": "^6.0.0",
     "jest": "^29.5.0",

@@ -420,7 +420,17 @@ Implement a browser `GitLocalPersistenceAdapter` over OPFS/LightningFS. Implemen
 
 ### Phase 4 — CRDT (Yjs) as in-editor model
 
-Define the Yjs schema for USFM (§5). Implement the USFM ⇄ Yjs codec (new module in `usfm-editor-core` or a new `usfm-yjs` package, living next to `usj-to-pm.ts`). Introduce `crdt/<BOOK>.ybin` alongside `files/<BOOK>.usfm` in the Git-tracked tree. Teach the per-path merge driver to do `Y.applyUpdate` for `.ybin` and re-render USFM. Migrate `HeadlessCollabSession` to share the same `Y.Doc` with Yjs awareness for live cursors and cross-tab sync.
+**Partial ✓ — codec + merge driver delivered.**
+
+- **Delivered:** `packages/usfm-editor-adapters/src/yjs-codec.ts` — `usfmToYjsBase64`, `yjsBase64ToUsfm`, `mergeYjsBase64ThreeWay`. Phase 4 schema: `Y.Doc { getText('usfm'): Y.Text }` — full USFM as a CRDT string (character-level concurrent editing). Three-way merge: base state-vector + ours-delta + theirs-delta via `Y.diffUpdateV2` / `Y.applyUpdateV2`. Binary state stored as base64 for string-only `ProjectStorage`.
+- **Delivered:** `packages/usfm-editor-adapters/src/crdt-paths.ts` — `isYbinPath`, `crdtPathFromUsfm` (`files/JHN.usfm` → `crdt/JHN.ybin`), `usfmPathFromCrdt`.
+- **Delivered:** `mergeFileContent` in `three-way-merge-project.ts` handles `.ybin` paths via `mergeYjsBase64ThreeWay` before the binary-file bailout — CRDT merges never produce conflicts for valid inputs.
+- **20 tests:** roundtrip stability, 3-way merge fast-paths, concurrent non-overlapping changes, merge dispatcher integration.
+
+**Still pending:**
+- Paragraph/verse-level `Y.Array` schema (current schema: `Y.Text` whole-document; sufficient for Phase 4 merge correctness).
+- Write `crdt/<BOOK>.ybin` alongside `files/<BOOK>.usfm` on each save (Phase 5 Git wiring).
+- Migrate `HeadlessCollabSession` to a shared `Y.Doc` for live cursors and cross-tab sync (Phase 5/6).
 
 ### Phase 5 — Switch sync orchestration to Git + CRDT
 

@@ -103,6 +103,16 @@ export {
   type MergeProjectResult,
 } from './three-way-merge-project';
 
+export { sliceUsfmByChapter, affectedChaptersFromUsfm } from './usfm-chapter-affect';
+
+export { isYbinPath, crdtPathFromUsfm, usfmPathFromCrdt } from './crdt-paths';
+export {
+  usfmToYjsBase64,
+  yjsBase64ToUsfm,
+  mergeYjsBase64ThreeWay,
+  type YjsMergeResult,
+} from './yjs-codec';
+
 export {
   CatalogSyncEngine,
   DEFAULT_CATALOG_SUBJECTS,
