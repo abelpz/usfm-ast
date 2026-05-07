@@ -2,6 +2,7 @@ import {
   useScriptureSession,
   type ScriptureSessionController,
 } from '@/hooks/useScriptureSession';
+import { useYbinDocProvider, type YbinStorageTarget } from '@/hooks/useYbinDocProvider';
 import type { DcsStoredCredentials, DcsStoredTarget } from '@/lib/dcs-storage';
 import { cn } from '@/lib/utils';
 import type { JournalStore } from '@usfm-tools/editor-core';
@@ -21,6 +22,12 @@ export type EditorPanelProps = {
   localBookCode?: string;
   onEditorChange?: () => void;
   onController?: (c: ScriptureSessionController | null) => void;
+  /**
+   * When set, maintains a live Yjs Y.Doc alongside the session.
+   * Every editor save is mirrored into the Y.Doc and debounce-persisted
+   * to `crdt/<BOOK>.ybin` in storage (Phase 4 CRDT layer).
+   */
+  ybinTarget?: YbinStorageTarget;
   className?: string;
 };
 
@@ -35,6 +42,7 @@ export const EditorPanel = memo(function EditorPanel({
   localBookCode,
   onEditorChange,
   onController,
+  ybinTarget,
   className,
 }: EditorPanelProps) {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -50,6 +58,9 @@ export const EditorPanel = memo(function EditorPanel({
     localBookCode,
     onEditorChange,
   });
+
+  // Maintain a live Y.Doc alongside the session for CRDT persistence.
+  useYbinDocProvider(ctrl, ybinTarget ?? null);
 
   useEffect(() => {
     onController?.(ctrl ?? null);
