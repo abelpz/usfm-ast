@@ -368,6 +368,11 @@ export class USFMFormatter {
             }
             const marker = usfmString.substring(markerStart, markerEnd);
 
+            // Empty marker means we found '\*' (a milestone self-close) — trailing space
+            // follows a self-closing token like \zaln-e\*, not a content marker, so it
+            // is significant (user text), not structural.
+            if (!marker) return false;
+
             // Extract the content between marker and trailing space
             const contentStart = markerEnd + 1; // Skip space after marker
             const contentEnd = usfmString.length - 1; // Before trailing space
