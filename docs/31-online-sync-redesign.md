@@ -484,10 +484,45 @@ Touched:
 | `packages/usfm-editor-app/src/pages/LocalProjectPage.tsx` | `PeerSyncPanel` wired into the Settings tab |
 | Tests: `yjs-codec.test.ts`, `crdt-storage.test.ts` | 8 new tests; 43/43 pass |
 
-**Deferred to Phase 7b** (WebRTC / LAN real-time):
-- `peer://` remote in `GitSyncAdapter`.
-- `PeerProjectSync` alongside `DcsGitProjectSync`.
-- QR-code / shared-passphrase pairing flow.
+**Deferred to Phase 7b** (WebRTC / LAN real-time): see below — now delivered.
+
+---
+
+### Phase 7b — WebRTC real-time peer sync ✅ **delivered**
+
+Two devices pair by exchanging two short codes (or QR scans) — no relay server
+required.  Data flows peer-to-peer over an `RTCDataChannel`.
+
+#### Pairing flow
+
+```
+Device A (initiator)                    Device B (responder)
+────────────────────                    ────────────────────
+createOffer() → offerCode    ────────→  acceptOffer(offerCode) → answerCode
+finalizeAnswer(answerCode)   ←────────
+── RTCDataChannel opens ──
+sendSnapshot(zip blob)       ─chunks─→  importPeerSnapshot() → sendAck()
+```
+
+#### No-server guarantee
+
+ICE gathering waits for `complete` before exposing the SDP so all LAN IP
+candidates are embedded in the code.  For same-LAN devices no STUN server is
+needed; a single Google STUN entry handles NAT traversal for internet peers
+(optional, removable in `ICE_SERVERS`).
+
+#### Touched files
+
+| File | Change |
+|------|--------|
+| `packages/usfm-editor-app/src/lib/peer-rtc-transport.ts` | New: `PeerRTCTransport` — WebRTC offer/answer, data channel, chunk streaming |
+| `packages/usfm-editor-app/src/components/PeerRTCSyncPanel.tsx` | New: 3-step wizard with QR code display, copy/paste codes, progress bar |
+| `packages/usfm-editor-app/src/pages/LocalProjectPage.tsx` | `PeerRTCSyncPanel` added to Settings tab below `PeerSyncPanel` |
+| `packages/usfm-editor-app/package.json` | Added `qrcode` for offline QR code generation |
+
+**Deferred to Phase 7c** (LAN discovery without manual pairing):
+- mDNS/Bonjour discovery for automatic same-network device listing.
+- Requires Tauri native adapter; not feasible in plain browser context.
 
 ---
 

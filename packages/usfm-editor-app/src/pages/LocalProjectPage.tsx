@@ -43,6 +43,7 @@ import {
 } from '@/lib/file-conflict-helpers';
 import { ProjectBundleControls } from '@/components/ProjectBundleControls';
 import { PeerSyncPanel } from '@/components/PeerSyncPanel';
+import { PeerRTCSyncPanel } from '@/components/PeerRTCSyncPanel';
 import { ArrowLeft, BookOpen, Check, Circle, FileDown, FileText, FileUp, Loader2, Plus, Tag, Trash2, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -862,6 +863,14 @@ export function LocalProjectPage() {
             <hr className="border-border" />
 
             <PeerSyncPanel
+              projectId={projectId}
+              displayName={meta?.name?.trim() || projectId}
+              onImported={() => void load()}
+            />
+
+            <hr className="border-border" />
+
+            <PeerRTCSyncPanel
               projectId={projectId}
               displayName={meta?.name?.trim() || projectId}
               onImported={() => void load()}
