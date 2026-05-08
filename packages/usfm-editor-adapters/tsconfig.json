@@ -7,9 +7,5 @@
     "noEmit": true,
     "baseUrl": "."
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
-  "exclude": [
-    "tests/conflict-renderers.test.ts",
-    "tests/para-verse-stitch.test.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }
