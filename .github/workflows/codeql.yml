@@ -32,7 +32,9 @@ jobs:
           bun-version: 1.3.3
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        # TODO: restore --frozen-lockfile once bun Windows/Linux lockfile
+        # inconsistency is resolved (tracked in issue #29 notes).
+        run: bun install
 
       - uses: github/codeql-action/init@v4
         with:
