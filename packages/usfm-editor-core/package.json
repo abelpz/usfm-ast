@@ -36,6 +36,7 @@
     "@usfm-tools/adapters": "workspace:*",
     "@usfm-tools/parser": "workspace:*",
     "@usfm-tools/types": "workspace:*",
+    "@usfm-tools/usj-core": "workspace:*",
     "isomorphic-git": "1.27.1"
   },
   "devDependencies": {

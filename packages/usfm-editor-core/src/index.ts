@@ -1,10 +1,18 @@
 export type { USFMRef, NodePath } from './types';
 export type { SourceTextProvider } from './source-text-provider';
-export type { ChapterSlice } from './chapter-chunker';
-export { splitUsjByChapter, ChapterChunker, chapterSliceToUsjDocument } from './chapter-chunker';
+export type { ChapterSlice, UsjDocument } from '@usfm-tools/usj-core';
+export { splitUsjByChapter, ChapterChunker, chapterSliceToUsjDocument } from '@usfm-tools/usj-core';
 export { usfmRefToVerseSid, findVerseInlineNodes } from './verse-ref';
-export { stripAlignments, stripArray } from './alignment-layer';
-export { appendGatewayText, needsSpaceBetween } from './gateway-text-spacing';
+export {
+  stripAlignments,
+  stripArray,
+  appendGatewayText,
+  needsSpaceBetween,
+  transIndexForAlignedWord,
+  tokenizeGatewayUsj,
+  occurrenceStats,
+  type GatewayWordToken,
+} from '@usfm-tools/usj-core';
 export { reconcileAlignments } from './alignment-reconcile';
 export { rebuildAlignedUsj, rebuildArray, emitAlignmentGroup } from './rebuild-aligned';
 export {
@@ -18,7 +26,7 @@ export { diffUsjDocuments } from './document-diff';
 export type { Operation, ContentOperation, AlignmentOperation } from './operations';
 export { applyOperation, applyOperations, invertOperation } from './operation-engine';
 export { composeOps, transformOpLists, invertOps, transformAgainstPrior } from './ot-transform';
-export { DocumentStore, type UsjDocument, type DocumentChangeListener } from './document-store';
+export { DocumentStore, type DocumentChangeListener } from './document-store';
 export type { GitSyncAdapter, MergeResult, Conflict } from './git-sync-adapter';
 export { StubGitSyncAdapter } from './git-sync-adapter';
 export type { PersistenceAdapter } from './persistence/persistence-adapter';

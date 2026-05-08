@@ -72,6 +72,7 @@ import {
   chapterSubsetToPm,
   classifyPreChapterNodes,
   expandChaptersWithContext,
+  mergeIdentificationPreservingBookId,
   partitionContent,
   type EditorContentPage,
 } from './usj-to-pm';
@@ -936,7 +937,11 @@ export class ScriptureSession {
     const parsedC = classifyPreChapterNodes(parsedPart.header);
 
     if (this.contentPage.kind === 'identification') {
-      const ch0 = [...parsedC.identification, ...parsedC.bookTitles, ...storeC.introduction];
+      const identification = mergeIdentificationPreservingBookId(
+        storeC.identification,
+        parsedC.identification,
+      );
+      const ch0 = [...identification, ...parsedC.bookTitles, ...storeC.introduction];
       this.store.replaceChapterNodes(0, ch0);
       return;
     }

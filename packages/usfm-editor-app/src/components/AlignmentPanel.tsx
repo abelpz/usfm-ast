@@ -1,9 +1,10 @@
 import type { ScriptureSession } from '@usfm-tools/editor';
 import type { Door43LanguageOption } from '@/dcs-client';
-import type { SourceSlotSnapshot } from '@/components/alignment/AlignmentSourcePicker';
+import type { SourceSlotSnapshot } from '@/components/alignment/alignment-source-matching';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlignmentEditor } from '@/components/alignment/AlignmentEditor';
+import { useNavigate } from 'react-router-dom';
 
 type Props = {
   session: ScriptureSession;
@@ -27,7 +28,14 @@ export function AlignmentPanel({
   onRequestAddDcsLanguage,
   usfmTheme = 'document',
 }: Props) {
+  const navigate = useNavigate();
+
   if (!open) return null;
+
+  function handleBack() {
+    navigate(-1);
+    onClose();
+  }
 
   return (
     <div
@@ -35,9 +43,9 @@ export function AlignmentPanel({
       data-usfm-theme={usfmTheme}
     >
       <div className="border-border flex items-center gap-2 border-b px-4 py-3">
-        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+        <Button type="button" variant="ghost" size="sm" onClick={handleBack}>
           <ArrowLeft className="mr-1 size-4" />
-          Back to editor
+          Back
         </Button>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">

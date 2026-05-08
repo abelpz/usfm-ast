@@ -1,0 +1,48 @@
+{
+  "name": "@usfm-tools/usj-core",
+  "version": "0.1.0",
+  "description": "USJ document helpers: chapter slicing and alignment stripping (no editor / OT)",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "clean": "rimraf dist",
+    "check-types": "tsc --noEmit -p tsconfig.tsup.json"
+  },
+  "dependencies": {
+    "@usfm-tools/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@usfm-tools/parser": "workspace:*",
+    "jest": "^29.5.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.1.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.0.0"
+  },
+  "keywords": ["usfm", "usj", "scripture", "alignment"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abelpz/usfm-ast.git",
+    "directory": "packages/usfm-usj-core"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

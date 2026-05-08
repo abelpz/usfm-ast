@@ -295,6 +295,12 @@ export type CompareRefsResult = {
   totalCommits: number;
   aheadBy: number | null;
   behindBy: number | null;
+  /**
+   * SHA of the common ancestor (merge-base) commit, if Gitea returned it in
+   * the `merge_base_commit` field of the compare response.
+   * `null` when the API did not include this field (older Gitea versions).
+   */
+  mergeBaseCommit: string | null;
 };
 
 /**
@@ -312,14 +318,17 @@ export async function compareRefs(options: CompareRefsOptions): Promise<CompareR
   if (!res.ok) await door43HttpError('Door43 compare refs', res);
   const raw: unknown = await res.json();
   if (!isRecord(raw)) {
-    return { totalCommits: 0, aheadBy: null, behindBy: null };
+    return { totalCommits: 0, aheadBy: null, behindBy: null, mergeBaseCommit: null };
   }
   const commitsLen = Array.isArray(raw.commits) ? raw.commits.length : 0;
   const totalCommits =
     typeof raw.total_commits === 'number' ? raw.total_commits : commitsLen;
   const aheadBy = typeof raw.ahead_by === 'number' ? raw.ahead_by : null;
   const behindBy = typeof raw.behind_by === 'number' ? raw.behind_by : null;
-  return { totalCommits, aheadBy, behindBy };
+  const mergeBaseRaw = isRecord(raw.merge_base_commit) ? raw.merge_base_commit : null;
+  const mergeBaseCommit =
+    mergeBaseRaw !== null && typeof mergeBaseRaw.sha === 'string' ? mergeBaseRaw.sha : null;
+  return { totalCommits, aheadBy, behindBy, mergeBaseCommit };
 }
 
 export type GetPullRequestOptions = {

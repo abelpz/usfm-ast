@@ -1,5 +1,7 @@
 # Bidirectional project sync (local translation projects)
 
+**Active redesign:** see [31-online-sync-redesign.md](./31-online-sync-redesign.md) (unified offline + online destination model: local Git + CRDT + 3-pane conflict UX).
+
 Local translation projects (resource-container in IndexedDB) sync to Door43 through **`syncLocalProjectWithDcs`** in `@usfm-tools/editor-app`: pull Tier‑2 (book branch) → three-way merge with IndexedDB → CAS push to the working branch, with retry on stale blob SHAs.
 
 ## Transport (`@usfm-tools/editor-adapters`)

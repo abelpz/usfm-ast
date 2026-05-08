@@ -1,4 +1,4 @@
-import { appendGatewayText, needsSpaceBetween } from '../src/gateway-text-spacing';
+import { appendGatewayText, needsSpaceBetween } from '../src';
 
 describe('gateway-text-spacing', () => {
   it('needsSpaceBetween adds space for letter-to-letter glue', () => {

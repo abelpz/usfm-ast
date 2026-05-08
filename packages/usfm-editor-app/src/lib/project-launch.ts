@@ -23,6 +23,11 @@ export type ProjectLaunchConfig = {
   /** Door43 language code for the source text (e.g. from translate wizard) — drives catalog helps discovery. */
   sourceLanguage?: string;
   openReferencePanel?: boolean;
+  /**
+   * When opening the local-project editor, show the word-alignment panel immediately
+   * (e.g. from the book tools “Align” action).
+   */
+  openAlignmentPanel?: boolean;
   /** Local project book session (virtual files in app project storage, IndexedDB by default). */
   localProject?: {
     projectId: string;

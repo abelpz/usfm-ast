@@ -177,6 +177,22 @@ img.ProseMirror-separator {
   border-radius: 2px;
 }
 
+/*
+ * Conflict solver root: must stay a column flex container with a definite min block size
+ * so inner `flex-1` + `overflow-y-*` regions clip and scroll. Layout lives here so callers
+ * can pass only cosmetic classes (e.g. border) without replacing structure.
+ */
+.usfm-conflict-panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
 /* Thin, subtle scrollbar for horizontally scrollable navigation rows. */
 .scrollbar-thin {
   scrollbar-width: thin;
@@ -195,6 +211,28 @@ img.ProseMirror-separator {
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+/* Vertical panels (conflict solver, etc.): readable thumb + track; reserve gutter so layout does not jump. */
+.scrollbar-panel-y {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground) 55%, var(--border)) var(--muted);
+}
+.scrollbar-panel-y::-webkit-scrollbar {
+  width: 10px;
+}
+.scrollbar-panel-y::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 6px;
+}
+.scrollbar-panel-y::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--muted-foreground) 50%, var(--border));
+  border-radius: 6px;
+  border: 2px solid var(--muted);
+}
+.scrollbar-panel-y::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--muted-foreground) 70%, var(--border));
 }
 
 /* Completely hide scrollbar (visual only, scrolling still works). */

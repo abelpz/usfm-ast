@@ -34,13 +34,7 @@ import { fetchAuthenticatedUser, getFileContent, type Door43RepoRow, type Door43
 import { booksFromDetectedProject, loadDcsProjectDescriptor, type DetectedDcsProject } from '@/lib/dcs-format-detect';
 import { findLocalProjectForDcsRepo, importDcsRepoAsProject } from '@/lib/dcs-import-project';
 import { resolveEditorProjectFormat } from '@/lib/project-create';
-import {
-  listRCBooks,
-  listSBBooks,
-  parseResourceContainer,
-  parseScriptureBurrito,
-  scaffoldRcProject,
-} from '@usfm-tools/project-formats';
+import { parseResourceContainer, parseScriptureBurrito, scaffoldRcProject } from '@usfm-tools/project-formats';
 import { getCatalogLanguages, getLangnames, type DcsLangnameEntry } from '@/lib/dcs-langnames-cache';
 import {
   peekReposSearchWizardCache,
@@ -51,6 +45,8 @@ import { cn } from '@/lib/utils';
 import { DCS_CREDS_KEY, loadDcsCredentials, type DcsStoredCredentials } from '@/lib/dcs-storage';
 import { useKV } from '@/platform/PlatformContext';
 import type { ProjectLaunchConfig } from '@/lib/project-launch';
+import { newPathsFromSnapshot } from '@/lib/bundle-import-snapshot';
+import { openLocalProjectFromBundle } from '@/lib/open-project-bundle';
 import { getProjectStorage } from '@/lib/project-storage';
 import { addRecentProject, loadRecentProjects, removeRecentProject, type RecentProjectEntry } from '@/lib/recent-projects';
 import { blankTranslationFromSourceUsfm, blankUsfmForBook, extractBookCodeFromUsfm } from '@/lib/usfm-project';
@@ -61,6 +57,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
+  Download,
   FilePlus,
   FileText,
   FileUp,
@@ -116,21 +113,6 @@ function formatRecentAge(ts: number): string {
   return `${d}d`;
 }
 
-async function readFileFromDirectory(
-  root: FileSystemDirectoryHandle,
-  relativePath: string,
-): Promise<string> {
-  const parts = relativePath.split(/[/\\]/).filter(Boolean);
-  if (parts.length === 0) throw new Error('Empty path');
-  let dir = root;
-  for (let i = 0; i < parts.length - 1; i++) {
-    dir = await dir.getDirectoryHandle(parts[i]!);
-  }
-  const fh = await dir.getFileHandle(parts[parts.length - 1]!);
-  const file = await fh.getFile();
-  return file.text();
-}
-
 export function HomePage() {
   const navigate = useNavigate();
   const kv = useKV();
@@ -155,6 +137,7 @@ export function HomePage() {
     | { kind: 'loadBook'; tab: 'device' | 'dcs' };
   const [launcher, setLauncher] = useState<LauncherState>(null);
   const loadBookFileRef = useRef<HTMLInputElement>(null);
+  const bundleFileRef = useRef<HTMLInputElement>(null);
   /** Invalidates in-flight `loadDcsProjectDescriptor` when the user picks another repo or goes Back. */
   const dcsRepoDetectSeqRef = useRef(0);
 
@@ -196,8 +179,8 @@ export function HomePage() {
   const [startProjErr, setStartProjErr] = useState<string | null>(null);
   const [localProjects, setLocalProjects] = useState<ProjectMeta[]>([]);
 
-  const [folderBusy, setFolderBusy] = useState(false);
-  const [folderErr, setFolderErr] = useState<string | null>(null);
+  const [deviceBusy, setDeviceBusy] = useState(false);
+  const [deviceErr, setDeviceErr] = useState<string | null>(null);
 
   const [recentList, setRecentList] = useState(() => loadRecentProjects());
 
@@ -379,72 +362,27 @@ export function HomePage() {
     setBlankOpen(false);
   }
 
-  async function pickProjectFolder() {
-    const w = window as unknown as { showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle> };
-    if (!w.showDirectoryPicker) {
-      setFolderErr('Folder picker is not supported in this browser. Use a single USFM file instead.');
-      return;
-    }
-    setFolderBusy(true);
-    setFolderErr(null);
+  async function pickProjectBundleFile(file: File) {
+    setDeviceBusy(true);
+    setDeviceErr(null);
     try {
-      const root = await w.showDirectoryPicker();
-      let metaText: string | null = null;
-      let metaName: 'sb' | 'rc' | null = null;
-      try {
-        metaText = await readFileFromDirectory(root, 'metadata.json');
-        metaName = 'sb';
-      } catch {
-        try {
-          metaText = await readFileFromDirectory(root, 'manifest.yaml');
-          metaName = 'rc';
-        } catch {
-          metaText = null;
-        }
-      }
-      if (!metaText || !metaName) {
-        setFolderErr('No metadata.json (Scripture Burrito) or manifest.yaml (Resource Container) found in this folder.');
-        setFolderBusy(false);
-        return;
-      }
-      let books: { code: string; name: string; path: string }[] = [];
-      if (metaName === 'sb') {
-        const meta = parseScriptureBurrito(JSON.parse(metaText) as unknown);
-        books = listSBBooks(meta);
-      } else {
-        const manifest = parseResourceContainer(metaText);
-        books = listRCBooks(manifest);
-      }
-      if (books.length === 0) {
-        setFolderErr('No USFM books found in manifest.');
-        setFolderBusy(false);
-        return;
-      }
-      const choice = window.prompt(`Book codes:\n${books.map((b) => `${b.code} — ${b.name}`).join('\n')}\n\nEnter book code to open:`);
-      const picked = books.find((b) => b.code.toUpperCase() === (choice ?? '').trim().toUpperCase());
-      if (!picked) {
-        setFolderErr('Cancelled or unknown book code.');
-        setFolderBusy(false);
-        return;
-      }
-      const rel = picked.path.replace(/^\.\//, '');
-      const usfm = await readFileFromDirectory(root, rel);
-      const recent = addRecentProject({
-        name: `${picked.name} (folder)`,
-        bookCode: picked.code,
-        source: 'continue',
-      });
-      goEditor({
-        initialUsfm: usfm,
-        skipPersistedDcsInitialFetch: true,
-        projectMeta: { name: recent.name, bookCode: picked.code, source: 'continue', recentId: recent.id },
-      });
+      const storage = getProjectStorage();
+      const { id } = await openLocalProjectFromBundle({ storage, blob: file });
+      setLocalProjects(await storage.listProjects());
       setLauncher(null);
+      navigate(`/project/${encodeURIComponent(id)}`);
     } catch (e) {
-      setFolderErr(e instanceof Error ? e.message : String(e));
+      setDeviceErr(e instanceof Error ? e.message : String(e));
     } finally {
-      setFolderBusy(false);
+      setDeviceBusy(false);
     }
+  }
+
+  function onProjectBundleFile(ev: React.ChangeEvent<HTMLInputElement>) {
+    const f = ev.target.files?.[0];
+    ev.target.value = '';
+    if (!f) return;
+    void pickProjectBundleFile(f);
   }
 
   async function onLoadBookFile(ev: React.ChangeEvent<HTMLInputElement>) {
@@ -928,7 +866,7 @@ export function HomePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setFolderErr(null); setLauncher({ kind: 'openProject', tab: 'device' }); }}
+                    onClick={() => { setDeviceErr(null); setLauncher({ kind: 'openProject', tab: 'device' }); }}
                     className="focus-visible:ring-ring flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-foreground/80 transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-1 focus-visible:outline-none"
                   >
                     <FolderOpen className="size-4 shrink-0 text-emerald-600" aria-hidden />
@@ -994,7 +932,7 @@ export function HomePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setFolderErr(null); setLauncher({ kind: 'openProject', tab: 'device' }); }}
+                    onClick={() => { setDeviceErr(null); setLauncher({ kind: 'openProject', tab: 'device' }); }}
                     className="focus-visible:ring-ring flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-foreground/80 transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-1 focus-visible:outline-none"
                   >
                     <FolderOpen className="size-4 shrink-0 text-emerald-600" aria-hidden />
@@ -1043,7 +981,7 @@ export function HomePage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setFolderErr(null); setLauncher({ kind: 'openProject', tab: 'device' }); }}
+                      onClick={() => { setDeviceErr(null); setLauncher({ kind: 'openProject', tab: 'device' }); }}
                       className="focus-visible:ring-ring flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-foreground/80 transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-1 focus-visible:outline-none"
                     >
                       <FolderOpen className="size-4 shrink-0 text-emerald-600" aria-hidden />
@@ -1084,12 +1022,33 @@ export function HomePage() {
                   <h2 className="text-foreground text-sm font-semibold">Projects</h2>
                   {(localProjects.length > 0 || recentProjectEntries.length > 0) && (
                     <ul className="divide-border divide-y">
-                      {localProjects.map((p) => (
+                      {localProjects.map((p) => {
+                        const hasUnresolvedConflicts = (p.pendingConflicts?.length ?? 0) > 0;
+                        const hasNewFromImport = newPathsFromSnapshot(p).length > 0;
+                        return (
                         <li key={p.id} className="group flex items-center gap-2 py-2.5 pr-1">
                           <div className="min-w-0 flex-1">
-                            <Button variant="link" asChild className="text-foreground hover:text-primary h-auto min-w-0 truncate p-0 text-left text-sm font-medium no-underline hover:underline">
-                              <Link to={`/project/${encodeURIComponent(p.id)}`}>{p.name}</Link>
-                            </Button>
+                            <div className="flex min-w-0 items-center gap-2">
+                              <Button variant="link" asChild className="text-foreground hover:text-primary h-auto min-w-0 truncate p-0 text-left text-sm font-medium no-underline hover:underline">
+                                <Link to={`/project/${encodeURIComponent(p.id)}`}>{p.name}</Link>
+                              </Button>
+                              {hasUnresolvedConflicts ? (
+                                <Tip label="Unresolved changes — open project to review" side="top">
+                                  <span
+                                    aria-label="Unresolved changes"
+                                    className="size-2 shrink-0 rounded-full bg-red-500"
+                                  />
+                                </Tip>
+                              ) : null}
+                              {!hasUnresolvedConflicts && hasNewFromImport ? (
+                                <Tip label="Last import added new content" side="top">
+                                  <span
+                                    aria-label="Last import added new content"
+                                    className="size-2 shrink-0 rounded-full bg-sky-500"
+                                  />
+                                </Tip>
+                              ) : null}
+                            </div>
                             <p className="text-muted-foreground text-xs">
                               <span className="font-mono">{p.id}</span> · {p.language} · {p.updated.slice(0, 10)}
                             </p>
@@ -1107,7 +1066,8 @@ export function HomePage() {
                             </Button>
                           </Tip>
                         </li>
-                      ))}
+                        );
+                      })}
                       {recentProjectEntries.map((r) => (
                         <li key={r.id} className="group flex items-center gap-2 py-2.5 pr-1">
                           <button
@@ -1259,7 +1219,8 @@ export function HomePage() {
           <DialogHeader>
             <DialogTitle>{launcher?.kind === 'openProject' ? 'Open project' : 'Load book'}</DialogTitle>
             <DialogDescription>
-              {launcher?.tab === 'device' && launcher?.kind === 'openProject' && 'Unzipped Burrito or Resource Container folder on this device.'}
+              {launcher?.tab === 'device' && launcher?.kind === 'openProject' &&
+                'Open a project from a `.bible.project.zip` exported from another device.'}
               {launcher?.tab === 'device' && launcher?.kind === 'loadBook' && 'USFM / USJ / USX file on this device.'}
               {launcher?.tab === 'dcs' && dcsWizardStep === 0 && 'Language for Bible repositories on Door43.'}
               {launcher?.tab === 'dcs' && dcsWizardStep === 1 && 'Pick a repository (public or your access).'}
@@ -1295,11 +1256,24 @@ export function HomePage() {
 
           {launcher?.tab === 'device' && launcher.kind === 'openProject' ? (
             <div className="flex flex-col gap-2">
-              <Button type="button" variant="outline" className="gap-2" disabled={folderBusy} onClick={() => void pickProjectFolder()}>
-                {folderBusy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <FolderOpen className="size-4" aria-hidden />}
-                Choose project folder…
+              <input
+                ref={bundleFileRef}
+                type="file"
+                className="hidden"
+                accept=".zip,application/zip"
+                onChange={onProjectBundleFile}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                disabled={deviceBusy}
+                onClick={() => bundleFileRef.current?.click()}
+              >
+                {deviceBusy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Download className="size-4" aria-hidden />}
+                Choose project file…
               </Button>
-              {folderErr ? <p className="text-destructive text-sm">{folderErr}</p> : null}
+              {deviceErr ? <p className="text-destructive text-sm">{deviceErr}</p> : null}
             </div>
           ) : null}
 

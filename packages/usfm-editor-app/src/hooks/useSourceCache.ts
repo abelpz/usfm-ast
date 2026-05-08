@@ -84,7 +84,6 @@ export function useSourceCache(): SourceCacheState {
   const platform = usePlatform();
   const cacheStorage = useMemo(
     () => platform.sourceCache ?? getSourceCacheStorage(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 

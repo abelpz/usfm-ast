@@ -43,10 +43,16 @@ const PM_NON_EDIT_CHROME = '.usfm-chapter-label';
 
 function findBlockStart(view: EditorView, el: HTMLElement | null): number | null {
   if (!el) return null;
+  if (!view.dom.isConnected) return null;
   let cur: HTMLElement | null = el;
   while (cur && cur !== view.dom) {
     if (cur.matches?.(BLOCK_SELECTOR)) {
-      const pos = view.posAtDOM(cur, 0);
+      let pos: number;
+      try {
+        pos = view.posAtDOM(cur, 0);
+      } catch {
+        return null;
+      }
       const $p = view.state.doc.resolve(pos);
       for (let d = $p.depth; d > 0; d--) {
         const n = $p.node(d);
@@ -1109,6 +1115,7 @@ export function attachWysiwygChrome(
 
   function onMouseMove(e: MouseEvent) {
     if (scrolling) return;
+    if (!view.dom.isConnected) return;
     const t = e.target as HTMLElement;
     if (
       pmShell.contains(t) &&

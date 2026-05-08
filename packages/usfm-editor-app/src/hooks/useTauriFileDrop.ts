@@ -53,6 +53,5 @@ export function useTauriFileDrop(
 
     return () => { unlisten?.(); };
     // onFiles identity is managed by the caller (useCallback).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platform]);
 }

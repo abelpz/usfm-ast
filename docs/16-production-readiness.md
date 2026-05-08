@@ -7,6 +7,18 @@ How to ship and operate **`@usfm-tools/*`** and **`@usj-tools/*`** packages in r
 - Each **published** package under `packages/` has its own **semver** in `package.json`.
 - **Breaking** changes to the public API or to stable JSON shapes (e.g. `USFMParser.prototype.toJSON()`) require a **major** bump; document them in the root [`CHANGELOG.md`](../CHANGELOG.md).
 - Publish scripts: `bun run publish:usfm`, `bun run publish:usj`, or `bun run publish:all` (see [`scripts/publish-scope.cjs`](../scripts/publish-scope.cjs)). Run `bun run build` first.
+
+### Scoped publish: `E404 Not Found` on `PUT /@scope/...`
+
+If **`npm publish`** fails with **`404 Not Found`** on a URL like `https://registry.npmjs.org/@usfm-tools%2ftypes`, npm is telling you that **this scope is not available for your account to create/publish into** (not “the package file is missing”).
+
+Do this:
+
+1. **Create the organization** on npm with the **exact** scope name (for `@usfm-tools/*`, the org is **`usfm-tools`**): [Create an organization](https://docs.npmjs.com/creating-an-organization) / [npm org create](https://www.npmjs.com/org/create).
+2. **Invite your npm user** (e.g. the account from `npm whoami`) and grant **publish** rights (owner or team with publish).
+3. Ensure each package has **`"publishConfig": { "access": "public" }`** for free public scoped packages (already set in this repo).
+
+If you intended a **different** scope (e.g. under your username), you must **rename** every `package.json` `name` field and dependencies — npm will not alias `@usfm-tools` to another org for you.
 - **npm provenance** (supply chain attestation): from a clean tree, with npm 9+ and appropriate permissions, you can use `npm publish --access public --provenance` from each package directory, or configure your CI to publish with OIDC. See [npm provenance](https://docs.npmjs.com/generating-provenance-statements).
 
 ## Parser logging (`USFMParser`)

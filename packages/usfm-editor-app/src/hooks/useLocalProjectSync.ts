@@ -5,16 +5,15 @@ import { loadDcsCredentials } from '@/lib/dcs-storage';
 import {
   publishPendingReleasesToDcs,
   hasLocalChanges,
-  autoMergeToDcs,
-  workingBranchName,
+  bookBranchName,
   syncLocalProjectWithDcs,
   type SyncLocalProjectWithDcsResult,
   SyncConflictsError,
   StalePushError,
 } from '@/lib/dcs-project-sync';
+import { createBrowserGitAdapter, type IBrowserGitAdapter } from '@/lib/browser-git-adapter';
 import {
   notifySyncSuccess,
-  notifySyncConflict,
   notifySyncFailure,
 } from '@/lib/tauri-notifications';
 import type { FileConflict, ProjectSyncConfig } from '@usfm-tools/types';
@@ -43,7 +42,7 @@ export type LocalProjectSyncState = {
   conflictPrUrl: string | undefined;
   /** File-level merge conflicts (three-way); resolve via {@link resolveConflict}. */
   pendingFileConflicts: FileConflict[];
-  resolveConflict: (path: string, choice: 'ours' | 'theirs') => Promise<void>;
+  resolveConflict: (path: string, choice: 'ours' | 'theirs' | 'merged', mergedText?: string) => Promise<void>;
   /** Enable or disable auto-sync (persists to project meta). */
   setAutoSync: (enabled: boolean) => void;
   /** Immediately trigger a push regardless of the debounce or toggle. */
@@ -56,8 +55,17 @@ export type LocalProjectSyncState = {
 };
 
 /**
- * Manages auto-sync of a local translation project to Door43 using a
- * 3-tier branch strategy with pull/merge before push.
+ * Manages auto-sync of a local translation project to Door43.
+ *
+ * **Offline-first:** all edits are stored locally (IndexedDB). A push to the
+ * Tier-2 book branch on DCS is attempted whenever the device is online and a
+ * debounce window elapses.  No additional relay server is required — the only
+ * online dependency is Door43 (DCS).
+ *
+ * **Phase 5 branch model:** pushes directly to `{bookCode}` (Tier-2).
+ * No personal Tier-1 branches are created; no PR auto-merge loop runs.
+ * File-level conflicts are resolved locally via the 3-pane conflict UI before
+ * the push is retried.
  */
 export function useLocalProjectSync(
   projectId: string | undefined,
@@ -97,6 +105,8 @@ export function useLocalProjectSync(
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const syncInFlightRef = useRef(false);
   const dirtyDuringSyncRef = useRef(false);
+  // Phase 3: one BrowserGitAdapter per project, created lazily on first sync.
+  const gitAdapterRef = useRef<IBrowserGitAdapter | null>(null);
   const onProjectSyncSucceededRef = useRef(options?.onProjectSyncSucceeded);
   onProjectSyncSucceededRef.current = options?.onProjectSyncSucceeded;
   const getSyncWatermarkRef = useRef(options?.getSyncWatermark);
@@ -113,16 +123,21 @@ export function useLocalProjectSync(
       const releases = await storage.listReleases(projectId);
       setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
     })();
-  }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   const resolveConflict = useCallback(
-    async (path: string, choice: 'ours' | 'theirs') => {
+    async (path: string, choice: 'ours' | 'theirs' | 'merged', mergedText?: string) => {
       if (!projectId) return;
       const meta = await storage.getProject(projectId);
       const list = meta?.pendingConflicts ?? [];
       const c = list.find((x) => x.path === path);
       if (!c) return;
-      const text = choice === 'ours' ? c.oursText : c.theirsText;
+      const text =
+        choice === 'merged' && mergedText !== undefined
+          ? mergedText
+          : choice === 'theirs'
+            ? c.theirsText
+            : c.oursText;
       // An empty string means the chosen side deleted the file.
       if (text === '') {
         await storage.deleteFile(projectId, path);
@@ -147,12 +162,21 @@ export function useLocalProjectSync(
       syncInFlightRef.current = true;
       setConflictPrUrl(undefined);
 
-      const wb = bookCode ? workingBranchName(username, bookCode) : undefined;
-      const branchLabel = wb ?? sync.branch;
+      // Phase 5: push target is the book branch directly (no Tier-1 personal branch).
+      const tier2 = bookCode ? bookBranchName(bookCode) : sync.branch;
 
-      setDetail(`Local project: syncing with Door43 (${branchLabel})…`);
+      setDetail(`Local project: syncing with Door43 (${tier2})…`);
       try {
         const journalWatermark = getSyncWatermarkRef.current?.() ?? 0;
+        // Phase 3: lazily initialize the per-project local git adapter.
+        if (!gitAdapterRef.current && projectId) {
+          try {
+            gitAdapterRef.current = createBrowserGitAdapter(projectId);
+          } catch {
+            // Non-fatal — local git is an optimization; sync continues without it.
+          }
+        }
+
         const syncResult = await syncLocalProjectWithDcs({
           storage,
           projectId: projectId!,
@@ -160,6 +184,7 @@ export function useLocalProjectSync(
           sync,
           username,
           bookCode,
+          gitAdapter: gitAdapterRef.current ?? undefined,
         });
 
         if (syncResult.kind === 'synced') {
@@ -180,29 +205,12 @@ export function useLocalProjectSync(
         const projectMeta = await storage.getProject(projectId!);
         const projectLabel = projectMeta?.name ?? projectId!;
 
-        if (wb && bookCode) {
-          setDetail(`Local project: pushed to ${branchLabel} — merging PRs…`);
-          const mergeResult = await autoMergeToDcs({ token, sync, username, bookCode });
-          if (mergeResult.merged) {
-            setDetail(`Local project: merged → ${sync.owner}/${sync.repo} (${sync.branch})`);
-            notifySyncSuccess(projectLabel, `${sync.owner}/${sync.repo}`);
-            await publishPendingReleasesToDcs({ storage, projectId: projectId!, token, sync });
-            const releases = await storage.listReleases(projectId!);
-            setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
-          } else {
-            setConflictPrUrl(mergeResult.conflictPrUrl);
-            setDetail(`Local project: pushed to ${branchLabel} — merge conflict, resolve on DCS`);
-            if (mergeResult.conflictPrUrl) {
-              notifySyncConflict(projectLabel, mergeResult.conflictPrUrl);
-            }
-          }
-        } else {
-          setDetail(`Local project: synced → ${sync.owner}/${sync.repo}`);
-          notifySyncSuccess(projectLabel, `${sync.owner}/${sync.repo}`);
-          await publishPendingReleasesToDcs({ storage, projectId: projectId!, token, sync });
-          const releases = await storage.listReleases(projectId!);
-          setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
-        }
+        // Phase 5: pushed directly to the book branch — no PR auto-merge loop.
+        setDetail(`Local project: synced → ${sync.owner}/${sync.repo} (${tier2})`);
+        notifySyncSuccess(projectLabel, `${sync.owner}/${sync.repo}`);
+        await publishPendingReleasesToDcs({ storage, projectId: projectId!, token, sync });
+        const releases = await storage.listReleases(projectId!);
+        setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
       } catch (err) {
         if (err instanceof SyncConflictsError) {
           setPendingFileConflicts(err.conflicts);
@@ -291,7 +299,7 @@ export function useLocalProjectSync(
         }
       }
     })();
-  }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   useEffect(() => {
     return () => {

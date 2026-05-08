@@ -135,6 +135,20 @@ describe('ScriptureSession paginated navigation', () => {
     session.contentView.destroy();
   });
 
+  it('applyLiveUsfmFromVisibleWindow on identification keeps book id when live text omits \\\\id', () => {
+    const el = document.createElement('div');
+    const session = new ScriptureSession(el, { paginatedEditor: true });
+    session.loadUSFM('\\id TIT EN ULT\n\\h Titus\n\\c 1\n\\p\n\\v 1 One.\n');
+    session.setContentPage({ kind: 'identification' });
+    session.applyLiveUsfmFromVisibleWindow('\\h Title without id line\n');
+    const content = session.store.getFullUSJ().content as unknown[];
+    const json = JSON.stringify(content);
+    expect(json).toContain('TIT');
+    expect((content[0] as { type?: string })?.type).toBe('book');
+    expect(json).toContain('Title without id line');
+    session.contentView.destroy();
+  });
+
   it('applyLiveUsfmFromVisibleWindow merges chapter slice without wiping book identification', () => {
     const el = document.createElement('div');
     const session = new ScriptureSession(el, { paginatedEditor: true });

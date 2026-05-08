@@ -1,7 +1,10 @@
 import type { ScriptureSession } from '@usfm-tools/editor';
 import { alignmentWordSurfacesEqual } from '@usfm-tools/editor-core';
 import type { Door43LanguageOption } from '@/dcs-client';
-import type { SourceSlotSnapshot } from './AlignmentSourcePicker';
+import {
+  tryAutoPickAlignmentSource,
+  type SourceSlotSnapshot,
+} from '@/components/alignment/alignment-source-matching';
 import type { AlignmentGroup } from '@usfm-tools/types';
 import {
   DndContext,
@@ -92,7 +95,6 @@ type Props = {
 export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, onRequestAddDcsLanguage }: Props) {
   const st = useAlignmentState(session, overlayOpen);
   const {
-    step,
     compat,
     verseSid,
     setVerseSid,
@@ -107,6 +109,49 @@ export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, on
   } = st;
 
   const { keys: alignmentLayerKeys, activeKey, setActiveKey } = useAlignmentDocuments(session);
+
+  const sourceReady = session.isAlignmentSourceLoaded();
+  const slotLoadKey = useMemo(() => {
+    const parts = sourceSlots.map((s) => (s.session?.isLoaded() ? `1:${s.id}` : '0'));
+    if (!parts.some((p) => p.startsWith('1:'))) {
+      return `unloaded:${sourceSlots.map((s) => s.id).join(',')}`;
+    }
+    return parts.join('|');
+  }, [sourceSlots]);
+  const lastAutoTriedKeyRef = useRef<string>('');
+  const hadAlignmentSourceRef = useRef(false);
+
+  useEffect(() => {
+    if (!overlayOpen) {
+      lastAutoTriedKeyRef.current = '';
+      hadAlignmentSourceRef.current = false;
+    }
+  }, [overlayOpen]);
+
+  useEffect(() => {
+    if (hadAlignmentSourceRef.current && !session.isAlignmentSourceLoaded()) {
+      lastAutoTriedKeyRef.current = '';
+    }
+    hadAlignmentSourceRef.current = session.isAlignmentSourceLoaded();
+  }, [session, bump]);
+
+  useLayoutEffect(() => {
+    if (!overlayOpen || session.isAlignmentSourceLoaded()) return;
+    if (lastAutoTriedKeyRef.current === slotLoadKey) return;
+    lastAutoTriedKeyRef.current = slotLoadKey;
+    const pick = tryAutoPickAlignmentSource(
+      sourceSlots,
+      session.getAlignmentDocuments(),
+      session.getExpectedAlignmentKey(),
+    );
+    if (pick) {
+      if (pick.kind === 'existing') {
+        useExistingLayer(pick.layerKey, pick.usj);
+      } else {
+        startNewLayer(pick.usj);
+      }
+    }
+  }, [overlayOpen, session, sourceSlots, slotLoadKey, useExistingLayer, startNewLayer, bump]);
 
   const groups = useMemo(
     () => session.getAlignmentsForVerse(verseSid),
@@ -163,6 +208,7 @@ export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, on
   // is expected and must not prevent editing.
   const isEmbeddedLayer = activeKey === '__embedded__';
   const compatBlocked = compat?.compatible === false && isEmbeddedLayer;
+  const interactionDisabled = compatBlocked || !sourceReady;
 
   const [selectedBoxIds, setSelectedBoxIds] = useState<Set<string>>(new Set());
   const [selectedDetachRef, setSelectedDetachRef] = useState<{ boxId: string; refIndex: number } | null>(null);
@@ -397,7 +443,7 @@ export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, on
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!over || compatBlocked) return;
+      if (!over || interactionDisabled) return;
       const d = active.data.current as
         | SourceWordDragData
         | MergeBoxDragData
@@ -446,11 +492,11 @@ export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, on
         return;
       }
     },
-    [compatBlocked, onDropSource, onDropMerge, onDropUnalign, onDetachTargetRef],
+    [interactionDisabled, onDropSource, onDropMerge, onDropUnalign, onDetachTargetRef],
   );
 
   const onMergeToolbar = useCallback(() => {
-    if (!verseSid || selectedBoxIds.size < 2) return;
+    if (!verseSid || selectedBoxIds.size < 2 || interactionDisabled) return;
     const ids = [...selectedBoxIds];
     const ordered = deriveAlignmentBoxes(refTok, groups, trTok);
     const sortedIds = [...ids].sort(
@@ -465,10 +511,10 @@ export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, on
     const anchor = sortedIds[0]!;
     const next = mergeAlignmentBoxes(refTok, trTok, groups, ids, anchor);
     if (next) applyGroups(next);
-  }, [verseSid, selectedBoxIds, refTok, trTok, groups, applyGroups]);
+  }, [verseSid, selectedBoxIds, refTok, trTok, groups, applyGroups, interactionDisabled]);
 
   const onSplitToolbar = useCallback(() => {
-    if (!verseSid || compatBlocked) return;
+    if (!verseSid || interactionDisabled) return;
     if (selectedDetachRef) {
       const box = deriveAlignmentBoxes(refTok, groups, trTok).find((b) => b.id === selectedDetachRef.boxId);
       if (box && box.groupIndex !== null && box.targetTokens.length > 1) {
@@ -484,7 +530,7 @@ export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, on
     if (next) applyGroups(next);
   }, [
     verseSid,
-    compatBlocked,
+    interactionDisabled,
     selectedDetachRef,
     selectedBoxIds,
     refTok,
@@ -495,35 +541,35 @@ export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, on
   ]);
 
   const onInsertToolbar = useCallback(() => {
-    if (!verseSid || selectedBoxIds.size !== 1 || selectedTrans.length === 0) return;
+    if (!verseSid || selectedBoxIds.size !== 1 || selectedTrans.length === 0 || interactionDisabled) return;
     const boxId = [...selectedBoxIds][0]!;
     const next = addSourcesToBox(refTok, trTok, groups, boxId, selectedTrans);
     applyGroups(next);
-  }, [verseSid, selectedBoxIds, selectedTrans, refTok, trTok, groups, applyGroups]);
+  }, [verseSid, selectedBoxIds, selectedTrans, refTok, trTok, groups, applyGroups, interactionDisabled]);
 
   const onUnlinkToolbar = useCallback(() => {
-    if (!verseSid || selectedBoxIds.size !== 1) return;
+    if (!verseSid || selectedBoxIds.size !== 1 || interactionDisabled) return;
     const boxId = [...selectedBoxIds][0]!;
     const next = unlinkBox(refTok, trTok, groups, boxId);
     applyGroups(next);
-  }, [verseSid, selectedBoxIds, refTok, trTok, groups, applyGroups]);
+  }, [verseSid, selectedBoxIds, refTok, trTok, groups, applyGroups, interactionDisabled]);
 
   const onClearVerse = useCallback(() => {
-    if (!verseSid) return;
+    if (!verseSid || interactionDisabled) return;
     session.updateAlignment(verseSid, []);
     setSelectedBoxIds(new Set());
     setSelectedTrans([]);
     setSelectedDetachRef(null);
     setSelectedAligned(null);
-  }, [verseSid, session, setSelectedTrans]);
+  }, [verseSid, session, setSelectedTrans, interactionDisabled]);
 
-  const mergeDisabled = selectedBoxIds.size < 2 || compatBlocked;
+  const mergeDisabled = selectedBoxIds.size < 2 || interactionDisabled;
   const selectedBoxList = useMemo(
     () => boxes.filter((b) => selectedBoxIds.has(b.id)),
     [boxes, selectedBoxIds],
   );
   const splitDisabled = useMemo(() => {
-    if (compatBlocked) return true;
+    if (interactionDisabled) return true;
     if (selectedDetachRef) {
       const b = boxes.find((x) => x.id === selectedDetachRef.boxId);
       return !(b && b.groupIndex !== null && b.targetTokens.length > 1);
@@ -531,19 +577,21 @@ export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, on
     if (selectedBoxIds.size !== 1) return true;
     const one = selectedBoxList[0];
     return !(one && canSplitBox(groups, one));
-  }, [compatBlocked, selectedDetachRef, selectedBoxIds, selectedBoxList, boxes, groups]);
+  }, [interactionDisabled, selectedDetachRef, selectedBoxIds, selectedBoxList, boxes, groups]);
   const insertDisabled =
-    selectedTrans.length === 0 || selectedBoxIds.size !== 1 || compatBlocked;
-  const unlinkDisabled = selectedBoxIds.size !== 1 || compatBlocked;
+    selectedTrans.length === 0 || selectedBoxIds.size !== 1 || interactionDisabled;
+  const unlinkDisabled = selectedBoxIds.size !== 1 || interactionDisabled;
 
   const colorSlotForBox = useCallback((box: AlignmentBoxModel) => alignmentColorSlotFromBox(box), []);
 
-  if (step === 'pick-source') {
-    const existingLayersForPicker = session.getAlignmentDocuments();
-    const expectedAlignmentKey = session.getExpectedAlignmentKey();
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 py-8">
+  const existingLayersForPicker = session.getAlignmentDocuments();
+  const expectedAlignmentKey = session.getExpectedAlignmentKey();
+
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      {!sourceReady ? (
         <AlignmentSourcePicker
+          variant="inline"
           sourceSlots={sourceSlots}
           existingLayers={existingLayersForPicker}
           activeLayerKey={activeKey}
@@ -554,21 +602,23 @@ export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, on
           onStartNewLayer={startNewLayer}
           onRequestAddDcsLanguage={onRequestAddDcsLanguage}
         />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground text-sm underline"
-          onClick={resetToPickSource}
-        >
-          Change alignment source
-        </button>
-      </div>
+      ) : null}
+      {!sourceReady ? (
+        <p className="text-muted-foreground shrink-0 text-sm" role="status">
+          Load an alignment source above to link words, or add a reference in the side panel first.
+        </p>
+      ) : null}
+      {sourceReady ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground text-sm underline"
+            onClick={resetToPickSource}
+          >
+            Change alignment source
+          </button>
+        </div>
+      ) : null}
 
       {compatBlocked ? (
         <div
@@ -687,7 +737,7 @@ export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, on
             colorSlots={colorSlots}
             groupClass={chipClass}
             onToggle={toggleSource}
-            disabled={compatBlocked}
+            disabled={interactionDisabled}
           />
           <AlignmentBoxGrid
             boxes={boxes}
@@ -697,7 +747,7 @@ export function AlignmentEditor({ session, sourceSlots, overlayOpen, dcsAuth, on
             onSelectDetachRef={onSelectDetachRef}
             groupClass={chipClass}
             colorSlotForBox={colorSlotForBox}
-            disabled={compatBlocked}
+            disabled={interactionDisabled}
             onSelectBox={onSelectBox}
             onRemoveAlignedSource={onRemoveAlignedSource}
             selectedAligned={selectedAligned}

@@ -12,10 +12,13 @@ import { initProjectStorage } from '@/lib/project-storage';
 import { initOfflineSyncQueue } from '@/lib/offline-sync-queue';
 import { initSourceCacheStorage, initProcessedCacheStorage } from '@/hooks/useSourceCache';
 import { initDownloadQueue } from '@/hooks/useDownloadQueue';
+import { registerDefaultBookTools } from '@/lib/book-tools-registry';
 import { loadDcsCredentials } from '@/lib/dcs-storage';
 import { IndexedDbProjectStorage } from '@usfm-tools/editor-adapters';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, MemoryRouter } from 'react-router-dom';
+
+registerDefaultBookTools();
 
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('#root missing');

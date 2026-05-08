@@ -21,6 +21,8 @@ const CHECK_HOST = 'https://git.door43.org';
 const FETCH_TIMEOUT_MS = 5_000;
 const POLL_ONLINE_MS = 60_000;
 const POLL_OFFLINE_MS = 15_000;
+/** When reachability keeps failing (DNS / captive portal), back off to avoid noisy console + CPU. */
+const REACHABILITY_BACKOFF_MAX_MS = 120_000;
 
 async function checkReachable(): Promise<boolean> {
   try {
@@ -42,6 +44,7 @@ export class TauriNetworkAdapter implements NetworkAdapter {
   private _listeners: Array<(online: boolean) => void> = [];
   private _pollTimer: ReturnType<typeof setTimeout> | undefined;
   private _started = false;
+  private _reachabilityFailStreak = 0;
 
   /** Start the background polling loop (called lazily on first subscriber). */
   private _start(): void {
@@ -53,14 +56,34 @@ export class TauriNetworkAdapter implements NetworkAdapter {
       // Only do a network probe when the browser believes we're online.
       const browserOnline =
         typeof navigator !== 'undefined' ? navigator.onLine : true;
-      const nowReachable = browserOnline ? await checkReachable() : false;
+      let nowReachable = false;
+      if (browserOnline) {
+        nowReachable = await checkReachable();
+        if (nowReachable) {
+          this._reachabilityFailStreak = 0;
+        } else {
+          this._reachabilityFailStreak = Math.min(this._reachabilityFailStreak + 1, 8);
+        }
+      } else {
+        this._reachabilityFailStreak = 0;
+      }
 
       if (nowReachable !== wasReachable) {
         this._reachable = nowReachable;
         for (const cb of this._listeners) cb(nowReachable);
       }
 
-      const delay = nowReachable ? POLL_ONLINE_MS : POLL_OFFLINE_MS;
+      let delay: number;
+      if (nowReachable) {
+        delay = POLL_ONLINE_MS;
+      } else if (browserOnline) {
+        delay = Math.min(
+          REACHABILITY_BACKOFF_MAX_MS,
+          POLL_OFFLINE_MS * 2 ** this._reachabilityFailStreak,
+        );
+      } else {
+        delay = POLL_OFFLINE_MS;
+      }
       this._pollTimer = setTimeout(() => void poll(), delay);
     };
 

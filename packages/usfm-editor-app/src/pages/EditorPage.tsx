@@ -1,3 +1,4 @@
+import type { ReferenceColumnHandle } from '@/components/ReferenceColumn';
 import { AlignmentPanel } from '@/components/AlignmentPanel';
 import { MarkerShortcutsDialog } from '@/components/MarkerShortcutsDialog';
 import { CheckingPanel } from '@/components/CheckingPanel';
@@ -6,7 +7,7 @@ import { CollaborateModal } from '@/components/CollaborateModal';
 import { DcsLoginDialog } from '@/components/DcsLoginDialog';
 import { DcsModal } from '@/components/DcsModal';
 import { DcsSyncButton } from '@/components/DcsSyncButton';
-import { SyncConflictDialog } from '@/components/SyncConflictDialog';
+import { ConflictSolverPanel } from '@/components/ConflictSolverPanel';
 import { EditorPanel } from '@/components/EditorPanel';
 import { SectionPicker } from '@/components/SectionPicker';
 import { ReferenceColumn } from '@/components/ReferenceColumn';
@@ -20,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { fetchAuthenticatedUser, getFileContent, type Door43UserInfo } from '@/dcs-client';
+import type { ProjectMeta } from '@usfm-tools/types';
 import { loadDcsCredentials, loadDcsTarget, type DcsStoredCredentials, type DcsStoredTarget } from '@/lib/dcs-storage';
 import { getOfflineSyncQueue } from '@/lib/offline-sync-queue';
 import { bookBranchName, syncLocalProjectWithDcs } from '@/lib/dcs-project-sync';
@@ -39,10 +41,12 @@ import {
   MARKER_PALETTE_TRIGGER_PRESETS,
   setStoredMarkerPaletteTrigger,
 } from '@/marker-palette-trigger';
+import { BookConflictsProvider, useBookConflicts } from '@/contexts/BookConflictsContext';
+import { buildConflictWorkspaceState } from '@/lib/conflict-workspace-state';
 import type { UsjDocument } from '@usfm-tools/editor-core';
-import type { EditorMode, SourceTextSession } from '@usfm-tools/editor';
-import { mountConflictReview, readEditorMode, writeEditorMode } from '@usfm-tools/editor-ui';
-import { isProjectLaunchConfig } from '@/lib/project-launch';
+import type { EditorContentPage, EditorMode, SourceTextSession } from '@usfm-tools/editor';
+import { readEditorMode, writeEditorMode } from '@usfm-tools/editor-ui';
+import { isProjectLaunchConfig, type ProjectLaunchConfig } from '@/lib/project-launch';
 import { getProjectStorage } from '@/lib/project-storage';
 import { nativeOpenFile, nativeSaveFile } from '@/lib/tauri-file-dialog';
 import { notifySyncFailure } from '@/lib/tauri-notifications';
@@ -63,7 +67,10 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type Dispatch,
   type MouseEvent,
+  type RefObject,
+  type SetStateAction,
 } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -93,6 +100,314 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
       },
     );
   });
+}
+
+type LocalProjectSyncApi = ReturnType<typeof useLocalProjectSync>;
+
+type EditorPageChromeProps = {
+  fileInputRef: RefObject<HTMLInputElement | null>;
+  onFileInputChange: (ev: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
+  editorUser: Door43UserInfo | null;
+  onSignInClick: () => void;
+  onDcs: () => void;
+  onCollaborate: () => void;
+  syncState: ReturnType<typeof useSyncStatus>['state'];
+  syncPeers: number | undefined;
+  syncDetail: string | undefined;
+  dcsSyncEnabled: boolean;
+  collabActive: boolean;
+  onOpenExportUsfm: () => void;
+  onExportUsx: () => void | Promise<void>;
+  referencePanel: boolean;
+  onToggleReference: () => void;
+  usfmSource: boolean;
+  onToggleUsfmSource: () => void;
+  onTopbarSyncNow: () => void;
+  usfmTheme: 'document' | 'document-dark';
+  onUsfmTheme: (t: 'document' | 'document-dark') => void;
+  editorMode: EditorMode;
+  onEditorMode: (m: EditorMode) => void;
+  paletteValue: string;
+  onPaletteChange: (v: string) => void;
+  paletteOptions: ReadonlyArray<{ value: string; label: string }>;
+  onAlignment: () => void;
+  onChecking: () => void;
+  checkingOpen: boolean;
+  onHelp: () => void;
+  onMarkerShortcuts: () => void;
+  localSyncSlot: React.ReactNode;
+  ctrl: ScriptureSessionController | null;
+  launch: ProjectLaunchConfig | null;
+  sourceTextSession: SourceTextSession | null;
+  initialUsfm: string;
+  wsRelay: string;
+  dcsCreds: DcsStoredCredentials | null;
+  dcsTarget: DcsStoredTarget | null;
+  localProjectMeta: ProjectMeta | null;
+  projectBookJournalStore: ProjectBookJournalStore | undefined;
+  localSync: LocalProjectSyncApi;
+  onLocalProjectUpdated: () => void;
+  onSourceLanguageChange: (lc: string | null) => void;
+  primaryChapter: number | null;
+  referenceColumnRef: RefObject<ReferenceColumnHandle | null>;
+  setSourceTextSession: Dispatch<SetStateAction<SourceTextSession | null>>;
+  setAllSourceSlots: Dispatch<
+    SetStateAction<ReadonlyArray<{ id: string; label: string; session: SourceTextSession | null }>>
+  >;
+  onController: (c: ScriptureSessionController | null) => void;
+  ybinTarget?: import('@/hooks/useYbinDocProvider').YbinStorageTarget;
+};
+
+function EditorPageChrome(props: EditorPageChromeProps) {
+  const {
+    fileInputRef,
+    onFileInputChange,
+    editorUser,
+    onSignInClick,
+    onDcs,
+    onCollaborate,
+    syncState,
+    syncPeers,
+    syncDetail,
+    dcsSyncEnabled,
+    collabActive,
+    onOpenExportUsfm,
+    onExportUsx,
+    referencePanel,
+    onToggleReference,
+    usfmSource,
+    onToggleUsfmSource,
+    onTopbarSyncNow,
+    usfmTheme,
+    onUsfmTheme,
+    editorMode,
+    onEditorMode,
+    paletteValue,
+    onPaletteChange,
+    paletteOptions,
+    onAlignment,
+    onChecking,
+    checkingOpen,
+    onHelp,
+    onMarkerShortcuts,
+    localSyncSlot,
+    ctrl,
+    launch,
+    sourceTextSession,
+    initialUsfm,
+    wsRelay,
+    dcsCreds,
+    dcsTarget,
+    localProjectMeta,
+    projectBookJournalStore,
+    localSync,
+    onLocalProjectUpdated,
+    onSourceLanguageChange,
+    primaryChapter,
+    referenceColumnRef,
+    setSourceTextSession,
+    setAllSourceSlots,
+    onController,
+    ybinTarget,
+  } = props;
+
+  const { pageHasConflict, bookConflicts, conflictChapters, hasFrontMatterConflict } = useBookConflicts();
+
+  const [currentPage, setCurrentPage] = useState<EditorContentPage | null>(null);
+
+  /** Ensures we auto-jump to the first conflict chapter once per session + book (e.g. after blank→real USFM remount). */
+  const didAutoJumpToConflictRef = useRef<{
+    ctrl: ScriptureSessionController | null;
+    bookCode: string | null;
+  }>({ ctrl: null, bookCode: null });
+
+  useEffect(() => {
+    const session = ctrl?.session;
+    if (!session) {
+      setCurrentPage(null);
+      return;
+    }
+    const sync = () => setCurrentPage(session.getContentPage());
+    sync();
+    return session.onChange(sync);
+  }, [ctrl]);
+
+  useEffect(() => {
+    const session = ctrl?.session;
+    const bc = launch?.localProject?.bookCode ?? null;
+    if (!session || !bc) return;
+    if (bookConflicts.length === 0) return;
+    if (
+      didAutoJumpToConflictRef.current.ctrl === ctrl &&
+      didAutoJumpToConflictRef.current.bookCode === bc
+    ) {
+      return;
+    }
+    const sortedChapters = [...conflictChapters].sort((a, b) => a - b);
+    if (sortedChapters.length > 0) {
+      session.navigateToChapter(sortedChapters[0]!);
+      didAutoJumpToConflictRef.current = { ctrl, bookCode: bc };
+      return;
+    }
+    if (hasFrontMatterConflict) {
+      const pages = session.getNavigableContentPages();
+      const intro = pages.find((p) => p.kind === 'introduction');
+      const ident = pages.find((p) => p.kind === 'identification');
+      const target = intro ?? ident ?? null;
+      if (target) session.setContentPage(target);
+      else session.navigateToChapter(1);
+      didAutoJumpToConflictRef.current = { ctrl, bookCode: bc };
+    }
+  }, [ctrl, launch?.localProject?.bookCode, bookConflicts.length, conflictChapters, hasFrontMatterConflict]);
+
+  const showConflictOverlay = Boolean(
+    launch?.localProject && bookConflicts.length > 0 && pageHasConflict(currentPage),
+  );
+
+  const onConflictPanelClose = useCallback(() => {
+    const session = ctrl?.session;
+    if (!session) return;
+    const total = Math.max(1, session.getChapterCount());
+    for (let c = 1; c <= total; c++) {
+      if (!conflictChapters.has(c)) {
+        session.navigateToChapter(c);
+        return;
+      }
+    }
+  }, [ctrl, conflictChapters]);
+
+  const navigationSlot = useMemo(
+    () =>
+      ctrl ? (
+        <SectionPicker
+          inline
+          session={ctrl.session}
+          referenceSession={sourceTextSession ?? undefined}
+          onWindowNotice={(msg) => console.info(msg)}
+        />
+      ) : undefined,
+    [ctrl, sourceTextSession],
+  );
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <Topbar
+        fileInputRef={fileInputRef}
+        onFileInputChange={onFileInputChange}
+        door43User={editorUser}
+        onSignInClick={onSignInClick}
+        onDcs={onDcs}
+        onCollaborate={onCollaborate}
+        syncState={syncState}
+        syncPeerCount={syncPeers}
+        syncDetail={syncDetail}
+        syncConnected={dcsSyncEnabled || collabActive}
+        onOpenExportUsfm={onOpenExportUsfm}
+        onExportUsx={onExportUsx}
+        referencePanel={referencePanel}
+        onToggleReference={onToggleReference}
+        usfmSource={usfmSource}
+        onToggleUsfmSource={onToggleUsfmSource}
+        onSyncNow={onTopbarSyncNow}
+        usfmTheme={usfmTheme}
+        onUsfmTheme={onUsfmTheme}
+        editorMode={editorMode}
+        onEditorMode={onEditorMode}
+        markerPaletteValue={paletteValue}
+        onMarkerPaletteValue={onPaletteChange}
+        markerPaletteOptions={paletteOptions}
+        onAlignment={onAlignment}
+        onChecking={onChecking}
+        checkingOpen={checkingOpen}
+        onHelp={onHelp}
+        onMarkerShortcuts={onMarkerShortcuts}
+        navigationSlot={navigationSlot}
+        localSyncSlot={localSyncSlot}
+      />
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 pb-4">
+          <div
+            className={cn(
+              'flex min-h-0 min-w-0 flex-1 gap-4 overflow-hidden',
+              referencePanel
+                ? 'flex-col landscape:flex-row landscape:items-stretch'
+                : 'flex-col',
+            )}
+          >
+            {referencePanel && ctrl ? (
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <ReferenceColumn
+                  ref={referenceColumnRef}
+                  session={ctrl.session}
+                  onSourceSession={setSourceTextSession}
+                  onSourceSessionsChange={setAllSourceSlots}
+                  prefillSourceUsfm={launch?.sourceReferenceUsfm}
+                  targetSession={ctrl.session}
+                  dcsAuth={dcsCreds ? { host: dcsCreds.host, token: dcsCreds.token } : null}
+                  sourceLanguage={launch?.sourceLanguage}
+                  launchBookCode={launch?.projectMeta?.bookCode}
+                  onSourceLanguageChange={onSourceLanguageChange}
+                />
+              </div>
+            ) : null}
+
+            <div
+              className={cn(
+                'flex min-h-0 min-w-0 flex-1 flex-col gap-0 overflow-hidden md:flex-row',
+                referencePanel && 'min-h-0 min-w-0 flex-1',
+              )}
+            >
+              <div className="relative min-h-0 min-w-0 flex-1">
+                <EditorPanel
+                  initialUsfm={initialUsfm}
+                  collabActive={collabActive}
+                  wsRelay={wsRelay}
+                  dcsCreds={dcsCreds}
+                  dcsTarget={dcsTarget}
+                  targetLanguage={localProjectMeta?.language}
+                  projectBookJournalStore={projectBookJournalStore}
+                  localBookCode={launch?.localProject?.bookCode}
+                  onController={onController}
+                  ybinTarget={ybinTarget}
+                  className={cn('min-w-0', showConflictOverlay && 'pointer-events-none invisible')}
+                />
+                {launch?.localProject && showConflictOverlay ? (
+                  <div className="bg-card absolute inset-0 z-10 flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border shadow-sm">
+                    <ConflictSolverPanel
+                      conflicts={bookConflicts}
+                      onClose={onConflictPanelClose}
+                      onResolve={async (path, choice, mergedText) => {
+                        await localSync.resolveConflict(path, choice, mergedText);
+                        onLocalProjectUpdated();
+                      }}
+                      defaultOursLabel={bookConflicts[0]?.oursLabel ?? 'Yours (local)'}
+                      defaultTheirsLabel={bookConflicts[0]?.theirsLabel ?? 'Theirs'}
+                      showFilePicker={false}
+                      showHeader={false}
+                      showCancelButton
+                      activeUsfmChapter={primaryChapter}
+                      onActiveUsfmChapterChange={(ch) => {
+                        if (ch != null) ctrl?.session?.navigateToChapter(ch);
+                      }}
+                      className="flex h-full min-h-0 flex-col overflow-hidden border-0"
+                    />
+                  </div>
+                ) : null}
+              </div>
+              {ctrl ? <UsfmSourcePane session={ctrl.session} visible={usfmSource} /> : null}
+            </div>
+          </div>
+
+          {checkingOpen ? (
+            <div className="border-border max-h-[min(40vh,22rem)] w-full max-w-4xl shrink-0 overflow-y-auto border-t pt-3">
+              <CheckingPanel />
+            </div>
+          ) : null}
+        </main>
+      </div>
+    </div>
+  );
 }
 
 export function EditorPage() {
@@ -151,7 +466,10 @@ export function EditorPage() {
   const [referencePanel, setReferencePanel] = useState(() => Boolean(launch?.openReferencePanel));
   const [usfmSource, setUsfmSource] = useState(false);
   const [alignmentOpen, setAlignmentOpen] = useState(false);
+  const appliedAlignmentFromLaunchRef = useRef(false);
   const [checkingOpen, setCheckingOpen] = useState(false);
+  /** First visible chapter (sorted); drives inline conflict UI vs editor. */
+  const [primaryChapter, setPrimaryChapter] = useState<number | null>(null);
   const [exportUsfmOpen, setExportUsfmOpen] = useState(false);
   const [sourceTextSession, setSourceTextSession] = useState<SourceTextSession | null>(null);
   const [allSourceSlots, setAllSourceSlots] = useState<ReadonlyArray<{ id: string; label: string; session: SourceTextSession | null }>>([]);
@@ -162,14 +480,20 @@ export function EditorPage() {
   const [paletteValue, setPaletteValue] = useState(() => getStoredMarkerPaletteTrigger());
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const conflictHostRef = useRef<HTMLDivElement>(null);
   const focusedOnceRef = useRef(false);
   // Ref to the active save timer so it can be flushed before window close.
   const pendingSaveRef = useRef<{ timer: ReturnType<typeof setTimeout>; run: () => Promise<void> } | null>(null);
-
   const [hasLocalProjectDcs, setHasLocalProjectDcs] = useState(false);
   const [localProjectMeta, setLocalProjectMeta] = useState<import('@usfm-tools/types').ProjectMeta | null>(null);
   const localProjectStorage = useMemo(() => launch?.localProject ? getProjectStorage() : null, [launch?.localProject]);
+  /** Resolved storage path for the current book file (e.g. `65-3JN.usfm`); drives `ybinTarget`. */
+  const [localBookPath, setLocalBookPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!ctrl || !launch?.openAlignmentPanel || appliedAlignmentFromLaunchRef.current) return;
+    appliedAlignmentFromLaunchRef.current = true;
+    setAlignmentOpen(true);
+  }, [ctrl, launch?.openAlignmentPanel]);
 
   /** OT journal persisted to `journal/<BOOK>.jsonl` and synced with the rest of the project. */
   const projectBookJournalStore = useMemo(
@@ -185,6 +509,12 @@ export function EditorPage() {
   );
 
   const offlineSyncQueue = useMemo(() => getOfflineSyncQueue(), []);
+
+  const ybinTarget = useMemo(() => {
+    const lp = launch?.localProject;
+    if (!lp || !localProjectStorage || !localBookPath) return undefined;
+    return { storage: localProjectStorage, projectId: lp.projectId, usfmPath: localBookPath };
+  }, [launch?.localProject, localProjectStorage, localBookPath]);
 
   const onProjectSyncSucceeded = useCallback(async (_result: unknown, journalWatermark = 0) => {
     const session = ctrlRef.current?.session;
@@ -366,6 +696,8 @@ export function EditorPage() {
       const rc = parseResourceContainer(manifest);
       const book = listRCBooks(rc).find((b) => b.code === bookCode);
       if (!book) return;
+      const bookStoragePath = book.path.replace(/^\.\//, '');
+      if (!cancelled) setLocalBookPath(bookStoragePath);
       let usfm = await storage.readFile(projectId, book.path);
       if (!usfm && meta?.syncConfig) {
         const creds = loadDcsCredentials();
@@ -581,13 +913,23 @@ export function EditorPage() {
     syncUpdate();
     const r = await ctrl.session.runSync();
     syncUpdate();
-    const host = conflictHostRef.current;
-    if (!host) return;
-    host.innerHTML = '';
     if (r.conflicts.length > 0) {
-      mountConflictReview(host, r, { onDismiss: () => { host.innerHTML = ''; } });
+      const lp = launch?.localProject;
+      if (!lp) return;
+      navigate(`/project/${encodeURIComponent(lp.projectId)}/conflicts`, {
+        state: buildConflictWorkspaceState({
+          kind: 'chapter',
+          origin: 'editor-run-sync',
+          projectId: lp.projectId,
+          conflicts: r.conflicts,
+          returnTo: `/project/${encodeURIComponent(lp.projectId)}/editor`,
+          sourceLanguage: launch?.sourceLanguage,
+          sourceReferenceUsfm: launch?.sourceReferenceUsfm,
+          launchBookCode: lp.bookCode,
+        }),
+      });
     }
-  }, [ctrl, syncUpdate]);
+  }, [ctrl, launch?.localProject, launch?.sourceLanguage, launch?.sourceReferenceUsfm, navigate, syncUpdate]);
 
   useEffect(() => {
     if (!pendingSyncAfterLogin || !dcsCreds?.token || !ctrl) return;
@@ -651,14 +993,19 @@ export function EditorPage() {
     });
   }, [launch?.localProject?.projectId]);
 
-  const navigationSlot = useMemo(() => ctrl ? (
-    <SectionPicker
-      inline
-      session={ctrl.session}
-      referenceSession={sourceTextSession ?? undefined}
-      onWindowNotice={(msg) => console.info(msg)}
-    />
-  ) : undefined, [ctrl, sourceTextSession]);
+  useEffect(() => {
+    const session = ctrl?.session;
+    if (!session) {
+      setPrimaryChapter(null);
+      return;
+    }
+    const syncPrimary = () => {
+      const nums = [...session.getVisibleChapterNumbers()].sort((a, b) => a - b);
+      setPrimaryChapter(nums.length ? nums[0]! : null);
+    };
+    syncPrimary();
+    return session.onChange(syncPrimary);
+  }, [ctrl]);
 
   const localSyncSlot = useMemo(() => localProjectMeta && localProjectStorage ? (
     <DcsSyncButton
@@ -738,107 +1085,62 @@ export function EditorPage() {
         ) : null}
       </div>
 
-      <Topbar
-        fileInputRef={fileInputRef}
-        onFileInputChange={onFileInputChange}
-        door43User={editorUser}
-        onSignInClick={onSignInClick}
-        onDcs={onDcs}
-        onCollaborate={onCollaborate}
-        syncState={syncState}
-        syncPeerCount={syncPeers}
-        syncDetail={syncDetail}
-        syncConnected={dcsSyncEnabled || collabActive}
-        onOpenExportUsfm={onOpenExportUsfm}
-        onExportUsx={onExportUsx}
-        referencePanel={referencePanel}
-        onToggleReference={onToggleReference}
-        usfmSource={usfmSource}
-        onToggleUsfmSource={onToggleUsfmSource}
-        onSyncNow={onTopbarSyncNow}
-        usfmTheme={usfmTheme}
-        onUsfmTheme={setUsfmTheme}
-        editorMode={editorMode}
-        onEditorMode={setEditorMode}
-        markerPaletteValue={paletteValue}
-        onMarkerPaletteValue={onPaletteChange}
-        markerPaletteOptions={paletteOptions}
-        onAlignment={onAlignment}
-        onChecking={onChecking}
-        checkingOpen={checkingOpen}
-        onHelp={onHelp}
-        onMarkerShortcuts={onMarkerShortcuts}
-        navigationSlot={navigationSlot}
-        localSyncSlot={localSyncSlot}
-      />
-
-      {launch?.localProject && localSync.pendingFileConflicts.length > 0 ? (
-        <SyncConflictDialog
-          open
-          conflicts={localSync.pendingFileConflicts}
-          onClose={() => {}}
-          onResolve={(path, choice) => void localSync.resolveConflict(path, choice)}
+      <BookConflictsProvider
+        bookCode={launch?.localProject?.bookCode ?? null}
+        allPendingConflicts={localSync.pendingFileConflicts}
+      >
+        <EditorPageChrome
+          fileInputRef={fileInputRef}
+          onFileInputChange={onFileInputChange}
+          editorUser={editorUser}
+          onSignInClick={onSignInClick}
+          onDcs={onDcs}
+          onCollaborate={onCollaborate}
+          syncState={syncState}
+          syncPeers={syncPeers}
+          syncDetail={syncDetail}
+          dcsSyncEnabled={dcsSyncEnabled}
+          collabActive={collabActive}
+          onOpenExportUsfm={onOpenExportUsfm}
+          onExportUsx={onExportUsx}
+          referencePanel={referencePanel}
+          onToggleReference={onToggleReference}
+          usfmSource={usfmSource}
+          onToggleUsfmSource={onToggleUsfmSource}
+          onTopbarSyncNow={onTopbarSyncNow}
+          usfmTheme={usfmTheme}
+          onUsfmTheme={setUsfmTheme}
+          editorMode={editorMode}
+          onEditorMode={setEditorMode}
+          paletteValue={paletteValue}
+          onPaletteChange={onPaletteChange}
+          paletteOptions={paletteOptions}
+          onAlignment={onAlignment}
+          onChecking={onChecking}
+          checkingOpen={checkingOpen}
+          onHelp={onHelp}
+          onMarkerShortcuts={onMarkerShortcuts}
+          localSyncSlot={localSyncSlot}
+          ctrl={ctrl}
+          launch={launch}
+          sourceTextSession={sourceTextSession}
+          initialUsfm={initialUsfm}
+          wsRelay={wsRelay}
+          dcsCreds={dcsCreds}
+          dcsTarget={dcsTarget}
+          localProjectMeta={localProjectMeta}
+          projectBookJournalStore={projectBookJournalStore}
+          localSync={localSync}
+          onLocalProjectUpdated={onLocalProjectUpdated}
+          onSourceLanguageChange={onSourceLanguageChange}
+          primaryChapter={primaryChapter}
+          referenceColumnRef={referenceColumnRef}
+          setSourceTextSession={setSourceTextSession}
+          setAllSourceSlots={setAllSourceSlots}
+          onController={onController}
+          ybinTarget={ybinTarget}
         />
-      ) : null}
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div ref={conflictHostRef} className="conflict-host" />
-
-        <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 pb-4">
-          <div
-            className={cn(
-              'flex min-h-0 min-w-0 flex-1 gap-4 overflow-hidden',
-              referencePanel
-                ? 'flex-col landscape:flex-row landscape:items-stretch'
-                : 'flex-col',
-            )}
-          >
-            {referencePanel && ctrl ? (
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                <ReferenceColumn
-                  ref={referenceColumnRef}
-                  session={ctrl.session}
-                  onSourceSession={setSourceTextSession}
-                  onSourceSessionsChange={setAllSourceSlots}
-                  prefillSourceUsfm={launch?.sourceReferenceUsfm}
-                  targetSession={ctrl.session}
-                  dcsAuth={dcsCreds ? { host: dcsCreds.host, token: dcsCreds.token } : null}
-                  sourceLanguage={launch?.sourceLanguage}
-                  launchBookCode={launch?.projectMeta?.bookCode}
-                  onSourceLanguageChange={onSourceLanguageChange}
-                />
-              </div>
-            ) : null}
-
-            <div
-              className={cn(
-                'flex min-h-0 min-w-0 flex-1 flex-col gap-0 overflow-hidden md:flex-row',
-                referencePanel && 'min-h-0 min-w-0 flex-1',
-              )}
-            >
-              <EditorPanel
-                initialUsfm={initialUsfm}
-                collabActive={collabActive}
-                wsRelay={wsRelay}
-                dcsCreds={dcsCreds}
-                dcsTarget={dcsTarget}
-                targetLanguage={localProjectMeta?.language}
-                projectBookJournalStore={projectBookJournalStore}
-                localBookCode={launch?.localProject?.bookCode}
-                onController={onController}
-                className="min-w-0"
-              />
-              {ctrl ? <UsfmSourcePane session={ctrl.session} visible={usfmSource} /> : null}
-            </div>
-          </div>
-
-          {checkingOpen ? (
-            <div className="border-border max-h-[min(40vh,22rem)] w-full max-w-4xl shrink-0 overflow-y-auto border-t pt-3">
-              <CheckingPanel />
-            </div>
-          ) : null}
-        </main>
-      </div>
+      </BookConflictsProvider>
 
       {ctrl ? (
         <AlignmentPanel

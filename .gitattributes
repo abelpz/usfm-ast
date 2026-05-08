@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Lockfiles must always use LF so bun --frozen-lockfile passes on Linux CI
+bun.lock text eol=lf

@@ -15,8 +15,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getProjectStorage } from '@/lib/project-storage';
-import type { ProjectLaunchConfig } from '@/lib/project-launch';
-import { blankUsfmForBook } from '@/lib/usfm-project';
+import {
+  downloadUsfmFileInBrowser,
+  importSingleBookUsfmFile,
+  readBookUsfmForExport,
+} from '@/lib/book-usfm-handoff';
+import { blankUsfmForBook, extractUsfmTitle } from '@/lib/usfm-project';
 import { getLocalizedBookName, preloadBookNames } from '@/lib/book-names-locale';
 import { USFM_BOOK_CODES } from '@usfm-tools/editor';
 import {
@@ -30,9 +34,18 @@ import {
 import type { ProjectMeta, ProjectRelease } from '@usfm-tools/types';
 import { useLocalProjectSync } from '@/hooks/useLocalProjectSync';
 import { cn } from '@/lib/utils';
+import { newBookCodesFromSnapshot, newPathsFromSnapshot } from '@/lib/bundle-import-snapshot';
+import { restoreBundleImportSnapshot } from '@/lib/bundle-import-rollback';
+import {
+  conflictsForBook,
+  resolveAllConflictsForBook,
+  resolveAllPendingConflicts,
+} from '@/lib/file-conflict-helpers';
 import { ProjectBundleControls } from '@/components/ProjectBundleControls';
-import { ArrowLeft, BookOpen, Circle, FileText, Loader2, Plus, Tag } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { PeerSyncPanel } from '@/components/PeerSyncPanel';
+import { PeerRTCSyncPanel } from '@/components/PeerRTCSyncPanel';
+import { ArrowLeft, BookOpen, Check, Circle, FileDown, FileText, FileUp, Loader2, Plus, Tag, Trash2, Undo2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 const VERSION_RE = /^v\d+(\.\d+){0,2}$/;
@@ -48,19 +61,6 @@ function latestReleaseLabelForBook(releases: ProjectRelease[], bookCode: string)
     if (r.books.map((b) => b.toUpperCase()).includes(bookCode.toUpperCase())) {
       return r.versionLabel ? `${r.version} (${r.versionLabel})` : r.version;
     }
-  }
-  return null;
-}
-
-/**
- * Extract the human-readable book title from a USFM document.
- * Priority: \h > \toc2 > \toc1 (the first non-empty match wins).
- */
-function extractUsfmTitle(usfm: string): string | null {
-  const markers = [/^\\h\s+(.+)/m, /^\\toc2\s+(.+)/m, /^\\toc1\s+(.+)/m];
-  for (const re of markers) {
-    const m = usfm.match(re);
-    if (m?.[1]?.trim()) return m[1].trim();
   }
   return null;
 }
@@ -94,6 +94,10 @@ export function LocalProjectPage() {
   const [relBooks, setRelBooks] = useState<Record<string, boolean>>({});
   const [relBusy, setRelBusy] = useState(false);
   const [relErr, setRelErr] = useState<string | null>(null);
+
+  const bookImportInputRef = useRef<HTMLInputElement>(null);
+  const [bookImportBusy, setBookImportBusy] = useState(false);
+  const [bookHandoffMsg, setBookHandoffMsg] = useState<string | null>(null);
 
   const [readmeDraft, setReadmeDraft] = useState('');
   const [licenseDraft, setLicenseDraft] = useState('');
@@ -194,6 +198,9 @@ export function LocalProjectPage() {
 
   const existingCodes = useMemo(() => new Set(books.map((b) => b.code.toUpperCase())), [books]);
 
+  const newBookCodes = useMemo(() => newBookCodesFromSnapshot(meta, books), [meta, books]);
+  const newFileCountFromImport = useMemo(() => newPathsFromSnapshot(meta).length, [meta]);
+
   const lc = meta?.sourceRefLanguage ?? meta?.language ?? 'en';
 
   const addBookCandidates: BookComboRow[] = useMemo(
@@ -203,7 +210,6 @@ export function LocalProjectPage() {
         name: bookNamesReady ? getLocalizedBookName(lc, code, englishName) : englishName,
         path: code,
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [existingCodes, lc, bookNamesReady],
   );
 
@@ -229,15 +235,7 @@ export function LocalProjectPage() {
       setAddOpen(false);
       setAddPick(null);
       await load();
-      const launch: ProjectLaunchConfig = {
-        initialUsfm: usfm,
-        skipPersistedDcsInitialFetch: true,
-        sourceLanguage: meta.sourceRefLanguage ?? undefined,
-        openReferencePanel: true,
-        localProject: { projectId: meta.id, bookCode: code, mode: 'translate' },
-        projectMeta: { name: `${meta.name} — ${code}`, bookCode: code, source: 'local' },
-      };
-      navigate(`/project/${encodeURIComponent(meta.id)}/editor`, { state: launch });
+      navigate(`/project/${encodeURIComponent(meta.id)}/book/${encodeURIComponent(code)}`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -245,19 +243,9 @@ export function LocalProjectPage() {
     }
   }
 
-  function openBook(book: { code: string; name: string }) {
+  function goToBookTools(book: { code: string }) {
     if (!meta) return;
-    const usfm = blankUsfmForBook(book.code, book.name);
-    navigate(`/project/${encodeURIComponent(meta.id)}/editor`, {
-      state: {
-        initialUsfm: usfm,
-        skipPersistedDcsInitialFetch: true,
-        sourceLanguage: meta.sourceRefLanguage ?? undefined,
-        openReferencePanel: true,
-        localProject: { projectId: meta.id, bookCode: book.code, mode: 'translate' },
-        projectMeta: { name: `${meta.name} — ${book.code}`, bookCode: book.code, source: 'local' },
-      } satisfies ProjectLaunchConfig,
-    });
+    navigate(`/project/${encodeURIComponent(meta.id)}/book/${encodeURIComponent(book.code)}`);
   }
 
   function openReleaseDialog() {
@@ -333,6 +321,125 @@ export function LocalProjectPage() {
     }
   }
 
+  const pendingConflicts = meta?.pendingConflicts ?? [];
+
+  const onDownloadBookUsfm = useCallback(
+    async (b: { path: string; code: string }) => {
+      if (!meta) return;
+      setBookHandoffMsg(null);
+      setErr(null);
+      try {
+        const { content, filename } = await readBookUsfmForExport({
+          storage,
+          projectId: meta.id,
+          path: b.path,
+        });
+        downloadUsfmFileInBrowser(filename, content);
+        setBookHandoffMsg('Book file downloaded.');
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [meta, storage],
+  );
+
+  const onPickBookUsfmFile = useCallback(() => {
+    setBookHandoffMsg(null);
+    bookImportInputRef.current?.click();
+  }, []);
+
+  const onBookUsfmFileChange = useCallback(
+    async (ev: React.ChangeEvent<HTMLInputElement>) => {
+      const file = ev.target.files?.[0];
+      ev.target.value = '';
+      if (!file || !meta) return;
+      setBookImportBusy(true);
+      setErr(null);
+      setBookHandoffMsg(null);
+      try {
+        const text = await file.text();
+        const { conflicts } = await importSingleBookUsfmFile({
+          storage,
+          projectId: meta.id,
+          text,
+          enableMerge: true,
+        });
+        if (conflicts.length > 0) {
+          const cur = await storage.getProject(meta.id);
+          const prev = cur?.pendingConflicts ?? [];
+          const touched = new Set(conflicts.map((c) => c.path));
+          const merged = [...prev.filter((c) => !touched.has(c.path)), ...conflicts];
+          await storage.updateProject(meta.id, { pendingConflicts: merged });
+          setBookHandoffMsg('Review the conflict in the editor, then continue.');
+        } else {
+          setBookHandoffMsg('Book file imported.');
+        }
+        await load();
+        localSync.notifyChange();
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBookImportBusy(false);
+      }
+    },
+    [meta, storage, load, localSync],
+  );
+
+  const resolveBookConflicts = useCallback(
+    async (bookCode: string, side: 'ours' | 'theirs') => {
+      if (!meta) return;
+      try {
+        await resolveAllConflictsForBook(storage, meta.id, pendingConflicts, bookCode, side);
+        await load();
+        localSync.notifyChange();
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [meta, pendingConflicts, storage, load, localSync],
+  );
+
+  const rollbackBundleImport = useCallback(async () => {
+    if (!meta?.bundleImportSnapshot) return;
+    const ok = window.confirm(
+      'Restore all project files to how they were before the last bundle import? Pending conflict choices will be cleared.',
+    );
+    if (!ok) return;
+    try {
+      await restoreBundleImportSnapshot(storage, meta.id);
+      await load();
+      localSync.notifyChange();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }, [meta?.bundleImportSnapshot, meta?.id, storage, load, localSync]);
+
+  const dismissImportSnapshot = useCallback(async () => {
+    if (!meta?.bundleImportSnapshot) return;
+    try {
+      await storage.updateProject(meta.id, { bundleImportSnapshot: undefined });
+      await load();
+      localSync.notifyChange();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }, [meta?.bundleImportSnapshot, meta?.id, storage, load, localSync]);
+
+  const discardAllConflicts = useCallback(async () => {
+    if (!meta || pendingConflicts.length === 0) return;
+    const ok = window.confirm(
+      'Discard all incoming changes and keep your local version for every conflicted file? This cannot be undone.',
+    );
+    if (!ok) return;
+    try {
+      await resolveAllPendingConflicts(storage, meta.id, 'ours');
+      await load();
+      localSync.notifyChange();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }, [meta, pendingConflicts.length, storage, load, localSync]);
+
   if (loading) {
     return (
       <div className="bg-background text-foreground flex min-h-dvh items-center justify-center gap-2">
@@ -382,7 +489,44 @@ export function LocalProjectPage() {
             ) : null}
           </div>
         </div>
-        <DcsSyncButton meta={meta} storage={storage} localSync={localSync} onUpdated={() => void load()} />
+        <div className="flex shrink-0 items-center gap-1.5">
+          {pendingConflicts.length > 0 ? (
+            <Tip label="Discard all incoming (keep local)">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="relative size-8 text-amber-600 dark:text-amber-400"
+                aria-label="Discard all incoming changes, keep local"
+                onClick={() => void discardAllConflicts()}
+              >
+                <Trash2 className="size-4" aria-hidden />
+              </Button>
+            </Tip>
+          ) : (
+            <ProjectBundleControls
+              projectId={projectId.trim()}
+              onImported={() => void load()}
+              variant="header"
+              actionsAlign="end"
+            />
+          )}
+          {meta.bundleImportSnapshot ? (
+            <Tip label="Restore files before import">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="relative size-8"
+                aria-label="Restore files before import"
+                onClick={() => void rollbackBundleImport()}
+              >
+                <Undo2 className="size-4" aria-hidden />
+              </Button>
+            </Tip>
+          ) : null}
+          <DcsSyncButton meta={meta} storage={storage} localSync={localSync} onUpdated={() => void load()} />
+        </div>
       </header>
 
       {/* ── Tabs ───────────────────────────────────────────────── */}
@@ -431,11 +575,54 @@ export function LocalProjectPage() {
       {/* ── Main content ───────────────────────────────────────── */}
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-4">
         {err ? <p className="text-destructive text-sm">{err}</p> : null}
+        {bookHandoffMsg ? (
+          <p className="text-muted-foreground text-sm" role="status">
+            {bookHandoffMsg}
+          </p>
+        ) : null}
+
+        {newFileCountFromImport > 0 ? (
+          <div
+            className="border-border bg-sky-50/80 dark:bg-sky-950/25 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
+            role="status"
+          >
+            <span className="text-foreground">
+              Last import added {newFileCountFromImport} new file
+              {newFileCountFromImport === 1 ? '' : 's'}.
+            </span>
+            <Button type="button" variant="secondary" size="sm" onClick={() => void dismissImportSnapshot()}>
+              Dismiss
+            </Button>
+          </div>
+        ) : null}
 
         {/* Books tab */}
         {tab === 'books' ? (
           <section>
             <div className="mb-3 flex items-center justify-end gap-2">
+              <input
+                ref={bookImportInputRef}
+                type="file"
+                accept=".usfm,.sfm,.txt,text/plain"
+                className="sr-only"
+                onChange={onBookUsfmFileChange}
+              />
+              <Tip label="Add or update from a book file">
+                <Button
+                  type="button"
+                  size="icon"
+                  className="size-8"
+                  onClick={onPickBookUsfmFile}
+                  disabled={bookImportBusy}
+                  aria-label="Add or update from a book file"
+                >
+                  {bookImportBusy ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : (
+                    <FileUp className="size-4" aria-hidden />
+                  )}
+                </Button>
+              </Tip>
               <Tip label="Add book">
                 <Button type="button" size="icon" className="size-8" onClick={() => setAddOpen(true)} aria-label="Add book">
                   <Plus className="size-4" aria-hidden />
@@ -452,31 +639,110 @@ export function LocalProjectPage() {
                   const rel = latestReleaseLabelForBook(releases, b.code);
                   // Prefer title extracted from the USFM document, fall back to manifest name.
                   const displayName = usfmTitles[b.code] ?? b.name;
+                  const bookConflicts = conflictsForBook(pendingConflicts, b.code);
+                  const hasBookConflict = bookConflicts.length > 0;
+                  const showNewFromImportDot = !hasBookConflict && newBookCodes.has(b.code);
                   return (
-                    <li key={b.code}>
-                      <button
-                        type="button"
-                        onClick={() => openBook(b)}
-                        className="border-border bg-card hover:bg-accent/40 flex w-full aspect-[2/3] flex-col justify-between rounded-lg border p-3 text-left shadow-sm transition-colors"
-                      >
-                        <span className="font-mono text-[10px] font-semibold text-muted-foreground leading-none">
-                          {b.code}
-                        </span>
-                        <span className="text-foreground font-bold text-base leading-snug line-clamp-3 text-center w-full">
-                          {displayName}
-                        </span>
-                        {rel ? (
-                          <span className="flex items-center gap-0.5 text-muted-foreground text-[10px] leading-none">
-                            <Tag className="size-2.5 shrink-0" aria-hidden />
-                            {rel}
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-muted-foreground text-[10px] leading-none">
-                            <Circle className="size-1.5 shrink-0 fill-muted-foreground/40 text-muted-foreground/40" aria-hidden />
-                            Draft
-                          </span>
+                    <li key={b.code} className="flex flex-col">
+                      <div
+                        className={cn(
+                          'border-border bg-card flex w-full min-h-0 flex-1 flex-col overflow-hidden rounded-lg border shadow-sm transition-colors',
+                          hasBookConflict ? 'ring-1 ring-red-500/40' : '',
                         )}
-                      </button>
+                      >
+                        <button
+                          type="button"
+                          onClick={() => goToBookTools(b)}
+                          className="hover:bg-accent/40 flex aspect-[2/3] min-h-0 w-full flex-col justify-between p-3 text-left transition-colors"
+                        >
+                          <span className="flex items-start justify-between gap-1">
+                            <span className="font-mono text-[10px] font-semibold leading-none text-muted-foreground">
+                              {b.code}
+                            </span>
+                            <span className="flex shrink-0 items-center gap-1">
+                              {hasBookConflict ? (
+                                <span
+                                  className="size-2 shrink-0 rounded-full bg-red-500"
+                                  title="Unresolved conflicts in this book"
+                                  aria-hidden
+                                />
+                              ) : null}
+                              {showNewFromImportDot ? (
+                                <Tip label="New from last import" side="top">
+                                  <span
+                                    className="size-2 shrink-0 rounded-full bg-sky-500"
+                                    aria-label="New from last import"
+                                  />
+                                </Tip>
+                              ) : null}
+                            </span>
+                          </span>
+                          <span className="text-foreground line-clamp-3 w-full text-center text-base font-bold leading-snug">
+                            {displayName}
+                          </span>
+                          {rel ? (
+                            <span className="flex items-center gap-0.5 text-[10px] leading-none text-muted-foreground">
+                              <Tag className="size-2.5 shrink-0" aria-hidden />
+                              {rel}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-[10px] leading-none text-muted-foreground">
+                              <Circle className="size-1.5 shrink-0 fill-muted-foreground/40 text-muted-foreground/40" aria-hidden />
+                              Draft
+                            </span>
+                          )}
+                        </button>
+                        <div
+                          className="border-border flex items-center justify-center border-t bg-muted/20 px-1 py-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Tip label="Download USFM file" side="top">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 text-muted-foreground"
+                              aria-label="Download USFM file"
+                              onClick={() => void onDownloadBookUsfm(b)}
+                            >
+                              <FileDown className="size-4" aria-hidden />
+                            </Button>
+                          </Tip>
+                        </div>
+                        {hasBookConflict ? (
+                          <div
+                            className="border-border flex items-center justify-center gap-0.5 border-t bg-muted/30 px-1 py-1"
+                            onClick={(e) => e.stopPropagation()}
+                            role="group"
+                            aria-label="Resolve whole book"
+                          >
+                            <Tip label="Use imported text for this book" side="top">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 text-emerald-700 dark:text-emerald-400"
+                                aria-label="Use imported text for this book"
+                                onClick={() => void resolveBookConflicts(b.code, 'theirs')}
+                              >
+                                <Check className="size-4" aria-hidden />
+                              </Button>
+                            </Tip>
+                            <Tip label="Keep local text for this book" side="top">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 text-muted-foreground"
+                                aria-label="Keep local text for this book"
+                                onClick={() => void resolveBookConflicts(b.code, 'ours')}
+                              >
+                                <Undo2 className="size-4" aria-hidden />
+                              </Button>
+                            </Tip>
+                          </div>
+                        ) : null}
+                      </div>
                     </li>
                   );
                 })}
@@ -534,13 +800,6 @@ export function LocalProjectPage() {
         {/* Settings tab */}
         {tab === 'settings' ? (
           <section className="flex flex-col gap-6">
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Offline bundle</h3>
-              <p className="text-muted-foreground text-sm">
-                Export or import a zip snapshot for offline handoff (no Door43 account required).
-              </p>
-              <ProjectBundleControls projectId={projectId.trim()} onImported={() => void load()} />
-            </div>
             <p className="text-muted-foreground text-sm">
               Edit repository documentation. Default license for new projects is CC BY-SA 4.0 (common for Door43 scripture
               resources). Full legal text:{' '}
@@ -599,6 +858,22 @@ export function LocalProjectPage() {
                 )}
               </div>
             </div>
+
+            <hr className="border-border" />
+
+            <PeerSyncPanel
+              projectId={projectId}
+              displayName={meta?.name?.trim() || projectId}
+              onImported={() => void load()}
+            />
+
+            <hr className="border-border" />
+
+            <PeerRTCSyncPanel
+              projectId={projectId}
+              displayName={meta?.name?.trim() || projectId}
+              onImported={() => void load()}
+            />
           </section>
         ) : null}
       </main>
@@ -609,7 +884,7 @@ export function LocalProjectPage() {
           <DialogHeader>
             <DialogTitle>Add book</DialogTitle>
             <DialogDescription>
-              Choose a book to add to this project. You will open it in the editor.
+              Choose a book to add to this project. On the next screen you can pick a tool (e.g. Edit or Align).
             </DialogDescription>
           </DialogHeader>
           <BookCombobox

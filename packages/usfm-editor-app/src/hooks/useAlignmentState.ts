@@ -11,30 +11,25 @@ export function useAlignmentState(
   session: ScriptureSession,
   overlayOpen: boolean,
 ) {
-  const [step, setStep] = useState<'pick-source' | 'align'>('pick-source');
   const [compat, setCompat] = useState<SourceCompatibility | null>(null);
   const [bump, setBump] = useState(0);
   const [verseSid, setVerseSid] = useState('');
   const [selectedRef, setSelectedRef] = useState<number[]>([]);
   const [selectedTrans, setSelectedTrans] = useState<number[]>([]);
 
-  // When overlay opens/closes, sync step with session state.
+  // When overlay opens/closes, sync selection and compat; source presence drives inline UI.
   useEffect(() => {
     if (!overlayOpen) return;
     setSelectedRef([]);
     setSelectedTrans([]);
     if (session.isAlignmentSourceLoaded()) {
       setCompat(session.getAlignmentSourceCompatibility());
-      setStep('align');
-      // Eagerly initialize verseSid when source is already loaded (e.g. re-opening the panel).
       setVerseSid((prev) => {
         if (prev) return prev;
-        // Prefer a verse that exists in the translation; fall back to the source.
         const transKeys = Object.keys(tokenizeTranslationDocument(session.store.getFullUSJ())).sort();
         return transKeys[0] ?? session.getAlignmentSourceVerseSids()[0] ?? '';
       });
     } else {
-      setStep('pick-source');
       setCompat(null);
     }
   }, [overlayOpen, session]);
@@ -54,13 +49,8 @@ export function useAlignmentState(
     void bump;
     const transKeys = Object.keys(tokenizeTranslationDocument(session.store.getFullUSJ()));
     if (transKeys.length > 0) {
-      // Translation has its own verse nodes — use only those for navigation so we never
-      // show source-only verses where the translation has no words.
       return transKeys.sort();
     }
-    // Translation store has no verse SIDs yet (e.g. new book, or verse nodes were written back
-    // without sid attrs). Fall back to the alignment source's verse sids so the picker isn't
-    // empty after the user picks a source.
     const srcKeys = session.isAlignmentSourceLoaded() ? session.getAlignmentSourceVerseSids() : [];
     return srcKeys;
   }, [session, bump]);
@@ -71,19 +61,13 @@ export function useAlignmentState(
     }
   }, [verseSids, verseSid]);
 
-  /**
-   * Use an existing layer: switch the active alignment layer to `layerKey` and load `sourceUsj`
-   * as the editing reference. The user continues aligning the same text they previously aligned.
-   */
   const useExistingLayer = useCallback(
     (layerKey: string, sourceUsj: UsjDocument) => {
       session.setActiveAlignmentDocumentKey(layerKey);
       const c = session.loadAlignmentSource(sourceUsj, { stripSource: true });
       setCompat(c);
-      setStep('align');
       setSelectedRef([]);
       setSelectedTrans([]);
-      // Eagerly set the first verse (prefer translation verses so the bank has words).
       setVerseSid((prev) => {
         if (prev) return prev;
         const transKeys = Object.keys(tokenizeTranslationDocument(session.store.getFullUSJ())).sort();
@@ -93,19 +77,13 @@ export function useAlignmentState(
     [session],
   );
 
-  /**
-   * Start a brand-new alignment layer for a source the book has never been aligned to before.
-   * Creates an empty `AlignmentDocument`, makes it active, and loads the reference for editing.
-   */
   const startNewLayer = useCallback(
     (sourceUsj: UsjDocument) => {
       session.createLayerForSource(sourceUsj);
       const c = session.loadAlignmentSource(sourceUsj, { stripSource: true });
       setCompat(c);
-      setStep('align');
       setSelectedRef([]);
       setSelectedTrans([]);
-      // Eagerly set the first verse (prefer translation verses so the bank has words).
       setVerseSid((prev) => {
         if (prev) return prev;
         const transKeys = Object.keys(tokenizeTranslationDocument(session.store.getFullUSJ())).sort();
@@ -118,7 +96,6 @@ export function useAlignmentState(
   const resetToPickSource = useCallback(() => {
     session.clearAlignmentSource();
     setCompat(null);
-    setStep('pick-source');
     setSelectedRef([]);
     setSelectedTrans([]);
   }, [session]);
@@ -126,7 +103,6 @@ export function useAlignmentState(
   const referenceLabel = useCallback((usj: UsjDocument) => {
     const raw = parseDocumentIdentityFromUsj(usj);
     if (!raw) return null;
-    // Strip date / timezone junk: "NEH EN_ULT en_English_ltr Thu Aug 26 2021…" → "NEH EN_ULT en_English_ltr"
     const clean = raw
       .replace(/\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b.*/i, '')
       .replace(/\s+\d{4}\b.*/i, '')
@@ -136,8 +112,6 @@ export function useAlignmentState(
   }, []);
 
   return {
-    step,
-    setStep,
     compat,
     setCompat,
     verseSid,

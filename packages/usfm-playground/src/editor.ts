@@ -5,6 +5,7 @@ import { LanguageSupport, syntaxHighlighting, defaultHighlightStyle } from '@cod
 import { EditorState, Extension } from '@codemirror/state';
 import {
   EditorView,
+  KeyBinding,
   highlightActiveLine,
   keymap,
   lineNumbers,
@@ -41,7 +42,7 @@ function extensionsFor(lang: EditorLang, readOnly: boolean): Extension[] {
     drawSelection(),
     dropCursor(),
     history(),
-    keymap.of([...defaultKeymap, ...historyKeymap]),
+    keymap.of([...defaultKeymap, ...historyKeymap] as KeyBinding[]),
     oneDark,
     baseTheme,
     EditorState.tabSize.of(2),

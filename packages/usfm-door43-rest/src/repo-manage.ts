@@ -192,9 +192,17 @@ export async function getBranchHeadCommit(options: GetBranchHeadCommitOptions): 
   if (!isRecord(raw)) throw new Error('Door43 get branch: invalid JSON');
   const commit = raw.commit;
   if (!isRecord(commit)) throw new Error('Door43 get branch: missing commit');
-  const sha = typeof commit.sha === 'string' ? commit.sha.trim() : '';
-  if (!sha) throw new Error('Door43 get branch: missing commit.sha');
-  return sha;
+  let oid = commitOidFromBranchCommitPayload(commit);
+  if (!oid && isRecord(commit.commit)) {
+    oid = commitOidFromBranchCommitPayload(commit.commit as Record<string, unknown>);
+  }
+  if (!oid && typeof raw.commit_sha === 'string' && raw.commit_sha.trim()) {
+    oid = raw.commit_sha.trim();
+  }
+  if (!oid) {
+    throw new Error('Door43 get branch: could not resolve head commit (expected commit.id, commit.sha, or commit_sha)');
+  }
+  return oid;
 }
 
 export type UpdateRepoDefaultBranchOptions = {
@@ -464,11 +472,19 @@ export type ListRepoGitTreeOptions = {
   token?: string;
   owner: string;
   repo: string;
-  /** Branch or tag name (resolved via branches API). */
+  /**
+   * Branch or tag name (via `.../branches/{ref}`), or a 40-char commit OID
+   * (skips the branches API — it only accepts names, not SHAs).
+   */
   ref: string;
   recursive?: boolean;
   fetch?: typeof fetch;
 };
+
+function isGitCommitObjectId(ref: string): boolean {
+  const t = ref.trim();
+  return t.length === 40 && /^[0-9a-f]{40}$/i.test(t);
+}
 
 /** Resolve Git tree object SHA from a `tree` field (string, `{ sha }`, or `{ url }` only). */
 function treeObjectToSha(tree: unknown): string {
@@ -569,7 +585,8 @@ async function fetchTreeShaFromGitCommit(options: {
 
 /**
  * Lists git tree entries for the ref’s root tree (blobs and trees).
- * Resolves `ref` (branch name) to a tree SHA via `GET .../branches/{ref}`.
+ * Resolves `ref` to a tree SHA: branch/tag via `GET .../branches/{ref}`,
+ * or a 40-char commit OID via the commits / git-commits APIs (not `/branches/{sha}`).
  */
 export async function listRepoGitTree(options: ListRepoGitTreeOptions): Promise<GitTreeEntry[]> {
   const host = options.host ?? DOOR43_HOST_DEFAULT;
@@ -579,54 +596,13 @@ export async function listRepoGitTree(options: ListRepoGitTreeOptions): Promise<
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (options.token) headers.Authorization = `token ${options.token}`;
 
-  let refName = options.ref;
+  const refName = options.ref.trim();
   const branchUrl = (r: string) =>
     `${base}/repos/${enc(options.owner)}/${enc(options.repo)}/branches/${enc(r)}`;
 
-  let br = await fetchFn(branchUrl(refName), { headers, cache: 'no-store' });
-  if (!br.ok && options.token) {
-    const info = await getRepoInfo({
-      host,
-      token: options.token,
-      owner: options.owner,
-      repo: options.repo,
-      fetch: fetchFn,
-    });
-    const def = info?.defaultBranch?.trim();
-    if (def && def !== refName) {
-      refName = def;
-      br = await fetchFn(branchUrl(refName), { headers, cache: 'no-store' });
-    }
-  }
-  if (!br.ok) await door43HttpError('Door43 get branch', br);
-  const branchBody: unknown = await br.json();
-  if (!isRecord(branchBody)) throw new Error('Invalid branch response');
-  const commit = branchBody.commit;
-  if (!isRecord(commit)) throw new Error('Invalid branch commit');
-  let oid = commitOidFromBranchCommitPayload(commit);
-  if (!oid && isRecord(commit.commit)) {
-    oid = commitOidFromBranchCommitPayload(commit.commit as Record<string, unknown>);
-  }
-  if (!oid && typeof branchBody.commit_sha === 'string' && branchBody.commit_sha.trim()) {
-    oid = branchBody.commit_sha.trim();
-  }
+  let treeSha = '';
 
-  // Try extracting tree SHA from the branch payload first (no extra request needed).
-  let treeSha = treeShaFromGitCommitApiBody(commit);
-
-  // If tree SHA == commit OID (Gitea returned the commit as the tree), clear it so we resolve properly.
-  if (
-    treeSha &&
-    oid &&
-    /^[0-9a-f]{40}$/i.test(oid) &&
-    /^[0-9a-f]{40}$/i.test(treeSha) &&
-    treeSha.toLowerCase() === oid.toLowerCase()
-  ) {
-    treeSha = '';
-  }
-
-  // Only call /commits/{ref} (Gitea v1.21+) when the branch payload didn't give us a usable tree SHA.
-  if (!treeSha) {
+  if (isGitCommitObjectId(refName)) {
     treeSha =
       (await fetchRootTreeShaFromCommitsApi({
         base,
@@ -637,18 +613,107 @@ export async function listRepoGitTree(options: ListRepoGitTreeOptions): Promise<
         headers,
         fetchFn,
       })) ?? '';
-  }
-  if (!treeSha) {
-    if (!oid) throw new Error('Missing tree sha');
-    treeSha = await fetchTreeShaFromGitCommit({
-      base,
-      enc,
-      owner: options.owner,
-      repo: options.repo,
-      commitOid: oid,
-      headers,
-      fetchFn,
-    });
+    if (!treeSha) {
+      treeSha = await fetchTreeShaFromGitCommit({
+        base,
+        enc,
+        owner: options.owner,
+        repo: options.repo,
+        commitOid: refName,
+        headers,
+        fetchFn,
+      });
+    }
+  } else {
+    let br = await fetchFn(branchUrl(refName), { headers, cache: 'no-store' });
+    let effectiveRef = refName;
+    if (!br.ok && options.token) {
+      const info = await getRepoInfo({
+        host,
+        token: options.token,
+        owner: options.owner,
+        repo: options.repo,
+        fetch: fetchFn,
+      });
+      const def = info?.defaultBranch?.trim();
+      if (def && def !== effectiveRef) {
+        effectiveRef = def;
+        br = await fetchFn(branchUrl(effectiveRef), { headers, cache: 'no-store' });
+      }
+    }
+    if (!br.ok) await door43HttpError('Door43 get branch', br);
+    const branchBody: unknown = await br.json();
+    if (!isRecord(branchBody)) throw new Error('Invalid branch response');
+    const commit = branchBody.commit;
+    if (!isRecord(commit)) throw new Error('Invalid branch commit');
+    let oid = commitOidFromBranchCommitPayload(commit);
+    if (!oid && isRecord(commit.commit)) {
+      oid = commitOidFromBranchCommitPayload(commit.commit as Record<string, unknown>);
+    }
+    if (!oid && typeof branchBody.commit_sha === 'string' && branchBody.commit_sha.trim()) {
+      oid = branchBody.commit_sha.trim();
+    }
+
+    // Try extracting tree SHA from the branch payload first (no extra request needed).
+    treeSha = treeShaFromGitCommitApiBody(commit);
+
+    // If tree SHA == commit OID (Gitea returned the commit as the tree), clear it so we resolve properly.
+    if (
+      treeSha &&
+      oid &&
+      /^[0-9a-f]{40}$/i.test(oid) &&
+      /^[0-9a-f]{40}$/i.test(treeSha) &&
+      treeSha.toLowerCase() === oid.toLowerCase()
+    ) {
+      treeSha = '';
+    }
+
+    // Only call /commits/{ref} (Gitea v1.21+) when the branch payload didn't give us a usable tree SHA.
+    if (!treeSha) {
+      treeSha =
+        (await fetchRootTreeShaFromCommitsApi({
+          base,
+          enc,
+          owner: options.owner,
+          repo: options.repo,
+          ref: effectiveRef,
+          headers,
+          fetchFn,
+        })) ?? '';
+    }
+    if (
+      !treeSha &&
+      (effectiveRef === DOOR43_LEGACY_DEFAULT_BRANCH || effectiveRef === DOOR43_SCRIPTURE_DEFAULT_BRANCH)
+    ) {
+      const alt =
+        effectiveRef === DOOR43_LEGACY_DEFAULT_BRANCH
+          ? DOOR43_SCRIPTURE_DEFAULT_BRANCH
+          : DOOR43_LEGACY_DEFAULT_BRANCH;
+      if (alt !== effectiveRef) {
+        treeSha =
+          (await fetchRootTreeShaFromCommitsApi({
+            base,
+            enc,
+            owner: options.owner,
+            repo: options.repo,
+            ref: alt,
+            headers,
+            fetchFn,
+          })) ?? '';
+      }
+    }
+    if (!treeSha) {
+      if (!oid) throw new Error('Missing tree sha');
+      treeSha = await fetchTreeShaFromGitCommit({
+        base,
+        enc,
+        owner: options.owner,
+        repo: options.repo,
+        commitOid: oid,
+        headers,
+        fetchFn,
+      });
+    }
   }
 
   const recursive = options.recursive !== false;

@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { USFMParser } from '@usfm-tools/parser';
-import { stripAlignments } from '../src/alignment-layer';
+import { stripAlignments } from '@usfm-tools/usj-core';
 import { rebuildAlignedUsj } from '../src/rebuild-aligned';
 import { collectVerseTextsFromContent } from '../src/verse-text';
 

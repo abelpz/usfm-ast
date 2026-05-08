@@ -8,7 +8,7 @@ import { USFMParser } from '@usfm-tools/parser';
 import type { ActiveAlignmentPointer, AlignmentDocument, AlignmentMap, EditableUSJ } from '@usfm-tools/types';
 
 import { createAlignmentDocument, parseAlignmentJson, serializeAlignmentJson } from './alignment-io';
-import { stripAlignments } from './alignment-layer';
+import { stripAlignments } from '@usfm-tools/usj-core';
 import { rebuildAlignedUsj } from './rebuild-aligned';
 
 function parseUsfmToUsj(usfm: string): Parameters<typeof stripAlignments>[0] {

@@ -137,13 +137,13 @@ describe('@usfm-tools/door43-rest repo-manage', () => {
       token: 'tok',
       owner: 'o',
       repo: 'r',
-      ref: 'main',
+      ref: 'release-v1',
       fetch: fetchMock as unknown as typeof fetch,
     });
     expect(out).toEqual([]);
     expect(fetchMock).toHaveBeenCalledTimes(4);
-    expect(String(fetchMock.mock.calls[0]![0])).toContain('/branches/main');
-    expect(String(fetchMock.mock.calls[1]![0])).toContain('/commits/main');
+    expect(String(fetchMock.mock.calls[0]![0])).toContain('/branches/release-v1');
+    expect(String(fetchMock.mock.calls[1]![0])).toContain('/commits/release-v1');
     expect(String(fetchMock.mock.calls[2]![0])).toContain(`/git/commits/${oid}`);
     expect(String(fetchMock.mock.calls[3]![0])).toContain('/git/trees/tree-root');
   });
