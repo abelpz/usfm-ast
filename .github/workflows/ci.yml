@@ -37,6 +37,8 @@ jobs:
       - name: Test
         env:
           RUN_RELAY_POOL_TESTS: '1'
+          # smoke-test requires published npm packages; skip in workspace CI
+          SMOKE_TEST_SKIP: '1'
         run: bun run test
 
       - name: Example USJ coverage

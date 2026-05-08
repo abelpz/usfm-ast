@@ -98,17 +98,12 @@ export interface ProjectMeta {
    */
   lastRemoteCommit?: Record<string, string>;
   /**
-   * Tier-2 (book branch) commit SHA after our last successful push + auto-merge.
+   * Tier-2 (book branch) commit SHA after our last successful push.
    * Used by `syncLocalProjectWithDcs` to detect when Tier-2 is already an ancestor
    * of our work and skip a spurious 3-way merge.
    * Key = book branch name (e.g. `"tit"`).
    */
   lastPushedCommit?: Record<string, string>;
-  /**
-   * True merge-base OID used in the last successful three-way merge per book branch.
-   * Key = book branch name. Stored for debug and future optimization.
-   */
-  lastMergedBaseCommit?: Record<string, string>;
   /**
    * Maps DCS commit OIDs → local `BrowserGitAdapter` commit OIDs for snapshots that
    * have been committed into the per-project local git repo.

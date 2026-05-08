@@ -943,7 +943,7 @@ export function coalesceSplitMerges(hunks: ParagraphHunk[]): ParagraphHunk[] {
     let j = i;
     const runOurs: ParaUnit[]   = [];
     const runTheirs: ParaUnit[] = [];
-    let runId = h.id;
+    const runId = h.id;
     while (j < hunks.length) {
       const rh = hunks[j];
       if (rh.kind === 'ours-only')   { runOurs.push(rh.ours);     j++; }

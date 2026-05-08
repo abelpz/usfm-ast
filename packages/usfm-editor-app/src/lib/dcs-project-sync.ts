@@ -212,108 +212,6 @@ export function bookBranchName(bookCode: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Auto-merge
-// ---------------------------------------------------------------------------
-
-export type AutoMergeResult =
-  | { merged: true }
-  | { merged: false; conflictPrUrl: string };
-
-/**
- * After a successful push to the Tier-1 branch (`{username}/{bookCode}`), attempt
- * to auto-merge the two PR hops:
- *
- *   {username}/{bookCode}  →  {bookCode}  →  main
- *
- * Each hop:
- *  1. Ensures the target branch exists (creating from main if needed).
- *  2. Finds or creates an open PR between the branches.
- *  3. Calls the Gitea merge API.
- *
- * Returns `{ merged: true }` when both hops succeed, or
- * `{ merged: false, conflictPrUrl }` pointing to the first PR that could not
- * be automatically merged.
- *
- * If a hop’s merge fails but the head is already fully contained in the base
- * (nothing left to integrate), that PR is closed and the hop is treated as success.
- */
-export async function autoMergeToDcs(options: {
-  token: string;
-  sync: ProjectSyncConfig;
-  username: string;
-  bookCode: string;
-}): Promise<AutoMergeResult> {
-  const { token, sync, username, bookCode } = options;
-  const host = sync.host;
-  const owner = sync.owner;
-  const repo = sync.repo;
-  const mainBranch = sync.branch; // always 'main'
-  const tier1 = workingBranchName(username, bookCode);
-  const tier2 = bookBranchName(bookCode);
-
-  // Ensure the Tier-2 (book) branch exists before we try to target it.
-  await ensureBranch({ host, token, owner, repo, branch: tier2, fromBranch: mainBranch });
-
-  // --- Hop 1: Tier-1 → Tier-2 ---
-  const pr1 = await ensureOpenPullRequest({
-    host,
-    token,
-    owner,
-    repo,
-    head: tier1,
-    base: tier2,
-    title: `[auto] ${username}: ${bookCode.toUpperCase()} changes`,
-    body: `Automatic PR from translator branch \`${tier1}\` into book branch \`${tier2}\`.`,
-  });
-
-  const merge1 = await mergePullRequestOrCloseIfNothingToMerge({
-    host,
-    token,
-    owner,
-    repo,
-    index: pr1.number,
-    method: 'merge',
-    message: `Auto-merge ${tier1} → ${tier2}`,
-    baseRef: tier2,
-    headRef: tier1,
-  });
-
-  if (!merge1.merged) {
-    return { merged: false, conflictPrUrl: merge1.prHtmlUrl };
-  }
-
-  // --- Hop 2: Tier-2 → main ---
-  const pr2 = await ensureOpenPullRequest({
-    host,
-    token,
-    owner,
-    repo,
-    head: tier2,
-    base: mainBranch,
-    title: `[auto] ${bookCode.toUpperCase()} → ${mainBranch}`,
-    body: `Automatic PR from book branch \`${tier2}\` into \`${mainBranch}\`.`,
-  });
-
-  const merge2 = await mergePullRequestOrCloseIfNothingToMerge({
-    host,
-    token,
-    owner,
-    repo,
-    index: pr2.number,
-    method: 'merge',
-    message: `Auto-merge ${tier2} → ${mainBranch}`,
-    baseRef: mainBranch,
-    headRef: tier2,
-  });
-
-  if (!merge2.merged) {
-    return { merged: false, conflictPrUrl: merge2.prHtmlUrl };
-  }
-
-  return { merged: true };
-}
-
-// ---------------------------------------------------------------------------
 // Push
 // ---------------------------------------------------------------------------
 
@@ -366,8 +264,8 @@ export async function pushLocalProjectToDcs(options: {
   /**
    * Override the target branch for the push.
    * When provided (e.g. `{username}/{bookCode}`) the push lands on this branch
-   * instead of `sync.branch`. The merge to `sync.branch` is handled separately
-   * by `autoMergeToDcs`.
+   * instead of `sync.branch`. The merge to `sync.branch` must be triggered
+   * separately (e.g. via a pull-request or higher-level sync flow).
    */
   workingBranch?: string;
   /**
@@ -676,15 +574,6 @@ async function _syncOnce(options: {
       await storage.deleteFile(projectId, path);
     }
 
-    // Record the merge-base used (for debug and future optimization).
-    if (mergeBaseOid) {
-      await storage.updateProject(projectId, {
-        lastMergedBaseCommit: {
-          ...(meta.lastMergedBaseCommit ?? {}),
-          [tier2]: mergeBaseOid,
-        },
-      });
-    }
   } else if (isLocalDeltaEmpty(localDelta)) {
     // Ancestry check said Tier-2 is not ahead of us, and nothing changed locally.
     return { kind: 'noop', tier2HeadSha };
@@ -742,9 +631,7 @@ async function _syncOnce(options: {
         }
       }
 
-      // Record the Tier-2 tip we synced from and the conservative lastPushedCommit.
-      // The hook will overwrite lastPushedCommit with the post-autoMerge Tier-2 head
-      // once autoMergeToDcs succeeds, giving us the most accurate anchor.
+      // Record the Tier-2 tip we synced from as the new push anchor.
       await storage.updateProject(projectId, {
         lastRemoteCommit: { ...(meta.lastRemoteCommit ?? {}), [tier2]: tier2HeadSha },
         lastPushedCommit: { ...(meta.lastPushedCommit ?? {}), [tier2]: tier2HeadSha },
