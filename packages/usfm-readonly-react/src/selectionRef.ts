@@ -4,6 +4,7 @@
  * full `.usfm-tok` words, and ordered **wordTokens** with per-verse occurrence metadata.
  */
 
+import type { WordTokenAlignment } from './wordAlignment.js';
 import { normalizeWordIdentity } from './wordTokens.js';
 
 export type ScriptureSelectionWordToken = {
@@ -12,6 +13,11 @@ export type ScriptureSelectionWordToken = {
   verseNum: string;
   wordIndexInVerse: number;
   occurrenceInVerse: number;
+  /** Set when spans carry `data-gateway-index` / `data-verse-sid` (see `UsfmReadonlyView`). */
+  gatewayTokenIndex?: number;
+  verseSid?: string;
+  /** Filled by `UsfmReadonlyView` when selection commits (requires gateway attrs on DOM). */
+  alignment?: WordTokenAlignment | null;
 };
 
 export type ScriptureSelectionRef = {
@@ -179,6 +185,17 @@ function readWordTokenFromDom(el: HTMLElement): ScriptureSelectionWordToken | nu
   const wi = parseInt(el.getAttribute('data-word-index') ?? '', 10);
   const occ = parseInt(el.getAttribute('data-occurrence') ?? '', 10);
   const id = el.getAttribute('data-word-identity')?.trim();
+  const gwiRaw = el.getAttribute('data-gateway-index');
+  const verseSidAttr = el.getAttribute('data-verse-sid')?.trim();
+  let gatewayTokenIndex: number | undefined;
+  let verseSid: string | undefined;
+  if (gwiRaw !== null && gwiRaw !== '' && verseSidAttr) {
+    const parsedGw = parseInt(gwiRaw, 10);
+    if (Number.isFinite(parsedGw)) {
+      gatewayTokenIndex = parsedGw;
+      verseSid = verseSidAttr;
+    }
+  }
   if (!verseNum || !Number.isFinite(wi) || !Number.isFinite(occ)) return null;
   return {
     surface: surf,
@@ -186,6 +203,7 @@ function readWordTokenFromDom(el: HTMLElement): ScriptureSelectionWordToken | nu
     verseNum,
     wordIndexInVerse: wi,
     occurrenceInVerse: occ,
+    ...(gatewayTokenIndex !== undefined && verseSid ? { gatewayTokenIndex, verseSid } : {}),
   };
 }
 

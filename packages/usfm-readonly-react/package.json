@@ -1,6 +1,6 @@
 {
   "name": "@usfm-tools/usfm-readonly-react",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Read-only USFM → React view (segment pipeline inspired by usfm-editor-app conflict-renderers; optional @usfm-tools/editor-themes CSS)",
   "type": "module",
   "main": "./dist/index.js",
@@ -14,11 +14,17 @@
     },
     "./styles.css": "./dist/default.css"
   },
-  "files": ["dist", "README.md"],
-  "sideEffects": ["./dist/default.css"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": [
+    "./dist/default.css"
+  ],
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "npm run clean && tsc -p tsconfig.build.json && node scripts/copy-css.mjs",
+    "test": "jest --config jest.config.cjs",
     "check-types": "tsc --noEmit -p tsconfig.json"
   },
   "peerDependencies": {
@@ -31,12 +37,17 @@
     }
   },
   "dependencies": {
+    "@usfm-tools/types": "workspace:*",
     "@usfm-tools/usj-core": "workspace:*",
     "@usfm-tools/parser": "workspace:*"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.0",
     "@types/react": "^19.0.10",
+    "@usfm-tools/parser": "workspace:*",
+    "jest": "^29.5.0",
     "react": "^19.0.0",
+    "ts-jest": "^29.1.0",
     "typescript": "^5.6.0"
   },
   "license": "MIT",
@@ -48,5 +59,12 @@
   "publishConfig": {
     "access": "public"
   },
-  "keywords": ["usfm", "usj", "react", "scripture", "readonly", "usfm-tools"]
+  "keywords": [
+    "usfm",
+    "usj",
+    "react",
+    "scripture",
+    "readonly",
+    "usfm-tools"
+  ]
 }

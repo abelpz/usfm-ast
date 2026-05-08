@@ -59,7 +59,12 @@ export function createVerseTokenBumper(): VerseTokenBump {
   };
 }
 
-export type VerseTokenMeta = { wordIndexInVerse: number; occurrenceInVerse: number };
+export type VerseTokenMeta = {
+  wordIndexInVerse: number;
+  occurrenceInVerse: number;
+  /** 0-based index in {@link tokenizeGatewayUsj} for this verse, when resolved. */
+  gatewayTokenIndex?: number;
+};
 
 /**
  * Stable 1-based word index and occurrence **per verse** for each word token.

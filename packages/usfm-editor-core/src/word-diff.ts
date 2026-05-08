@@ -1,24 +1,15 @@
 /**
  * Word-level tokenizer and LCS-based diff for alignment reconciliation (see `reconcileAlignments`).
+ *
+ * Gateway splitting + surface normalization live in `@usfm-tools/usj-core` so read-only UIs
+ * and other consumers can share the same rules without depending on the full editor stack.
  */
 
-/** Split gateway text into words (letters/digits/apostrophe); punctuation stays attached or split by whitespace */
-export function tokenizeWords(line: string): string[] {
-  return line.trim().split(/\s+/).filter((w) => w.length > 0);
-}
-
-/**
- * Strip leading/trailing characters that are not letters, numbers, or apostrophe (incl. curly apostrophe).
- * Same rule as word cores in `rebuild-aligned.ts` so "Pablo," ↔ "Pablo" and "Παῦλος," ↔ "Παῦλος" align.
- */
-export function normalizeWordForAlignmentMatch(s: string): string {
-  return s.replace(/^[^\p{L}\p{N}'\u2019]+|[^\p{L}\p{N}'\u2019]+$/gu, '');
-}
-
-/** Compare gateway / reference word surfaces for alignment (ignores attached punctuation). */
-export function alignmentWordSurfacesEqual(a: string, b: string): boolean {
-  return normalizeWordForAlignmentMatch(a) === normalizeWordForAlignmentMatch(b);
-}
+export {
+  tokenizeWords,
+  normalizeWordForAlignmentMatch,
+  alignmentWordSurfacesEqual,
+} from '@usfm-tools/usj-core';
 
 /**
  * Longest common subsequence on word arrays: which old/new indices participate in one LCS, and

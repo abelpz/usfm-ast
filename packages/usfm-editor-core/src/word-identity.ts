@@ -1,19 +1,21 @@
 /**
  * Word-level identity for alignment: verse sid + surface + occurrence within verse.
+ *
+ * Gateway (translation) tokenization is delegated to `@usfm-tools/usj-core` so it can be shared
+ * with read-only renderers without pulling the full editor stack.
  */
 
-import { stripAlignments } from '@usfm-tools/usj-core';
-import { collectVerseTextsFromContent } from './verse-text';
-import { findVerseInlineNodes } from './verse-ref';
+import {
+  stripAlignments,
+  tokenizeGatewayUsj,
+  collectVerseTextsFromContent,
+  occurrenceStats,
+  findVerseInlineNodes,
+} from '@usfm-tools/usj-core';
+import type { GatewayWordToken } from '@usfm-tools/usj-core';
 import { tokenizeWords } from './word-diff';
 
-export type WordToken = {
-  verseSid: string;
-  surface: string;
-  occurrence: number;
-  occurrences: number;
-  index: number;
-};
+export type WordToken = GatewayWordToken;
 
 export type OriginalWordToken = WordToken & {
   strong: string;
@@ -21,30 +23,11 @@ export type OriginalWordToken = WordToken & {
   morph?: string;
 };
 
-function occurrenceStats(words: string[], index: number): { occurrence: number; occurrences: number } {
-  const w = words[index];
-  const occurrences = words.filter((x) => x === w).length;
-  const occurrence = words.slice(0, index + 1).filter((x) => x === w).length;
-  return { occurrence, occurrences };
-}
-
 /**
  * Tokenize a gateway / translation USJ (typically stripped, plain strings in verses).
  */
 export function tokenizeDocument(usj: { content?: unknown[] }): Record<string, WordToken[]> {
-  const content = usj.content ?? [];
-  const byVerse = collectVerseTextsFromContent(content as unknown[]);
-  const out: Record<string, WordToken[]> = {};
-  for (const [sid, text] of Object.entries(byVerse)) {
-    const words = tokenizeWords(text);
-    out[sid] = words.map((surface, index) => ({
-      verseSid: sid,
-      surface,
-      ...occurrenceStats(words, index),
-      index,
-    }));
-  }
-  return out;
+  return tokenizeGatewayUsj(usj);
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {

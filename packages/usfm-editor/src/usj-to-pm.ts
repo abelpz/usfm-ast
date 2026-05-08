@@ -169,6 +169,37 @@ export function classifyPreChapterNodes(nodes: unknown[]): {
   return { identification, bookTitles, introduction };
 }
 
+/**
+ * USJ node for the mandatory `\\id` line (`type: 'book'`; see USFM→USJ parser and `pm-to-usj` `blockToUsj`).
+ * Parser may omit `marker` on book nodes; treat any `type: 'book'` as the id line.
+ */
+export function isUsjBookIdNode(n: unknown): boolean {
+  if (!isRecord(n) || n.type !== 'book') return false;
+  if (n.marker === undefined) return true;
+  return n.marker === 'id';
+}
+
+/**
+ * When merging the **identification** page from live USFM, the parse may omit `\\id` (e.g. user
+ * deleted it in the source pane). The in-editor structure guard only applies to ProseMirror — this
+ * path updates the store directly, so we carry forward the previous `book` node when missing.
+ */
+export function mergeIdentificationPreservingBookId(
+  storeIdentification: unknown[],
+  parsedIdentification: unknown[],
+): unknown[] {
+  const hasParsedId = parsedIdentification.some((n) => isUsjBookIdNode(n));
+  if (hasParsedId) {
+    return parsedIdentification;
+  }
+  const fromStore = storeIdentification.filter((n) => isUsjBookIdNode(n));
+  if (fromStore.length === 0) {
+    return parsedIdentification;
+  }
+  const rest = parsedIdentification.filter((n) => !isUsjBookIdNode(n));
+  return [...fromStore, ...rest];
+}
+
 /** Advance {@link TsState} over USJ blocks in the same order as {@link normalizeStandaloneTranslatorMilestones} + {@link blockToPm}. */
 function advanceTsStateForNormalizedBlocks(state: TsState, nodes: unknown[]): void {
   for (const n of normalizeStandaloneTranslatorMilestones(nodes)) {

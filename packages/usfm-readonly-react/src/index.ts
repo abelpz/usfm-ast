@@ -1,6 +1,18 @@
-export { UsfmReadonlyView, type UsfmReadonlyViewProps, type WordClickPayload } from './UsfmReadonlyView.js';
+export {
+  UsfmReadonlyView,
+  type UsfmReadonlyViewProps,
+  type UsfmReadonlyViewReadyPayload,
+  type WordClickPayload,
+  type WordDecorationInfo,
+  type WordTokenAlignment,
+} from './UsfmReadonlyView.js';
 export { normalizeWordIdentity } from './wordTokens.js';
-export { parseUsfmToUsj, type ParseUsfmOptions } from './parseUsfm.js';
+export { getUsfmChapters, getUsjChapters, parseUsfmToUsj, parseUsfmToUsjWithAlignments, type ParseUsfmOptions } from './parseUsfm.js';
+export {
+  buildPieceKeyToGatewayIndex,
+  resolveWordTokenAlignment,
+  verseSidFromParts,
+} from './wordAlignment.js';
 export { collectSegments, type RenderSegment, type SegmentKind } from './segments.js';
 export {
   commitExpandedWordTokenSelection,

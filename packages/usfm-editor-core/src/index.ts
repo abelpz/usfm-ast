@@ -3,7 +3,16 @@ export type { SourceTextProvider } from './source-text-provider';
 export type { ChapterSlice, UsjDocument } from '@usfm-tools/usj-core';
 export { splitUsjByChapter, ChapterChunker, chapterSliceToUsjDocument } from '@usfm-tools/usj-core';
 export { usfmRefToVerseSid, findVerseInlineNodes } from './verse-ref';
-export { stripAlignments, stripArray, appendGatewayText, needsSpaceBetween } from '@usfm-tools/usj-core';
+export {
+  stripAlignments,
+  stripArray,
+  appendGatewayText,
+  needsSpaceBetween,
+  transIndexForAlignedWord,
+  tokenizeGatewayUsj,
+  occurrenceStats,
+  type GatewayWordToken,
+} from '@usfm-tools/usj-core';
 export { reconcileAlignments } from './alignment-reconcile';
 export { rebuildAlignedUsj, rebuildArray, emitAlignmentGroup } from './rebuild-aligned';
 export {

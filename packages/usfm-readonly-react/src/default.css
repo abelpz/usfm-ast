@@ -41,6 +41,17 @@
   cursor: pointer;
 }
 
+/** Optional helpers for {@link UsfmReadonlyViewProps.getWordDecoration} */
+.usfm-ro-root .usfm-tok.usfm-ro-hl {
+  background-color: rgba(255, 230, 120, 0.42);
+  border-radius: 2px;
+}
+
+.usfm-ro-root .usfm-tok.usfm-ro-ul {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .usfm-ro-root .usfm-tok--usfmw {
   font-weight: 500;
 }

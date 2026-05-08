@@ -1,5 +1,7 @@
 import { EditorPage } from '@/pages/EditorPage';
+import { ConflictWorkspacePage } from '@/pages/ConflictWorkspacePage';
 import { HomePage } from '@/pages/HomePage';
+import { BookToolsPage } from '@/pages/BookToolsPage';
 import { LocalProjectPage } from '@/pages/LocalProjectPage';
 import { SourceCachePage } from '@/pages/SourceCachePage';
 import { UpdateBanner } from '@/components/UpdateBanner';
@@ -22,7 +24,9 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/dcs-project" element={<Navigate to="/" replace />} />
         <Route path="/project/:id" element={<LocalProjectPage />} />
+        <Route path="/project/:id/book/:bookCode" element={<BookToolsPage />} />
         <Route path="/project/:id/editor" element={<EditorPage />} />
+        <Route path="/project/:id/conflicts" element={<ConflictWorkspacePage />} />
         <Route path="/project" element={<LegacyDcsProjectRedirect />} />
         <Route path="/editor" element={<EditorPage />} />
         <Route path="/source-cache" element={<SourceCachePage />} />

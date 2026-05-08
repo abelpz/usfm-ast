@@ -13,6 +13,8 @@ export {
   chapterSubsetToPm,
   classifyPreChapterNodes,
   expandChaptersWithContext,
+  isUsjBookIdNode,
+  mergeIdentificationPreservingBookId,
   partitionContent,
   normalizeStandaloneTranslatorMilestones,
   nextTsSection,
