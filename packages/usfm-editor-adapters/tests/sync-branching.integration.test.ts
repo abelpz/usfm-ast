@@ -31,7 +31,6 @@ import {
 import {
   workingBranchName,
   bookBranchName,
-  autoMergeToDcs,
 } from '../../usfm-editor-app/src/lib/dcs-project-sync';
 import {
   ensureBranch,
@@ -153,15 +152,9 @@ describeQa('QA integration — 3-tier sync', () => {
       expect(result.commit.sha).toMatch(/^[0-9a-f]{40}$/);
     }, 20_000);
 
-    it('auto-merges Tier-1 → Tier-2 → main', async () => {
-      const result = await autoMergeToDcs({
-        token: sessions[0].token,
-        sync: syncConfig(),
-        username: sessions[0].username,
-        bookCode: BOOK_CODE,
-      });
-      expect(result.merged).toBe(true);
-    }, 60_000);
+    it.skip('auto-merges Tier-1 → Tier-2 → main (decommissioned: autoMergeToDcs removed in Phase 6b)', () => {
+      // autoMergeToDcs has been removed; this flow is now handled by the higher-level sync pipeline.
+    });
 
     it('file is visible on main after merge', async () => {
       const tree = await listRepoGitTree({
@@ -216,20 +209,9 @@ describeQa('QA integration — 3-tier sync', () => {
       expect(result.commit.sha).toMatch(/^[0-9a-f]{40}$/);
     }, 20_000);
 
-    it('auto-merge either succeeds or returns a conflict PR URL', async () => {
-      const result = await autoMergeToDcs({
-        token: sessions[1].token,
-        sync: syncConfig(),
-        username: sessions[1].username,
-        bookCode: BOOK_CODE,
-      });
-      if (result.merged) {
-        expect(result.merged).toBe(true);
-      } else {
-        expect(result.conflictPrUrl).toMatch(/^https?:\/\//);
-        console.log(`[QA] Conflict PR (expected): ${result.conflictPrUrl}`);
-      }
-    }, 60_000);
+    it.skip('auto-merge either succeeds or returns a conflict PR URL (decommissioned: autoMergeToDcs removed in Phase 6b)', () => {
+      // autoMergeToDcs has been removed; this flow is now handled by the higher-level sync pipeline.
+    });
   });
 
   // -------------------------------------------------------------------------

@@ -279,7 +279,6 @@ describe('syncLocalProjectWithDcs — ancestry-aware (Phase 1)', () => {
     const meta = await storage.getProject('TEST');
     expect(meta?.lastPushedCommit?.['main']).toBe('remote-head-sha');
     expect(meta?.lastRemoteCommit?.['main']).toBe('remote-head-sha');
-    expect(meta?.lastMergedBaseCommit?.['main']).toBe('mb-sha');
   });
 
   test('does not advance lastPushedCommit when there are conflicts', async () => {

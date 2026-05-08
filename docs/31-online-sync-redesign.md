@@ -448,12 +448,16 @@ Touched:
 - `packages/usfm-editor-adapters/src/three-way-merge-project.ts` — CRDT-first branch in `mergeProjectMaps`
 - `packages/usfm-editor-adapters/tests/yjs-codec.test.ts` — 4 new Phase 6 tests (24/24 pass)
 
-**Deferred to Phase 6b** (full REST anchor decommission, once CRDT path has soaked in production):
-- Per-blob CAS (`expectedBaseShaByPath` push loop).
-- `lastRemoteCommit`, `lastPushedCommit`, `lastMergedBaseCommit` from `ProjectMeta`.
-- Persisted `pendingConflicts`.
-- Remove `autoMergeToDcs` entirely (deprecated in Phase 5).
-- Remove OT bridge entirely once CRDT history coverage is confirmed.
+**Phase 6b — Partial REST anchor decommission ✅ delivered (conservative scope):**
+- Removed `lastMergedBaseCommit` from `ProjectMeta` (was debug-only; no production callers).
+- Removed `autoMergeToDcs` function entirely from `dcs-project-sync.ts` (deprecated in Phase 5; no production call sites).
+- Updated `sync-branching.integration.test.ts` to skip decommissioned auto-merge tests.
+
+**Retained (still actively used in production sync):**
+- Per-blob CAS (`expectedBaseShaByPath` push loop) — serializes concurrent pushes; safe to remove only after ancestry-aware sync fully replaces it.
+- `lastRemoteCommit`, `lastPushedCommit` — used by sync UI and conflict detection.
+- `pendingConflicts` — drives conflict UX.
+- OT bridge — retained until CRDT history coverage is confirmed in production.
 
 ### Phase 7 — Peer transport (file mode) ✅ **delivered**
 

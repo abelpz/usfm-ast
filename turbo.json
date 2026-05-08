@@ -1,7 +1,7 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
-  "globalPassThroughEnv": ["RUN_RELAY_POOL_TESTS", "RELAY_URL"],
+  "globalPassThroughEnv": ["RUN_RELAY_POOL_TESTS", "RELAY_URL", "SMOKE_TEST_SKIP"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
