@@ -311,8 +311,8 @@ describe('syncLocalProjectWithDcs — ancestry-aware (Phase 1)', () => {
   });
 
   test('concurrent calls are serialized — at most one compareRefs in-flight per key', async () => {
-    let inFlightCount = 0;
-    let maxInFlight = 0;
+    const inFlightCount = 0;
+    const maxInFlight = 0;
 
     // Use a slow compareRefs via the module-level control variable approach.
     // We patch the delay into _compareRefsCallArgs side-channel by tracking entry/exit counts.
@@ -323,7 +323,7 @@ describe('syncLocalProjectWithDcs — ancestry-aware (Phase 1)', () => {
     // The module-level compareRefs mock already records calls, but we need a delay.
     // Inject delay via a tiny wrapper tracked through _compareRefsCallArgs:
     // Each call increments before await and decrements after — we measure max across calls.
-    let _realCompareCount = 0;
+    const _realCompareCount = 0;
     const storage = makeStorage({ lastPushedCommit: { main: 'old-push-sha' } });
 
     // Monkey-patch the mock to add timing — we re-register with a delay variant.

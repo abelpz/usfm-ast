@@ -66,6 +66,5 @@ export function useTauriCloseGuard(opts: CloseGuardOptions): void {
 
     return () => { unlisten?.(); };
     // opts refs are stable if callers use useCallback/useRef.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platform]);
 }

@@ -4,6 +4,16 @@ export function extractBookCodeFromUsfm(usfm: string): string | null {
   return m?.[1] ? m[1].toUpperCase() : null;
 }
 
+/** Title hints from USFM: `\\h` > `\\toc2` > `\\toc1`. */
+export function extractUsfmTitle(usfm: string): string | null {
+  const markers = [/^\\h\s+(.+)/m, /^\\toc2\s+(.+)/m, /^\\toc1\s+(.+)/m];
+  for (const re of markers) {
+    const m = usfm.match(re);
+    if (m?.[1]?.trim()) return m[1].trim();
+  }
+  return null;
+}
+
 export function blankUsfmForBook(code: string, displayName: string): string {
   const c = code.toUpperCase();
   const h = displayName.trim() || c;

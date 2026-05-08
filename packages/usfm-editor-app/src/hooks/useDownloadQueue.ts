@@ -183,7 +183,6 @@ export function useDownloadQueue(): DownloadQueueState {
       _schedulerStarted = false;
       _scheduler = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync job list on mount (before scheduler effect runs and after each reload).

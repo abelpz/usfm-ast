@@ -4,6 +4,7 @@ import { Book, ChevronDown, ChevronLeft, ChevronRight, ScrollText, SlidersHorizo
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useBookConflicts } from '@/contexts/BookConflictsContext';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -82,7 +83,13 @@ function mergeWithReferencePages(
   return result;
 }
 
-export const SectionPicker = memo(function SectionPicker({ session, referenceSession, onWindowNotice, inline }: Props) {
+export const SectionPicker = memo(function SectionPicker({
+  session,
+  referenceSession,
+  onWindowNotice,
+  inline,
+}: Props) {
+  const { conflictChapters, hasFrontMatterConflict } = useBookConflicts();
   const maxSel = session.maxVisibleChapters;
   const contextN = session.getContextChapterRadius();
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -134,6 +141,10 @@ export const SectionPicker = memo(function SectionPicker({ session, referenceSes
       rerender();
     };
 
+    const onChapterButtonClick = (entry: { page: EditorContentPage; fromReference: boolean }) => {
+      goToEntry(entry);
+    };
+
     const inner = (
       <div className="flex items-center gap-1.5">
         <Button
@@ -164,16 +175,38 @@ export const SectionPicker = memo(function SectionPicker({ session, referenceSes
                     ? 'h-7 min-w-7 px-1.5 text-xs font-medium tabular-nums'
                     : 'h-7 w-7 shrink-0',
                   fromReference && !active && 'border border-dashed opacity-70',
+                  p.kind === 'chapter' &&
+                    conflictChapters.has(p.chapter) &&
+                    'relative border-red-500/80 text-red-700 ring-1 ring-red-500/50 dark:text-red-400',
+                  p.kind !== 'chapter' &&
+                    hasFrontMatterConflict &&
+                    'relative border-red-500/80 text-red-700 ring-1 ring-red-500/50 dark:text-red-400',
                 )}
                 aria-label={p.kind === 'chapter' ? undefined : paginatedPageAriaLabel(p)}
                 aria-current={active ? 'true' : undefined}
                 title={fromReference && !active ? 'Chapter exists in reference only — will be created when visited' : undefined}
-                onClick={() => goToEntry({ page: p, fromReference })}
+                onClick={() => onChapterButtonClick({ page: p, fromReference })}
               >
                 {p.kind === 'chapter' ? (
-                  p.chapter
+                  <>
+                    {p.chapter}
+                    {conflictChapters.has(p.chapter) ? (
+                      <span
+                        className="ring-background absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-red-500 ring-2"
+                        aria-hidden
+                      />
+                    ) : null}
+                  </>
                 ) : (
-                  <PaginatedPageGlyph page={p} iconClass="size-3.5" />
+                  <>
+                    <PaginatedPageGlyph page={p} iconClass="size-3.5" />
+                    {hasFrontMatterConflict ? (
+                      <span
+                        className="ring-background absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-red-500 ring-2"
+                        aria-hidden
+                      />
+                    ) : null}
+                  </>
                 )}
               </Button>
             );
@@ -288,12 +321,20 @@ export const SectionPicker = memo(function SectionPicker({ session, referenceSes
                     'h-8 min-w-8 px-2 font-medium',
                     isRo && !isSel && 'border-dashed opacity-60',
                     isRefOnly && !isSel && 'border-dashed opacity-60 text-muted-foreground',
+                    conflictChapters.has(c) &&
+                      'relative border-red-500/80 text-red-700 ring-1 ring-red-500/50 dark:text-red-400',
                   )}
                   aria-pressed={isSel}
                   title={isRefOnly ? 'Chapter exists in reference only — will be created when visited' : undefined}
                   onClick={() => goToChapter(c)}
                 >
                   {c}
+                  {conflictChapters.has(c) ? (
+                    <span
+                      className="ring-background absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-red-500 ring-2"
+                      aria-hidden
+                    />
+                  ) : null}
                 </Button>
               </span>
             );

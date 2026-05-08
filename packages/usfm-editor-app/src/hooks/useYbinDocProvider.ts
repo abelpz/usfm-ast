@@ -85,7 +85,6 @@ export function useYbinDocProvider(
       currentProvider?.destroy();
       setProvider(null);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctrl, targetKey, debounceMs]);
 
   return provider;

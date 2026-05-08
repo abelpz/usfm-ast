@@ -1,9 +1,4 @@
 import type { UsjDocument } from '@usfm-tools/editor-core';
-import {
-  alignmentDocumentSourceKey,
-  parseDocumentIdentityFromUsj,
-} from '@usfm-tools/editor-core';
-import type { SourceTextSession } from '@usfm-tools/editor';
 import type { AlignmentDocument } from '@usfm-tools/types';
 import { BadgeCheck, ChevronDown, ChevronRight, Globe, Loader2, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -12,15 +7,13 @@ import { AlignmentLanguageQuickPick } from '@/components/alignment/AlignmentLang
 import { parseUsfmToUsj } from '@/alignment-panel';
 import type { Door43LanguageOption } from '@/dcs-client';
 import { cn } from '@/lib/utils';
+import {
+  matchLayerKey,
+  sourceKeyFromUsj,
+  type SourceSlotSnapshot,
+} from '@/components/alignment/alignment-source-matching';
 
-export type SourceSlotSnapshot = {
-  id: string;
-  /** Short code identifier, e.g. "ult" or "glt" (from catalog abbreviation). */
-  label: string;
-  /** Human-readable title from the catalog, e.g. "unfoldingWord Literal Translation". */
-  title?: string;
-  session: SourceTextSession | null;
-};
+export type { SourceSlotSnapshot } from '@/components/alignment/alignment-source-matching';
 
 type Props = {
   /** All loaded reference slots from ReferenceColumn. */
@@ -41,29 +34,19 @@ type Props = {
   onStartNewLayer: (sourceUsj: UsjDocument) => void;
   /** Trigger language load in ReferenceColumn (imperative). */
   onRequestAddDcsLanguage: (lang: Door43LanguageOption) => void;
+  /** `card` = legacy centered chooser; `inline` = strip at top of alignment shell. */
+  variant?: 'card' | 'inline';
 };
 
-/** Derive the alignment doc key from a slot's loaded USJ (same logic as alignmentDocumentSourceKey). */
-function sourceKeyFromUsj(usj: UsjDocument): string {
-  const id = parseDocumentIdentityFromUsj(usj) ?? 'unknown';
-  // alignmentDocumentSourceKey uses source.id without version by default; we mirror that.
-  return id;
-}
-
-/** Find a layer whose source.id matches the given source key (prefix-match like compat check). */
-function matchLayerKey(
-  layers: AlignmentDocument[],
-  sourceKey: string,
-): string | null {
-  for (const doc of layers) {
-    const layerKey = alignmentDocumentSourceKey(doc);
-    const srcId = doc.source.id.toLowerCase();
-    const sk = sourceKey.toLowerCase();
-    if (layerKey.toLowerCase() === sk || srcId === sk || sk.includes(srcId) || srcId.includes(sk)) {
-      return layerKey;
-    }
-  }
-  return null;
+function isBestMatch(
+  srcKey: string,
+  expectedAlignmentKey: string | null,
+): boolean {
+  if (expectedAlignmentKey === null) return false;
+  return (
+    srcKey.toLowerCase().includes(expectedAlignmentKey.toLowerCase()) ||
+    expectedAlignmentKey.toLowerCase().includes(srcKey.toLowerCase())
+  );
 }
 
 export function AlignmentSourcePicker({
@@ -76,6 +59,7 @@ export function AlignmentSourcePicker({
   onUseExistingLayer,
   onStartNewLayer,
   onRequestAddDcsLanguage,
+  variant = 'card',
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [showDcsPicker, setShowDcsPicker] = useState(false);
@@ -105,69 +89,142 @@ export function AlignmentSourcePicker({
     setDcsLanguageAdding(true);
     setShowDcsPicker(false);
     onRequestAddDcsLanguage(lang);
-    // Loading state will clear once sourceSlots updates (via parent re-render)
-    // Give it a moment then reset
     setTimeout(() => setDcsLanguageAdding(false), 3000);
   }
 
   const loadedSlots = sourceSlots.filter((s) => s.session?.isLoaded());
+  const inline = variant === 'inline';
 
-  return (
-    <div className="border-border bg-card mx-auto max-w-lg space-y-4 rounded-xl border p-6 shadow-sm">
-      <div>
-        <h2 className="text-foreground text-lg font-semibold">Choose alignment source</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Pick the text to align <strong>against</strong> (e.g. Greek UGNT, ULT). If this book is
-          already aligned to a source, pick the same one to continue, or pick a different source to
-          start a new alignment layer.
-        </p>
-      </div>
+  const content = (
+    <>
+      {inline ? (
+        <div>
+          <h2 className="text-foreground text-base font-semibold">Alignment source</h2>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            Pick a loaded reference, add from Door43, or upload USFM. When one reference matches
+            your book, it is applied automatically.
+          </p>
+        </div>
+      ) : (
+        <div>
+          <h2 className="text-foreground text-lg font-semibold">Choose alignment source</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Pick the text to align <strong>against</strong> (e.g. Greek UGNT, ULT). If this book is
+            already aligned to a source, pick the same one to continue, or pick a different source to
+            start a new alignment layer.
+          </p>
+        </div>
+      )}
 
-      {/* 1 — Loaded reference slots */}
       {loadedSlots.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+          <p
+            className={cn(
+              'text-muted-foreground font-medium uppercase tracking-wide',
+              inline ? 'text-[10px]' : 'text-xs',
+            )}
+          >
             Loaded references
           </p>
-          <div className="space-y-2">
+          <div
+            className={cn(
+              inline
+                ? 'flex flex-col gap-2 sm:flex-row sm:flex-wrap'
+                : 'space-y-2',
+            )}
+          >
             {loadedSlots.map((slot) => {
               const usj = slot.session!.store.getFullUSJ() as UsjDocument;
               const srcKey = sourceKeyFromUsj(usj);
               const matchedLayerKey = matchLayerKey(existingLayers, srcKey);
-              const isBestMatch =
-                expectedAlignmentKey !== null &&
-                (srcKey.toLowerCase().includes(expectedAlignmentKey.toLowerCase()) ||
-                  expectedAlignmentKey.toLowerCase().includes(srcKey.toLowerCase()));
+              const isBest = isBestMatch(srcKey, expectedAlignmentKey);
               const isActiveLayer = matchedLayerKey !== null && matchedLayerKey === activeLayerKey;
               const subtitle = referenceLabel(usj);
               const displayTitle = slot.title || slot.label;
               const codeLabel = slot.title ? slot.label : null;
 
-              return (
-                <div
-                  key={slot.id}
-                  className={cn(
-                    'rounded-lg border p-4 space-y-2 transition-colors',
-                    isBestMatch && 'border-primary/40 bg-primary/5',
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
+              if (inline) {
+                return (
+                  <div
+                    key={slot.id}
+                    className={cn(
+                      'flex min-w-0 max-w-md flex-1 flex-col gap-1.5 rounded-lg border p-2',
+                      isBest && 'border-primary/40 bg-primary/5',
+                    )}
+                  >
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-sm font-medium">{displayTitle}</span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="text-foreground text-sm font-medium">{displayTitle}</span>
                         {codeLabel && (
-                          <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                          <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono text-xs">
                             {codeLabel}
                           </span>
                         )}
-                        {isBestMatch && (
-                          <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium bg-primary/15 text-primary">
+                        {isBest && (
+                          <span className="bg-primary/15 text-primary inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs font-medium">
                             <BadgeCheck className="size-3" aria-hidden />
                             Best match
                           </span>
                         )}
                         {isActiveLayer && (
-                          <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                          <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs">
+                            Active layer
+                          </span>
+                        )}
+                      </div>
+                      {subtitle && (
+                        <p className="text-muted-foreground truncate font-mono text-[10px]">{subtitle}</p>
+                      )}
+                    </div>
+                    {matchedLayerKey ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full shrink-0"
+                        onClick={() => onUseExistingLayer(matchedLayerKey, usj)}
+                      >
+                        Continue with this reference
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="w-full shrink-0"
+                        onClick={() => onStartNewLayer(usj)}
+                      >
+                        New layer from this reference
+                      </Button>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={slot.id}
+                  className={cn(
+                    'space-y-2 rounded-lg border p-4 transition-colors',
+                    isBest && 'border-primary/40 bg-primary/5',
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-sm font-medium">{displayTitle}</span>
+                        {codeLabel && (
+                          <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono text-xs">
+                            {codeLabel}
+                          </span>
+                        )}
+                        {isBest && (
+                          <span className="bg-primary/15 text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium">
+                            <BadgeCheck className="size-3" aria-hidden />
+                            Best match
+                          </span>
+                        )}
+                        {isActiveLayer && (
+                          <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs">
                             Active layer
                           </span>
                         )}
@@ -204,13 +261,13 @@ export function AlignmentSourcePicker({
         </div>
       ) : (
         <p className="text-muted-foreground text-sm">
-          No reference text loaded in the reference panel. Add one from Door43 below, upload a file,
-          or open the reference panel and load a source first.
+          {inline
+            ? 'No reference text in the reference panel yet. Add one from Door43 or upload a file, or open the side reference panel and load a source first.'
+            : 'No reference text loaded in the reference panel. Add one from Door43 below, upload a file, or open the reference panel and load a source first.'}
         </p>
       )}
 
-      {/* 2 — Add from Door43 */}
-      <div className="space-y-2">
+      <div className={cn('space-y-2', inline && 'pt-1')}>
         <button
           type="button"
           className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide"
@@ -221,18 +278,11 @@ export function AlignmentSourcePicker({
             <Globe className="size-3.5" aria-hidden />
             Add from Door43
           </span>
-          {showDcsPicker ? (
-            <ChevronDown className="size-3.5" aria-hidden />
-          ) : (
-            <ChevronRight className="size-3.5" aria-hidden />
-          )}
+          {showDcsPicker ? <ChevronDown className="size-3.5" aria-hidden /> : <ChevronRight className="size-3.5" aria-hidden />}
         </button>
         {showDcsPicker ? (
-          <div className="rounded-lg border overflow-hidden">
-            <AlignmentLanguageQuickPick
-              onPick={handleDcsPick}
-              host={dcsAuth?.host}
-            />
+          <div className="overflow-hidden rounded-lg border">
+            <AlignmentLanguageQuickPick onPick={handleDcsPick} host={dcsAuth?.host} />
           </div>
         ) : null}
         {dcsLanguageAdding ? (
@@ -243,7 +293,6 @@ export function AlignmentSourcePicker({
         ) : null}
       </div>
 
-      {/* 3 — Upload a USFM file */}
       <div className="flex flex-col gap-2">
         <input
           ref={fileRef}
@@ -263,6 +312,20 @@ export function AlignmentSourcePicker({
           Upload a USFM file…
         </Button>
       </div>
+    </>
+  );
+
+  if (inline) {
+    return (
+      <div className="border-border bg-card/50 shrink-0 space-y-3 rounded-lg border p-3 shadow-sm">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-border bg-card mx-auto max-w-lg space-y-4 rounded-xl border p-6 shadow-sm">
+      {content}
     </div>
   );
 }

@@ -210,7 +210,6 @@ export function LocalProjectPage() {
         name: bookNamesReady ? getLocalizedBookName(lc, code, englishName) : englishName,
         path: code,
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [existingCodes, lc, bookNamesReady],
   );
 

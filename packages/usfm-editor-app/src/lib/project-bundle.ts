@@ -33,10 +33,8 @@ export type BundleManifest = {
 
 /** Strip characters illegal in common OS file names; collapse whitespace. */
 export function sanitizeProjectDisplayNameForFilename(name: string): string {
-  return name
-    .replace(/[/\\:*?"<>|\x00-\x1f]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  // eslint-disable-next-line no-control-regex
+  return name.replace(/[/\\:*?"<>|\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /**

@@ -53,6 +53,7 @@ import { getCatalogLanguages } from '@/lib/dcs-langnames-cache';
 import { fetchCatalogSourcesCached } from '@/lib/dcs-wizard-query-cache';
 import { directionForLangSync } from '@/lib/lang-direction';
 import { cn } from '@/lib/utils';
+import type { SourceSlotSnapshot } from '@/components/alignment/alignment-source-matching';
 
 type DcsAuth = { host: string; token?: string } | null;
 
@@ -72,15 +73,7 @@ type Props = {
   onSourceLanguageChange?: (lc: string | null) => void;
 };
 
-/** Snapshot of a single source slot, safe to pass outside ReferenceColumn. */
-export type SourceSlotSnapshot = {
-  id: string;
-  /** Short code identifier, e.g. "ult" or "glt" (from catalog abbreviation or repo name). */
-  label: string;
-  /** Human-readable title from the catalog, e.g. "unfoldingWord Literal Translation". */
-  title?: string;
-  session: SourceTextSession | null;
-};
+export type { SourceSlotSnapshot } from '@/components/alignment/alignment-source-matching';
 
 /** Imperative handle exposed via ref for parent-driven operations. */
 export type ReferenceColumnHandle = {

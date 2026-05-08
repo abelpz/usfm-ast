@@ -57,6 +57,5 @@ export function useTauriMenuEvents(handlers: TauriMenuHandlers): void {
     return () => { unlisten?.(); };
     // handlers object changes every render, but we only want to subscribe once.
     // Callers should memoize handler references (useCallback) for correctness.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platform]);
 }

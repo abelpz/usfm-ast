@@ -123,7 +123,7 @@ export function useLocalProjectSync(
       const releases = await storage.listReleases(projectId);
       setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
     })();
-  }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   const resolveConflict = useCallback(
     async (path: string, choice: 'ours' | 'theirs' | 'merged', mergedText?: string) => {
@@ -299,7 +299,7 @@ export function useLocalProjectSync(
         }
       }
     })();
-  }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   useEffect(() => {
     return () => {

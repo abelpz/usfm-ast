@@ -188,7 +188,6 @@ export function PeerRTCSyncPanel({
         setProgress({ state: 'error', message: 'Snapshot transfer failed.', error: String(e) });
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress?.state]);
 
   // ── Responder ─────────────────────────────────────────────────────────────
