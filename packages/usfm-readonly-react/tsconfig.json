@@ -11,10 +11,6 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "paths": {
-      "@usfm-tools/types": ["../shared-types/src/index.ts"],
-      "@usfm-tools/types/*": ["../shared-types/src/*"]
-    }
   },
   "include": ["src/**/*"]
 }

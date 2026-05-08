@@ -2,8 +2,7 @@
  * Resolve embedded USFM alignments to per-word metadata (shared rules with `@usfm-tools/usj-core` gateway tokens).
  */
 
-import type { AlignedWord, AlignmentMap, OriginalWord } from '@usfm-tools/types';
-import type { GatewayWordToken } from '@usfm-tools/usj-core';
+import type { AlignedWord, AlignmentMap, GatewayWordToken, OriginalWord } from '@usfm-tools/usj-core';
 import { transIndexForAlignedWord } from '@usfm-tools/usj-core';
 import type { RenderSegment } from './segments.js';
 import { splitWordsAndGaps } from './wordTokens.js';

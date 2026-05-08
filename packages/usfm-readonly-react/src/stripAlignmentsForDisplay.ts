@@ -3,8 +3,7 @@
  * Returns `{ usj, alignments }` so the rest of this package never deals with editor-centric return field names.
  */
 
-import type { AlignmentMap } from '@usfm-tools/types';
-import type { UsjDocument } from '@usfm-tools/usj-core';
+import type { AlignmentMap, UsjDocument } from '@usfm-tools/usj-core';
 import { stripAlignments } from '@usfm-tools/usj-core';
 
 /** Input shape accepted by `@usfm-tools/usj-core` {@link stripAlignments}. */
