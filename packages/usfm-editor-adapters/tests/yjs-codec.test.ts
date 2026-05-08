@@ -1,6 +1,7 @@
 import {
   usfmToYjsBase64,
   yjsBase64ToUsfm,
+  updateYjsBase64WithUsfm,
   mergeYjsBase64ThreeWay,
 } from '../src/yjs-codec';
 import { isYbinPath, crdtPathFromUsfm, usfmPathFromCrdt } from '../src/crdt-paths';
@@ -307,5 +308,93 @@ describe('mergeProjectMaps — Phase 6 CRDT-first for USFM', () => {
     // Both USFM and .ybin paths produced merged output
     expect(result.merged.has(USFM_PATH)).toBe(true);
     expect(result.merged.has(YBIN_PATH)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 7: updateYjsBase64WithUsfm — incremental Yjs update
+// ---------------------------------------------------------------------------
+
+describe('updateYjsBase64WithUsfm', () => {
+  it('returns a valid .ybin that decodes to the new USFM content', () => {
+    const genesis = usfmToYjsBase64('\\id TIT\n\\c 1\n\\p\n\\v 1 Hello.\n');
+    const updated = updateYjsBase64WithUsfm(genesis, '\\id TIT\n\\c 1\n\\p\n\\v 1 Updated.\n');
+    expect(yjsBase64ToUsfm(updated)).toBe('\\id TIT\n\\c 1\n\\p\n\\v 1 Updated.\n');
+  });
+
+  it('handles empty existing state (creates genesis)', () => {
+    const updated = updateYjsBase64WithUsfm('', '\\id TIT\n\\c 1\n\\p\n\\v 1 New.\n');
+    expect(yjsBase64ToUsfm(updated)).toBe('\\id TIT\n\\c 1\n\\p\n\\v 1 New.\n');
+  });
+
+  it('produces a larger state update (operations are accumulated, not replaced)', () => {
+    const genesis = usfmToYjsBase64('\\id TIT\n\\c 1\n\\p\n\\v 1 V1.\n');
+    const step2 = updateYjsBase64WithUsfm(genesis, '\\id TIT\n\\c 1\n\\p\n\\v 1 V2.\n');
+    const step3 = updateYjsBase64WithUsfm(step2, '\\id TIT\n\\c 1\n\\p\n\\v 1 V3.\n');
+    // Each update accumulates operations — state grows
+    expect(step3.length).toBeGreaterThan(genesis.length);
+    expect(yjsBase64ToUsfm(step3)).toBe('\\id TIT\n\\c 1\n\\p\n\\v 1 V3.\n');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 7: mergeProjectMaps — peer sync (no shared base .ybin)
+// ---------------------------------------------------------------------------
+
+describe('mergeProjectMaps — Phase 7 peer sync (no shared .ybin base)', () => {
+  const USFM_PATH = 'files/JHN.usfm';
+  const YBIN_PATH = 'crdt/JHN.ybin';
+
+  // Simulate both devices starting from the same genesis .ybin (DCS sync or
+  // shared bundle), then each making independent edits.
+  function makeSharedGenesis(usfm: string) {
+    return usfmToYjsBase64(usfm);
+  }
+  function applyEdit(genesis: string, newUsfm: string) {
+    return updateYjsBase64WithUsfm(genesis, newUsfm);
+  }
+
+  it('merges two devices\' edits when no base .ybin is provided (peer import)', () => {
+    const genesisUsfm = '\\id JHN\n\\c 1\n\\p\n\\v 1 In the beginning.\n';
+    const genesis = makeSharedGenesis(genesisUsfm);
+
+    const oursUsfm = '\\id JHN\n\\c 1\n\\p\n\\v 1 In the beginning was the Word.\n';
+    const theirsUsfm = '\\id JHN\n\\c 1\n\\p\n\\v 1 In the beginning.\n\\v 2 Added verse.\n';
+
+    const oursYbin = applyEdit(genesis, oursUsfm);
+    const theirsYbin = applyEdit(genesis, theirsUsfm);
+
+    // No base: simulates Device B receiving Device A's snapshot for the first time
+    const result = mergeProjectMaps({
+      paths: new Set([USFM_PATH, YBIN_PATH]),
+      getBase: () => undefined,
+      getOurs: (p) => p === USFM_PATH ? oursUsfm : p === YBIN_PATH ? oursYbin : undefined,
+      getTheirs: (p) => p === USFM_PATH ? theirsUsfm : p === YBIN_PATH ? theirsYbin : undefined,
+    });
+
+    // CRDT-first should fire (ours + theirs have .ybin), no conflict
+    expect(result.conflicts).toHaveLength(0);
+    const merged = result.merged.get(USFM_PATH);
+    expect(merged).toBeDefined();
+    // Both devices' edits should be present in the merged result
+    expect(merged).toContain('Word');
+    expect(merged).toContain('Added verse');
+    // .ybin companion must also be stored
+    expect(result.merged.has(YBIN_PATH)).toBe(true);
+  });
+
+  it('no-conflict when peer sent identical content (idempotent import)', () => {
+    const usfm = '\\id JHN\n\\c 1\n\\p\n\\v 1 Same.\n';
+    const ybin = usfmToYjsBase64(usfm);
+
+    const result = mergeProjectMaps({
+      paths: new Set([USFM_PATH, YBIN_PATH]),
+      getBase: () => undefined,
+      getOurs: (p) => p === USFM_PATH ? usfm : p === YBIN_PATH ? ybin : undefined,
+      getTheirs: (p) => p === USFM_PATH ? usfm : p === YBIN_PATH ? ybin : undefined,
+    });
+
+    expect(result.conflicts).toHaveLength(0);
+    expect(result.merged.get(USFM_PATH)).toBeDefined();
   });
 });

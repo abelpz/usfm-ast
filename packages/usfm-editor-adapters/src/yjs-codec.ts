@@ -67,6 +67,29 @@ export function usfmToYjsBase64(usfm: string): string {
   return uint8ToBase64(state);
 }
 
+/**
+ * Apply a new USFM string as an incremental update to an **existing** base64
+ * Yjs state.  The existing Yjs history (client IDs + clocks) is preserved — only
+ * new operations are appended.  This is critical for peer sync: two devices that
+ * both started from the same `.ybin` genesis will share those operations, so
+ * applying `diffUpdateV2` relative to the shared base correctly deduplicates
+ * on merge.
+ *
+ * Returns updated base64 state.  Throws on corrupt input (caller should catch).
+ */
+export function updateYjsBase64WithUsfm(existingBase64: string, newUsfm: string): string {
+  const doc = new Y.Doc();
+  if (existingBase64) {
+    Y.applyUpdateV2(doc, base64ToUint8(existingBase64));
+  }
+  doc.transact(() => {
+    const yText = doc.getText('usfm');
+    yText.delete(0, yText.length);
+    yText.insert(0, newUsfm);
+  });
+  return uint8ToBase64(Y.encodeStateAsUpdateV2(doc));
+}
+
 /** Decode a base64 Yjs state back to a USFM string. */
 export function yjsBase64ToUsfm(base64: string): string {
   const doc = new Y.Doc();

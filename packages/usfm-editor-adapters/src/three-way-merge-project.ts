@@ -624,20 +624,32 @@ export function mergeProjectMaps(opts: {
 
     const b = base ?? '';
 
-    // Phase 6: CRDT-first merge for USFM files.
-    // When all three revisions have a companion `.ybin` (Yjs state), use the
-    // CRDT 3-way merge as the primary strategy — it is always deterministic and
-    // never produces a conflict.  Fall through to OT only when CRDT history is
-    // absent (e.g. files written before Phase 4 was deployed) or corrupted.
+    // Phase 6+7: CRDT-first merge for USFM files.
+    // When both sides have a companion `.ybin` (Yjs state), use the CRDT 3-way
+    // merge as the primary strategy — always deterministic, never conflicts.
+    //
+    // Phase 7 extension: `ybinBase` is allowed to be absent (empty string used).
+    // This covers peer-sync (bundle/file exchange between two devices without a
+    // shared DCS ancestor).  Yjs deduplicates operations by (clientID, clock):
+    // if both devices started from the same genesis `.ybin` the shared history
+    // is automatically skipped; only each side's new operations are merged.
+    //
+    // Falls through to OT when: CRDT history is absent on either side (files
+    // written before Phase 4), CRDT merge errors (corrupt state), or when only
+    // one side has a .ybin.
     if (isUsfmPath(path)) {
       const ybinPath = crdtPathFromUsfm(path);
       const ybinBase = opts.getBase(ybinPath);
       const ybinOurs = opts.getOurs(ybinPath);
       const ybinTheirs = opts.getTheirs(ybinPath);
-      if (ybinBase !== undefined && ybinOurs !== undefined && ybinTheirs !== undefined) {
-        const crdtResult = mergeYjsBase64ThreeWay(ybinBase, ybinOurs, ybinTheirs);
+      if (ybinOurs !== undefined && ybinTheirs !== undefined) {
+        const crdtResult = mergeYjsBase64ThreeWay(ybinBase ?? '', ybinOurs, ybinTheirs);
         if (crdtResult.kind === 'merged') {
           merged.set(path, crdtResult.usfm);
+          // Also persist the merged Yjs state so the .ybin stays consistent.
+          // The .ybin path may be encountered again in the loop and produce the
+          // same value — the second write is idempotent.
+          merged.set(ybinPath, crdtResult.base64);
           continue;
         }
         // CRDT merge returned an error (corrupted state) — fall through to OT.

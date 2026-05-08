@@ -109,6 +109,7 @@ export { isYbinPath, crdtPathFromUsfm, usfmPathFromCrdt } from './crdt-paths';
 export {
   usfmToYjsBase64,
   yjsBase64ToUsfm,
+  updateYjsBase64WithUsfm,
   mergeYjsBase64ThreeWay,
   type YjsMergeResult,
 } from './yjs-codec';

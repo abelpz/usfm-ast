@@ -127,3 +127,46 @@ describe('readYbinAsUsfm', () => {
     expect(result).toBe(USFM);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 7: incremental .ybin update (preserves genesis client IDs)
+// ---------------------------------------------------------------------------
+
+describe('writeFileWithCrdt — Phase 7 incremental update', () => {
+  const USFM_V1 = '\\id JHN\n\\c 1\n\\p\n\\v 1 Version one.\n';
+  const USFM_V2 = '\\id JHN\n\\c 1\n\\p\n\\v 1 Version two.\n';
+  const USFM_V3 = '\\id JHN\n\\c 1\n\\p\n\\v 1 Version three.\n';
+
+  test('second write updates the .ybin in place (incremental, not replaced)', async () => {
+    const storage = makeStorage();
+    await writeFileWithCrdt(storage, 'proj', 'files/JHN.usfm', USFM_V1);
+    const ybin1 = storage.files.get('crdt/JHN.ybin')!;
+
+    await writeFileWithCrdt(storage, 'proj', 'files/JHN.usfm', USFM_V2);
+    const ybin2 = storage.files.get('crdt/JHN.ybin')!;
+
+    // State grew (operations accumulated)
+    expect(ybin2.length).toBeGreaterThan(ybin1.length);
+    // Decodes to latest content
+    expect(yjsBase64ToUsfm(ybin2)).toBe(USFM_V2);
+  });
+
+  test('three consecutive writes all decode to the final content', async () => {
+    const storage = makeStorage();
+    await writeFileWithCrdt(storage, 'proj', 'files/JHN.usfm', USFM_V1);
+    await writeFileWithCrdt(storage, 'proj', 'files/JHN.usfm', USFM_V2);
+    await writeFileWithCrdt(storage, 'proj', 'files/JHN.usfm', USFM_V3);
+    const result = await readYbinAsUsfm(storage, 'proj', 'files/JHN.usfm');
+    expect(result).toBe(USFM_V3);
+  });
+
+  test('.ybin from consecutive writes is larger than genesis (history is preserved)', async () => {
+    const storage = makeStorage();
+    await writeFileWithCrdt(storage, 'proj', 'files/JHN.usfm', USFM_V1);
+    const genesis = storage.files.get('crdt/JHN.ybin')!;
+    await writeFileWithCrdt(storage, 'proj', 'files/JHN.usfm', USFM_V2);
+    await writeFileWithCrdt(storage, 'proj', 'files/JHN.usfm', USFM_V3);
+    const accumulated = storage.files.get('crdt/JHN.ybin')!;
+    expect(accumulated.length).toBeGreaterThan(genesis.length);
+  });
+});

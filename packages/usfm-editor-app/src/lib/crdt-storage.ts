@@ -5,13 +5,26 @@
  * `crdt/<BOOK>.ybin` Yjs state is also written so the CRDT history
  * stays synchronised with the canonical text (Phase 4).
  *
- * The `.ybin` write is **non-fatal**: if it fails (quota exceeded,
- * storage error, etc.) the USFM write has already succeeded and the
- * CRDT state will be rebuilt on the next write that succeeds.
+ * Phase 7 — incremental updates:
+ * When a `.ybin` already exists, `writeFileWithCrdt` applies the new USFM as
+ * an incremental Yjs operation rather than replacing the `.ybin` with a fresh
+ * genesis state.  This preserves the existing Yjs operation history (client IDs
+ * + clocks), which is critical for correct CRDT peer-sync: two devices that
+ * both started from the same `.ybin` genesis share those operation IDs, so
+ * `diffUpdateV2` relative to the shared base deduplicates correctly on merge.
+ *
+ * The `.ybin` write is **non-fatal**: if it fails (quota exceeded, storage
+ * error, etc.) the USFM write has already succeeded and the CRDT state will be
+ * rebuilt on the next write that succeeds.
  */
 
 import type { ProjectStorage } from '@usfm-tools/types';
-import { crdtPathFromUsfm, usfmToYjsBase64, yjsBase64ToUsfm } from '@usfm-tools/editor-adapters';
+import {
+  crdtPathFromUsfm,
+  usfmToYjsBase64,
+  updateYjsBase64WithUsfm,
+  yjsBase64ToUsfm,
+} from '@usfm-tools/editor-adapters';
 
 function isUsfmPath(path: string): boolean {
   const l = path.toLowerCase();
@@ -59,8 +72,13 @@ export async function writeFileWithCrdt(
   if (isUsfmPath(path)) {
     try {
       const crdtPath = crdtPathFromUsfm(path);
-      const ybinBase64 = usfmToYjsBase64(content);
-      await storage.writeFile(projectId, crdtPath, ybinBase64);
+      const existing = await storage.readFile(projectId, crdtPath);
+      // Incremental update when .ybin exists (preserves genesis client IDs).
+      // Genesis creation when .ybin is absent (first write for this file).
+      const newYbin = existing
+        ? updateYjsBase64WithUsfm(existing, content)
+        : usfmToYjsBase64(content);
+      await storage.writeFile(projectId, crdtPath, newYbin);
     } catch {
       // Non-fatal: CRDT state is rebuilt on the next successful write.
     }

@@ -455,13 +455,39 @@ Touched:
 - Remove `autoMergeToDcs` entirely (deprecated in Phase 5).
 - Remove OT bridge entirely once CRDT history coverage is confirmed.
 
-### Phase 7 — Peer transport (first-class)
+### Phase 7 — Peer transport (file mode) ✅ **delivered**
 
-**First mode:** "import packfile from file" — lowest friction, works without any network signaling. The sending device exports a packfile containing commits since the last shared ancestor; the receiving device imports it and runs the standard fetch+merge cycle.
+**Delivered:** Two offline devices can exchange project state via a shared file — no DCS server required.
 
-**Second mode:** WebRTC / LAN discovery — adds real-time peer negotiation for devices on the same network.
+#### How it works
 
-Expose a `peer://` remote in the `GitSyncAdapter` surface. Implement `PeerProjectSync` alongside `DcsGitProjectSync`. Multi-device merging is now `Y.applyUpdate` end-to-end — no special handling beyond the standard merge cycle.
+1. **Export** — `exportPeerSnapshot` (wraps `exportProjectBundle`) produces a standard `.bible.project.zip` that includes both the USFM files *and* the CRDT `crdt/*.ybin` companions.
+
+2. **Transfer** — USB, email, AirDrop, SD card — any file transfer mechanism.
+
+3. **Import** — `importPeerSnapshot` calls `importProjectBundle(enableMerge: true)`, which drives `mergeProjectMaps`.  The Phase 7 extension to `mergeProjectMaps` attempts CRDT-first merge whenever *both sides* have a `.ybin` companion, even when no explicit base `.ybin` is available.
+
+#### Why no-base CRDT merge is correct
+
+`updateYjsBase64WithUsfm` (new in Phase 7) updates the `.ybin` incrementally rather than replacing it with a fresh genesis state on every write.  Both devices therefore carry the **same genesis Yjs operations** (same client IDs + clocks) from the DCS sync or bundle import that seeded the project.  Applying both states to an empty Yjs doc uses the CRDT's `(clientID, clock)` deduplication to skip the shared history and merge only the divergent edits — deterministic, no conflict at the CRDT level.
+
+#### Touched files
+
+| File | Change |
+|------|--------|
+| `packages/usfm-editor-adapters/src/yjs-codec.ts` | Added `updateYjsBase64WithUsfm` — incremental update preserving genesis operations |
+| `packages/usfm-editor-adapters/src/index.ts` | Exported `updateYjsBase64WithUsfm` |
+| `packages/usfm-editor-app/src/lib/crdt-storage.ts` | `writeFileWithCrdt` now updates existing `.ybin` incrementally instead of replacing with fresh genesis |
+| `packages/usfm-editor-adapters/src/three-way-merge-project.ts` | `mergeProjectMaps` CRDT-first now fires when *both* `ybinOurs` and `ybinTheirs` exist, using `ybinBase ?? ''` — enables peer import |
+| `packages/usfm-editor-app/src/lib/peer-snapshot.ts` | New: `exportPeerSnapshot`, `importPeerSnapshot`, `downloadPeerSnapshot` |
+| `packages/usfm-editor-app/src/components/PeerSyncPanel.tsx` | New: "Share with another device" UI panel |
+| `packages/usfm-editor-app/src/pages/LocalProjectPage.tsx` | `PeerSyncPanel` wired into the Settings tab |
+| Tests: `yjs-codec.test.ts`, `crdt-storage.test.ts` | 8 new tests; 43/43 pass |
+
+**Deferred to Phase 7b** (WebRTC / LAN real-time):
+- `peer://` remote in `GitSyncAdapter`.
+- `PeerProjectSync` alongside `DcsGitProjectSync`.
+- QR-code / shared-passphrase pairing flow.
 
 ---
 
