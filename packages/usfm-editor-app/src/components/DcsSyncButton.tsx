@@ -98,6 +98,8 @@ export type DcsSyncButtonProps = {
   localSync: LocalProjectSyncState;
   /** Called after connecting / disconnecting so the parent can reload meta. */
   onUpdated: () => void;
+  /** Called when the user clicks "Review conflicts" in the popover. */
+  onResolveConflicts?: () => void;
   /** Extra class names for the trigger button. */
   className?: string;
 };
@@ -106,7 +108,7 @@ export type DcsSyncButtonProps = {
 // Component
 // ---------------------------------------------------------------------------
 
-export function DcsSyncButton({ meta, storage, localSync, onUpdated, className }: DcsSyncButtonProps) {
+export function DcsSyncButton({ meta, storage, localSync, onUpdated, onResolveConflicts, className }: DcsSyncButtonProps) {
   // Credentials
   const [creds, setCreds] = useState<DcsStoredCredentials | null>(() => loadDcsCredentials());
 
@@ -340,7 +342,17 @@ export function DcsSyncButton({ meta, storage, localSync, onUpdated, className }
                 {fileConflicts > 0 && !localSync.isSyncing ? (
                   <p className="text-destructive flex items-center gap-1">
                     <AlertTriangle className="size-3 shrink-0" aria-hidden />
-                    {fileConflicts} file merge conflict{fileConflicts === 1 ? '' : 's'}
+                    {onResolveConflicts ? (
+                      <button
+                        type="button"
+                        className="underline underline-offset-2 hover:opacity-80"
+                        onClick={() => { setPopOpen(false); onResolveConflicts(); }}
+                      >
+                        {fileConflicts} file conflict{fileConflicts === 1 ? '' : 's'} — Review →
+                      </button>
+                    ) : (
+                      <span>{fileConflicts} file merge conflict{fileConflicts === 1 ? '' : 's'}</span>
+                    )}
                   </p>
                 ) : null}
 
