@@ -31,7 +31,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@xmldom/xmldom": "0.8.11",
+    "@xmldom/xmldom": "0.9.9",
     "@usfm-tools/parser": "workspace:*",
     "@usfm-tools/types": "workspace:*",
     "@usfm-tools/formatter": "workspace:*"
