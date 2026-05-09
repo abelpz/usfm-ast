@@ -47,7 +47,7 @@ import { PeerSyncPanel } from '@/components/PeerSyncPanel';
 import { PeerRTCSyncPanel } from '@/components/PeerRTCSyncPanel';
 import { AlertTriangle, ArrowLeft, BookOpen, Check, Circle, FileDown, FileText, FileUp, Loader2, Plus, Tag, Trash2, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 const VERSION_RE = /^v\d+(\.\d+){0,2}$/;
 
@@ -72,6 +72,15 @@ export function LocalProjectPage() {
   const storage = useMemo(() => getProjectStorage(), []);
 
   const localSync = useLocalProjectSync(projectId || undefined);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // When navigated back from the conflict workspace with ?sync=1, trigger an
+  // immediate sync (skip the debounce) and clean up the param.
+  useEffect(() => {
+    if (searchParams.get('sync') !== '1') return;
+    setSearchParams((prev) => { prev.delete('sync'); return prev; }, { replace: true });
+    void localSync.forceSync();
+  }, [searchParams, setSearchParams, localSync.forceSync]);
 
   const [tab, setTab] = useState<'books' | 'releases' | 'settings'>('books');
 
