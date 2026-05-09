@@ -178,6 +178,15 @@ export function ConflictWorkspacePage() {
             }
           : null,
       );
+
+      // All conflicts resolved — navigate back and ask the project page to sync
+      // immediately (instead of waiting for the auto-push debounce).
+      if (next.length === 0 && payload.origin === 'local-sync') {
+        const dest = new URL(returnTo, window.location.href);
+        dest.searchParams.set('sync', '1');
+        navigate(dest.pathname + dest.search, { replace: true });
+        return;
+      }
     }
   };
 
