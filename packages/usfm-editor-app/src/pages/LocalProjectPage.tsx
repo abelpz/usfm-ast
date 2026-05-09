@@ -41,10 +41,11 @@ import {
   resolveAllConflictsForBook,
   resolveAllPendingConflicts,
 } from '@/lib/file-conflict-helpers';
+import { buildConflictWorkspaceState } from '@/lib/conflict-workspace-state';
 import { ProjectBundleControls } from '@/components/ProjectBundleControls';
 import { PeerSyncPanel } from '@/components/PeerSyncPanel';
 import { PeerRTCSyncPanel } from '@/components/PeerRTCSyncPanel';
-import { ArrowLeft, BookOpen, Check, Circle, FileDown, FileText, FileUp, Loader2, Plus, Tag, Trash2, Undo2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, BookOpen, Check, Circle, FileDown, FileText, FileUp, Loader2, Plus, Tag, Trash2, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -321,7 +322,35 @@ export function LocalProjectPage() {
     }
   }
 
-  const pendingConflicts = meta?.pendingConflicts ?? [];
+  // Prefer live state from the sync hook (updated immediately after sync);
+  // fall back to persisted storage value for conflicts that survived a page reload.
+  const pendingConflicts =
+    localSync.pendingFileConflicts.length > 0
+      ? localSync.pendingFileConflicts
+      : (meta?.pendingConflicts ?? []);
+
+  // Auto-navigate to the conflict workspace when new file conflicts arrive from sync.
+  const prevConflictCountRef = useRef(0);
+  useEffect(() => {
+    const count = localSync.pendingFileConflicts.length;
+    if (count > 0 && prevConflictCountRef.current === 0 && projectId && meta) {
+      navigate(
+        `/project/${encodeURIComponent(projectId)}/conflicts`,
+        {
+          state: buildConflictWorkspaceState({
+            kind: 'file',
+            origin: 'local-sync',
+            projectId,
+            conflicts: localSync.pendingFileConflicts,
+            defaultOursLabel: 'Yours (local)',
+            defaultTheirsLabel: 'From Door43',
+            returnTo: `/project/${encodeURIComponent(projectId)}`,
+          }),
+        },
+      );
+    }
+    prevConflictCountRef.current = count;
+  }, [localSync.pendingFileConflicts, projectId, meta, navigate]);
 
   const onDownloadBookUsfm = useCallback(
     async (b: { path: string; code: string }) => {
@@ -491,18 +520,45 @@ export function LocalProjectPage() {
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {pendingConflicts.length > 0 ? (
-            <Tip label="Discard all incoming (keep local)">
+            <>
               <Button
                 type="button"
-                variant="ghost"
-                size="icon"
-                className="relative size-8 text-amber-600 dark:text-amber-400"
-                aria-label="Discard all incoming changes, keep local"
-                onClick={() => void discardAllConflicts()}
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 text-xs text-destructive border-destructive/40 hover:bg-destructive/10"
+                onClick={() =>
+                  navigate(
+                    `/project/${encodeURIComponent(projectId)}/conflicts`,
+                    {
+                      state: buildConflictWorkspaceState({
+                        kind: 'file',
+                        origin: 'local-sync',
+                        projectId,
+                        conflicts: pendingConflicts,
+                        defaultOursLabel: 'Yours (local)',
+                        defaultTheirsLabel: 'From Door43',
+                        returnTo: `/project/${encodeURIComponent(projectId)}`,
+                      }),
+                    },
+                  )
+                }
               >
-                <Trash2 className="size-4" aria-hidden />
+                <AlertTriangle className="size-3.5" aria-hidden />
+                {pendingConflicts.length} conflict{pendingConflicts.length === 1 ? '' : 's'}
               </Button>
-            </Tip>
+              <Tip label="Discard all incoming (keep local)">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="relative size-8 text-amber-600 dark:text-amber-400"
+                  aria-label="Discard all incoming changes, keep local"
+                  onClick={() => void discardAllConflicts()}
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                </Button>
+              </Tip>
+            </>
           ) : (
             <ProjectBundleControls
               projectId={projectId.trim()}
@@ -525,7 +581,31 @@ export function LocalProjectPage() {
               </Button>
             </Tip>
           ) : null}
-          <DcsSyncButton meta={meta} storage={storage} localSync={localSync} onUpdated={() => void load()} />
+          <DcsSyncButton
+            meta={meta}
+            storage={storage}
+            localSync={localSync}
+            onUpdated={() => void load()}
+            onResolveConflicts={
+              pendingConflicts.length > 0
+                ? () =>
+                    navigate(
+                      `/project/${encodeURIComponent(projectId)}/conflicts`,
+                      {
+                        state: buildConflictWorkspaceState({
+                          kind: 'file',
+                          origin: 'local-sync',
+                          projectId,
+                          conflicts: pendingConflicts,
+                          defaultOursLabel: 'Yours (local)',
+                          defaultTheirsLabel: 'From Door43',
+                          returnTo: `/project/${encodeURIComponent(projectId)}`,
+                        }),
+                      },
+                    )
+                : undefined
+            }
+          />
         </div>
       </header>
 
@@ -865,6 +945,22 @@ export function LocalProjectPage() {
               projectId={projectId}
               displayName={meta?.name?.trim() || projectId}
               onImported={() => void load()}
+              onConflicts={(conflicts) =>
+                navigate(
+                  `/project/${encodeURIComponent(projectId)}/conflicts`,
+                  {
+                    state: buildConflictWorkspaceState({
+                      kind: 'file',
+                      origin: 'bundle-import',
+                      projectId,
+                      conflicts,
+                      defaultOursLabel: 'Yours (local)',
+                      defaultTheirsLabel: 'From peer device',
+                      returnTo: `/project/${encodeURIComponent(projectId)}`,
+                    }),
+                  },
+                )
+              }
             />
 
             <hr className="border-border" />
@@ -873,6 +969,22 @@ export function LocalProjectPage() {
               projectId={projectId}
               displayName={meta?.name?.trim() || projectId}
               onImported={() => void load()}
+              onConflicts={(conflicts) =>
+                navigate(
+                  `/project/${encodeURIComponent(projectId)}/conflicts`,
+                  {
+                    state: buildConflictWorkspaceState({
+                      kind: 'file',
+                      origin: 'bundle-import',
+                      projectId,
+                      conflicts,
+                      defaultOursLabel: 'Yours (local)',
+                      defaultTheirsLabel: 'From peer device (WebRTC)',
+                      returnTo: `/project/${encodeURIComponent(projectId)}`,
+                    }),
+                  },
+                )
+              }
             />
           </section>
         ) : null}

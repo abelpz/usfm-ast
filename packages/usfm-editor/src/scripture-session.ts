@@ -582,7 +582,7 @@ export class ScriptureSession {
     const needsAlignmentReconcile = this.isAlignmentSourceLoaded() && editedChapters.length > 0;
 
     // Snapshot old verse texts scoped to just the edited chapters (no full-book clone needed).
-    let oldTexts: Record<string, string> = {};
+    const oldTexts: Record<string, string> = {};
     if (needsAlignmentReconcile) {
       const slices = this.store.getChapterSlicesRef();
       for (const ch of editedChapters) {
@@ -624,7 +624,7 @@ export class ScriptureSession {
 
     if (needsAlignmentReconcile) {
       // Snapshot new verse texts from only the edited chapters (still no full-book clone).
-      let newTexts: Record<string, string> = {};
+      const newTexts: Record<string, string> = {};
       const slicesAfter = this.store.getChapterSlicesRef();
       for (const ch of editedChapters) {
         const slice = slicesAfter.find((s) => s.chapter === ch);

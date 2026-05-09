@@ -14,6 +14,7 @@ import {
   importPeerSnapshot,
 } from '@/lib/peer-snapshot';
 import { cn } from '@/lib/utils';
+import type { FileConflict } from '@usfm-tools/types';
 import { ArrowDownToLine, ArrowUpFromLine, Loader2, Wifi } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 
@@ -21,6 +22,8 @@ export type PeerSyncPanelProps = {
   projectId: string;
   displayName: string;
   onImported?: () => void;
+  /** Called when the import produced file-level merge conflicts that need resolution. */
+  onConflicts?: (conflicts: FileConflict[]) => void;
   className?: string;
 };
 
@@ -35,6 +38,7 @@ export function PeerSyncPanel({
   projectId,
   displayName,
   onImported,
+  onConflicts,
   className,
 }: PeerSyncPanelProps) {
   const storage = getProjectStorage();
@@ -74,10 +78,14 @@ export function PeerSyncPanel({
         const { importedPaths, conflicts } = result;
         if (conflicts.length > 0) {
           await storage.updateProject(projectId, { pendingConflicts: conflicts });
-          setMsg({
-            kind: 'ok',
-            text: `Merged ${importedPaths.length} file(s). ${conflicts.length} conflict(s) need your choice — open a book to resolve them.`,
-          });
+          if (onConflicts) {
+            onConflicts(conflicts);
+          } else {
+            setMsg({
+              kind: 'ok',
+              text: `Merged ${importedPaths.length} file(s). ${conflicts.length} conflict(s) need your choice — open a book to resolve them.`,
+            });
+          }
         } else {
           setMsg({ kind: 'ok', text: `Merged ${importedPaths.length} file(s) — no conflicts.` });
         }
@@ -88,7 +96,7 @@ export function PeerSyncPanel({
         setBusy(false);
       }
     },
-    [onImported, projectId, storage],
+    [onConflicts, onImported, projectId, storage],
   );
 
   return (
