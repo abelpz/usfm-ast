@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { getProjectStorage } from '@/lib/project-storage';
 import { exportPeerSnapshot, importPeerSnapshot } from '@/lib/peer-snapshot';
+import type { FileConflict } from '@usfm-tools/types';
 import {
   PeerRTCTransport,
   type PeerRTCProgress,
@@ -120,6 +121,8 @@ export type PeerRTCSyncPanelProps = {
   projectId: string;
   displayName: string;
   onImported?: () => void;
+  /** Called when the WebRTC import produced file-level merge conflicts that need resolution. */
+  onConflicts?: (conflicts: FileConflict[]) => void;
   className?: string;
 };
 
@@ -127,6 +130,7 @@ export function PeerRTCSyncPanel({
   projectId,
   displayName,
   onImported,
+  onConflicts,
   className,
 }: PeerRTCSyncPanelProps) {
   const storage = getProjectStorage();
@@ -212,6 +216,9 @@ export function PeerRTCSyncPanel({
         t.sendAck({ importedCount: importedPaths.length, conflictCount: conflicts.length });
         onImported?.();
         setStep('responder-done');
+        if (conflicts.length > 0) {
+          onConflicts?.(conflicts);
+        }
       } catch (e) {
         setProgress({ state: 'error', message: 'Merge failed.', error: String(e) });
       }
@@ -223,7 +230,7 @@ export function PeerRTCSyncPanel({
     } catch (e) {
       setProgress({ state: 'error', message: 'Invalid offer code.', error: String(e) });
     }
-  }, [pasteCode, onProg, storage, projectId, onImported]);
+  }, [pasteCode, onProg, storage, projectId, onImported, onConflicts]);
 
   // ── Reset ──────────────────────────────────────────────────────────────────
 

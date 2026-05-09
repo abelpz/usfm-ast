@@ -945,6 +945,22 @@ export function LocalProjectPage() {
               projectId={projectId}
               displayName={meta?.name?.trim() || projectId}
               onImported={() => void load()}
+              onConflicts={(conflicts) =>
+                navigate(
+                  `/project/${encodeURIComponent(projectId)}/conflicts`,
+                  {
+                    state: buildConflictWorkspaceState({
+                      kind: 'file',
+                      origin: 'bundle-import',
+                      projectId,
+                      conflicts,
+                      defaultOursLabel: 'Yours (local)',
+                      defaultTheirsLabel: 'From peer device',
+                      returnTo: `/project/${encodeURIComponent(projectId)}`,
+                    }),
+                  },
+                )
+              }
             />
 
             <hr className="border-border" />
@@ -953,6 +969,22 @@ export function LocalProjectPage() {
               projectId={projectId}
               displayName={meta?.name?.trim() || projectId}
               onImported={() => void load()}
+              onConflicts={(conflicts) =>
+                navigate(
+                  `/project/${encodeURIComponent(projectId)}/conflicts`,
+                  {
+                    state: buildConflictWorkspaceState({
+                      kind: 'file',
+                      origin: 'bundle-import',
+                      projectId,
+                      conflicts,
+                      defaultOursLabel: 'Yours (local)',
+                      defaultTheirsLabel: 'From peer device (WebRTC)',
+                      returnTo: `/project/${encodeURIComponent(projectId)}`,
+                    }),
+                  },
+                )
+              }
             />
           </section>
         ) : null}
