@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "@usj-tools/core": "workspace:*",
-    "commander": "14.0.0"
+    "commander": "14.0.3"
   },
   "devDependencies": {
     "tsup": "^8.3.5",
