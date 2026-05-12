@@ -16,6 +16,7 @@ import type {
   ProjectMeta,
   ProjectPushResult,
   ProjectStorage,
+  ProjectSyncAdapter,
   ProjectSyncConfig,
   RemoteFileEntry,
 } from '@usfm-tools/types';
@@ -399,6 +400,13 @@ export async function syncLocalProjectWithDcs(options: {
    *   so subsequent syncs can use the local snapshot.
    */
   gitAdapter?: IBrowserGitAdapter;
+  /**
+   * Injectable sync adapter (test seam).  When supplied, all remote I/O goes
+   * through this adapter instead of constructing a real {@link DcsRestProjectSync}.
+   * DCS-specific coordination calls (ensureBranch, compareRefs) are skipped.
+   * This lets unit tests simulate multi-user conflict scenarios without HTTP.
+   */
+  _adapter?: ProjectSyncAdapter;
 }): Promise<SyncLocalProjectWithDcsResult> {
   const { projectId, sync, bookCode } = options;
   const tier2 = bookCode ? bookBranchName(bookCode) : sync.branch;
@@ -444,8 +452,10 @@ async function _syncOnce(options: {
   username: string;
   bookCode?: string;
   gitAdapter?: IBrowserGitAdapter;
+  _adapter?: ProjectSyncAdapter;
 }): Promise<SyncLocalProjectWithDcsResult> {
   const { storage, projectId, token, sync, username, bookCode } = options;
+  const injected = options._adapter;
 
   const meta = await storage.getProject(projectId);
   if (!meta) throw new Error(`Project not found: ${projectId}`);
@@ -453,28 +463,31 @@ async function _syncOnce(options: {
   // Phase 5: push target is the Tier-2 (book) branch directly — no Tier-1 personal branch.
   const tier2 = bookCode ? bookBranchName(bookCode) : sync.branch;
 
-  if (sync.branch.trim().toLowerCase() === 'main') {
-    await ensureRepoUsesMainDefaultBranch({
-      host: sync.host,
-      token,
-      owner: sync.owner,
-      repo: sync.repo,
-    });
+  // DCS-specific coordination: skipped when an injected adapter is provided.
+  if (!injected) {
+    if (sync.branch.trim().toLowerCase() === 'main') {
+      await ensureRepoUsesMainDefaultBranch({
+        host: sync.host,
+        token,
+        owner: sync.owner,
+        repo: sync.repo,
+      });
+    }
+
+    // Ensure the book branch exists before reading its tip or pushing to it.
+    if (bookCode && tier2 !== sync.branch) {
+      await ensureBranch({
+        host: sync.host,
+        token,
+        owner: sync.owner,
+        repo: sync.repo,
+        branch: tier2,
+        fromBranch: sync.branch,
+      });
+    }
   }
 
-  // Ensure the book branch exists before reading its tip or pushing to it.
-  if (bookCode && tier2 !== sync.branch) {
-    await ensureBranch({
-      host: sync.host,
-      token,
-      owner: sync.owner,
-      repo: sync.repo,
-      branch: tier2,
-      fromBranch: sync.branch,
-    });
-  }
-
-  const adapterTier2 = new DcsRestProjectSync({
+  const adapterTier2 = injected ?? new DcsRestProjectSync({
     host: sync.host,
     token,
     owner: sync.owner,
@@ -496,25 +509,35 @@ async function _syncOnce(options: {
     return { kind: 'noop', tier2HeadSha };
   }
 
-  // --- Ancestry check via compareRefs ---
+  // --- Ancestry check via compareRefs (DCS only; injected adapter uses simple equality) ---
   let needsMerge = true;
   let mergeBaseOid: string | null = null;
 
   if (lastPushed) {
-    const cmp = await compareRefs({
-      host: sync.host,
-      token,
-      owner: sync.owner,
-      repo: sync.repo,
-      base: lastPushed,   // what we last owned on Tier-2
-      head: tier2HeadSha, // current Tier-2 tip
-    });
-    if (cmp.totalCommits === 0) {
-      // Tier-2 has no commits beyond our last push — nothing new to pull.
-      needsMerge = false;
+    if (injected) {
+      // Injected adapter: no compareRefs API. Use simple equality — if head hasn't moved,
+      // no merge needed. If it has, we use lastPushed as the base ref.
+      if (lastPushed === tier2HeadSha) {
+        needsMerge = false;
+      } else {
+        mergeBaseOid = lastPushed;
+      }
     } else {
-      // Use the API-supplied merge-base as the true common ancestor for 3-way.
-      mergeBaseOid = cmp.mergeBaseCommit;
+      const cmp = await compareRefs({
+        host: sync.host,
+        token,
+        owner: sync.owner,
+        repo: sync.repo,
+        base: lastPushed,   // what we last owned on Tier-2
+        head: tier2HeadSha, // current Tier-2 tip
+      });
+      if (cmp.totalCommits === 0) {
+        // Tier-2 has no commits beyond our last push — nothing new to pull.
+        needsMerge = false;
+      } else {
+        // Use the API-supplied merge-base as the true common ancestor for 3-way.
+        mergeBaseOid = cmp.mergeBaseCommit;
+      }
     }
   } else if (lastBase && lastBase === tier2HeadSha && isLocalDeltaEmpty(localDelta)) {
     // Legacy fallback noop (no lastPushed recorded yet).
@@ -531,11 +554,15 @@ async function _syncOnce(options: {
     // to fetching by branch name — we'll get the latest remote files, which is still
     // a correct (if slightly non-atomic) view of the remote state.
     let theirsFiles: Map<string, string>;
-    try {
-      theirsFiles = await adapterTier2.pullFilesAt(tier2HeadSha);
-    } catch (e) {
-      if (!(e instanceof CommitNotFoundError)) throw e;
-      theirsFiles = await adapterTier2.pullFilesAt(tier2);
+    if (injected) {
+      theirsFiles = await injected.pullFilesAt(tier2HeadSha);
+    } else {
+      try {
+        theirsFiles = await adapterTier2.pullFilesAt(tier2HeadSha);
+      } catch (e) {
+        if (!(e instanceof CommitNotFoundError)) throw e;
+        theirsFiles = await adapterTier2.pullFilesAt(tier2);
+      }
     }
 
     // Phase 3: read base files from local git when a snapshot for this DCS OID is cached,
@@ -548,6 +575,8 @@ async function _syncOnce(options: {
       baseFiles = await options.gitAdapter.readFilesAt(localBaseOid);
     } else if (baseRef === tier2HeadSha) {
       baseFiles = new Map(theirsFiles);
+    } else if (injected) {
+      baseFiles = await injected.pullFilesAt(baseRef);
     } else {
       try {
         baseFiles = await adapterTier2.pullFilesAt(baseRef);
@@ -601,6 +630,63 @@ async function _syncOnce(options: {
 
   // Phase 5: push directly to the book branch (tier2), not a personal Tier-1 branch.
   const pushBranch = tier2;
+
+  // When an injected adapter is present, push through it directly without HTTP coordination.
+  if (injected) {
+    const map = await gatherProjectFileMap(storage, projectId);
+    const storedShas = await storage.getSyncShas(projectId);
+    const previouslySyncedPaths = new Set(Object.keys(storedShas));
+    const remoteIndex = await injected.getRemoteFileIndex();
+    let expectedBaseShaByPath = buildExpectedBaseShasForPush({
+      remoteIndex,
+      localMap: map,
+      previouslySyncedPaths,
+    });
+
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const pushOutcome = await injected.pushFiles(map, 'Project sync', {
+        previouslySyncedPaths,
+        expectedBaseShaByPath,
+      });
+      if (isProjectPushStale(pushOutcome)) {
+        if (attempt < 2) {
+          const freshIndex = await injected.getRemoteFileIndex();
+          const mapNow = await gatherProjectFileMap(storage, projectId);
+          const shasNow = await storage.getSyncShas(projectId);
+          expectedBaseShaByPath = buildExpectedBaseShasForPush({
+            remoteIndex: freshIndex,
+            localMap: mapNow,
+            previouslySyncedPaths: new Set(Object.keys(shasNow)),
+          });
+          lastErr = new StalePushError(pushOutcome.staleByPath);
+          continue;
+        }
+        throw new StalePushError(pushOutcome.staleByPath);
+      }
+
+      // Compute git-compatible blob SHAs for the files just pushed.
+      // We derive them locally (gitBlobShaHex) so detectLocalChanges — which
+      // also uses gitBlobShaHex — sees no changes on the next sync cycle.
+      const next: Record<string, string> = {};
+      for (const [lk, content] of map) {
+        next[lk] = await gitBlobShaHex(content);
+      }
+      await storage.setSyncShas(projectId, next);
+
+      const newHeadSha = await injected.getRemoteHeadCommit();
+      await storage.updateProject(projectId, {
+        lastRemoteCommit: { ...(meta.lastRemoteCommit ?? {}), [tier2]: newHeadSha },
+        lastPushedCommit: { ...(meta.lastPushedCommit ?? {}), [tier2]: newHeadSha },
+        pendingConflicts: [],
+      });
+
+      return { kind: 'synced' as const, pushResult: pushOutcome, tier2HeadSha: newHeadSha };
+    }
+    throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+  }
+
+  // DCS path — use pushLocalProjectToDcs with CAS retry.
   const adapterPush = new DcsRestProjectSync({
     host: sync.host,
     token,
