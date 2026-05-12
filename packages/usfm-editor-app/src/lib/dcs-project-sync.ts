@@ -1,5 +1,6 @@
 import { DcsRestProjectSync, gitBlobShaHex } from '@usfm-tools/editor-adapters';
 import {
+  CommitNotFoundError,
   ensureRepoUsesMainDefaultBranch,
   ensureBranch,
   createDcsRelease,
@@ -525,7 +526,17 @@ async function _syncOnce(options: {
     // Prefer the true merge-base from compareRefs; fall back to the legacy lastBase anchor.
     const baseRef = mergeBaseOid ?? lastBase ?? tier2HeadSha;
 
-    const theirsFiles = await adapterTier2.pullFilesAt(tier2HeadSha);
+    // Fetch the current remote tree. If the commit OID is not accessible via the
+    // commits API (some Gitea instances return 404 for /git/commits/{sha}), fall back
+    // to fetching by branch name — we'll get the latest remote files, which is still
+    // a correct (if slightly non-atomic) view of the remote state.
+    let theirsFiles: Map<string, string>;
+    try {
+      theirsFiles = await adapterTier2.pullFilesAt(tier2HeadSha);
+    } catch (e) {
+      if (!(e instanceof CommitNotFoundError)) throw e;
+      theirsFiles = await adapterTier2.pullFilesAt(tier2);
+    }
 
     // Phase 3: read base files from local git when a snapshot for this DCS OID is cached,
     // avoiding a REST round-trip for `pullFilesAt(baseRef)`.
@@ -538,7 +549,15 @@ async function _syncOnce(options: {
     } else if (baseRef === tier2HeadSha) {
       baseFiles = new Map(theirsFiles);
     } else {
-      baseFiles = await adapterTier2.pullFilesAt(baseRef);
+      try {
+        baseFiles = await adapterTier2.pullFilesAt(baseRef);
+      } catch (e) {
+        if (!(e instanceof CommitNotFoundError)) throw e;
+        // Stale base anchor — the OID no longer exists on the remote.
+        // Degrade to a 2-way merge (no common ancestor). This is conservative:
+        // more lines may appear as conflicts, but no data is lost.
+        baseFiles = new Map();
+      }
     }
 
     const oursFiles = await gatherProjectFileMap(storage, projectId);
