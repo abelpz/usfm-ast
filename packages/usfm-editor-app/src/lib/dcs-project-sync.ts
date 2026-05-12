@@ -736,15 +736,21 @@ async function _syncOnce(options: {
         }
       }
 
-      // Record the Tier-2 tip we synced from as the new push anchor.
+      // Use the commit SHA from the push result as the new anchor when available.
+      // pushResult.commitSha is the SHA of the new commit we just created on DCS —
+      // the correct anchor for the next sync.  Falls back to tier2HeadSha (the
+      // remote HEAD *before* our push) when the API didn't return a commit SHA
+      // (e.g. a no-op push where all files matched and no PUT was issued).
+      const pushedSha = pushResult.commitSha ?? tier2HeadSha;
+
       await storage.updateProject(projectId, {
-        lastRemoteCommit: { ...(meta.lastRemoteCommit ?? {}), [tier2]: tier2HeadSha },
-        lastPushedCommit: { ...(meta.lastPushedCommit ?? {}), [tier2]: tier2HeadSha },
+        lastRemoteCommit: { ...(meta.lastRemoteCommit ?? {}), [tier2]: pushedSha },
+        lastPushedCommit: { ...(meta.lastPushedCommit ?? {}), [tier2]: pushedSha },
         ...(newLocalOidByDcsRef ? { localGitOidByDcsRef: newLocalOidByDcsRef } : {}),
         pendingConflicts: [],
       });
 
-      return { kind: 'synced' as const, pushResult, tier2HeadSha };
+      return { kind: 'synced' as const, pushResult, tier2HeadSha: pushedSha };
     } catch (e) {
       lastError = e;
       if (e instanceof StalePushError && attempt < 2) {
