@@ -158,6 +158,12 @@ function isAlignmentJson(p: string): boolean {
   return p.toLowerCase().endsWith('.alignment.json');
 }
 
+/** Matches `.sync/<BOOK>.json` sync-sidecar files written by sync-sidecar.ts. */
+function isSyncSidecarJson(p: string): boolean {
+  const n = p.replace(/\\/g, '/');
+  return /(?:^|\/)\.sync\/[^/]+\.json$/i.test(n);
+}
+
 function isProjectJournalJsonl(p: string): boolean {
   const n = p.replace(/\\/g, '/').toLowerCase();
   return n.startsWith('journal/') && n.endsWith('.jsonl');
@@ -372,6 +378,70 @@ function tryJsonCanonical(
 }
 
 // ---------------------------------------------------------------------------
+// Sync-sidecar auto-merge (.sync/<BOOK>.json)
+// ---------------------------------------------------------------------------
+
+type SyncSidecar = {
+  schema?: number;
+  docId?: string;
+  baseCommit?: string;
+  baseBlobSha?: string;
+  vectorClock?: Record<string, number>;
+  journalId?: string;
+  savedAt?: string;
+  [key: string]: unknown;
+};
+
+/**
+ * Auto-merge `.sync/<BOOK>.json` sidecars — these are pure sync metadata and
+ * should never require human resolution.
+ *
+ * Strategy:
+ *  - `schema`, `docId`, `journalId`, `baseBlobSha`, `baseCommit` → ours wins
+ *    (our local sync anchors are authoritative for our device)
+ *  - `vectorClock` → per-actor max (CRDT semantics)
+ *  - `savedAt` → most recent timestamp
+ */
+function trySyncSidecarMerge(
+  path: string,
+  _base: string,
+  ours: string,
+  theirs: string,
+): { kind: 'merged'; text: string } | undefined {
+  if (!isSyncSidecarJson(path)) return undefined;
+  try {
+    const o = JSON.parse(ours) as SyncSidecar;
+    const t = JSON.parse(theirs) as SyncSidecar;
+    if (typeof o !== 'object' || o === null) return undefined;
+
+    // Merge vectorClock: max per actor
+    const ovc = (o.vectorClock ?? {}) as Record<string, number>;
+    const tvc = (t.vectorClock ?? {}) as Record<string, number>;
+    const allActors = new Set([...Object.keys(ovc), ...Object.keys(tvc)]);
+    const mergedClock: Record<string, number> = {};
+    for (const actor of allActors) {
+      mergedClock[actor] = Math.max(ovc[actor] ?? 0, tvc[actor] ?? 0);
+    }
+
+    // savedAt: take the more recent timestamp
+    let savedAt = o.savedAt;
+    if (t.savedAt && (!savedAt || t.savedAt > savedAt)) {
+      savedAt = t.savedAt;
+    }
+
+    const merged: SyncSidecar = {
+      ...o,
+      vectorClock: Object.keys(mergedClock).length > 0 ? mergedClock : undefined,
+      savedAt,
+    };
+
+    return { kind: 'merged', text: `${JSON.stringify(merged, null, 2)}\n` };
+  } catch {
+    return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // JSON deep-merge (for *.alignment.json and other structured JSON files)
 // ---------------------------------------------------------------------------
 
@@ -498,6 +568,14 @@ export function mergeFileContent(opts: {
       kind: 'conflict',
       conflict: fileConflictFrom(path, base, ours, theirs, finalIndices),
     };
+  }
+
+  // Sync sidecar: always auto-merge, never surface to human resolver
+  if (isSyncSidecarJson(path)) {
+    const sidecarResult = trySyncSidecarMerge(path, base, ours, theirs);
+    if (sidecarResult) return sidecarResult;
+    // Fallback: if parse fails, ours wins
+    return { kind: 'merged', text: ours };
   }
 
   // YAML manifest: structured deep-merge with metadata-key filtering
