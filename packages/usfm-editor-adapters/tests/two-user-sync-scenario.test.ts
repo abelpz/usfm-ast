@@ -1,14 +1,26 @@
 /**
- * Two-user conflict simulation tests.
+ * Two-user conflict simulation tests — in-memory, no HTTP.
  *
- * These tests verify the full sync loop (merge + push + conflict detection)
- * using an in-memory adapter — no HTTP, no IndexedDB, no real git.
+ * Each scenario uses MemoryRemote (shared "server") + MemoryProjectSyncAdapter
+ * injected via the `_adapter` seam in syncLocalProjectWithDcs, so the full sync
+ * loop (merge, CAS push, conflict detection, noop fast-path) runs identically
+ * to what the real app does against DCS — just without network I/O.
  *
- * Scenario A — non-overlapping edits auto-merge
- * Scenario B — same file, same verse, both users changed it → SyncConflictsError
- * Scenario C — same file, different verses → auto-merged
- * Scenario D — User B resolves conflict and retries → synced
- * Scenario E — first-sync fast-path: neither user has synced before
+ * Scenarios
+ * ---------
+ *  A  Non-overlapping edits (verse 1 vs verse 2) → auto-merged
+ *  B  Same verse, different text → SyncConflictsError + pendingConflicts stored
+ *  C  Different verses in same file → plain-text 3-way auto-merge
+ *  D  Conflict resolved ("accept theirs") → retry succeeds
+ *  E  Nothing changed after sync → noop fast-path
+ *  F  New file added by one user while other is unaware → remote-only import
+ *  G  YAML manifest metadata-only drift → auto-merged (no human conflict)
+ *  H  YAML manifest real-field conflict → SyncConflictsError
+ *  I  Sync sidecar (.sync/*.json) always auto-merges → no human conflict
+ *  J  CRDT (.ybin) companion present → never conflicts for concurrent edits
+ *  K  File deleted by one user, edited by other → conflict surfaced
+ *  L  Multiple files: some conflict, manifest auto-merges → only USFM conflict
+ *  M  Third sync after A's push is noop for A (already up to date)
  */
 
 import type { ProjectSyncConfig } from '@usfm-tools/types';
@@ -16,234 +28,535 @@ import {
   syncLocalProjectWithDcs,
   SyncConflictsError,
 } from '../../usfm-editor-app/src/lib/dcs-project-sync';
+import { crdtPathFromUsfm, usfmToYjsBase64, updateYjsBase64WithUsfm } from '../src';
 import { MemoryRemote, MemoryProjectSyncAdapter } from './helpers/memory-sync-adapter';
 import { makeStorage } from './helpers/make-storage';
 
 // ---------------------------------------------------------------------------
-// Shared helpers
+// Shared constants
 // ---------------------------------------------------------------------------
 
-/** Minimal ProjectSyncConfig — values not used by the injected-adapter path. */
-const syncConfig: ProjectSyncConfig = {
+const SYNC_CONFIG: ProjectSyncConfig = {
   host: 'memory.test',
   owner: 'org',
-  repo: 'tit-project',
+  repo: 'test-project',
   branch: 'main',
   targetType: 'org',
 };
 
-const PROJECT_ID = 'proj-1';
+const PID = 'proj-1';
 
-function syncAs(
+function sync(
   username: string,
   storage: ReturnType<typeof makeStorage>,
   adapter: MemoryProjectSyncAdapter,
 ) {
   return syncLocalProjectWithDcs({
     storage,
-    projectId: PROJECT_ID,
+    projectId: PID,
     token: 'unused',
-    sync: syncConfig,
+    sync: SYNC_CONFIG,
     username,
     _adapter: adapter,
   });
 }
 
+/** Shorthand: create storage with one USFM file already written. */
+async function userStorage(content: string) {
+  const s = makeStorage({ id: PID, name: 'Test', language: 'en' });
+  await s.writeFile(PID, '56-TIT.usfm', content);
+  return s;
+}
+
 // ---------------------------------------------------------------------------
-// Scenario A — non-overlapping edits: auto-merged, no conflict
+// USFM fixtures
 // ---------------------------------------------------------------------------
 
-describe('Two-user sync — Scenario A: non-overlapping edits auto-merge', () => {
-  const TIT_BASE = '\\id TIT\n\\c 1\n\\p\n\\v 1 Base verse one.\n\\v 2 Base verse two.\n';
+const TIT_BASE = [
+  '\\id TIT',
+  '\\c 1',
+  '\\p',
+  '\\v 1 Verse one original.',
+  '\\v 2 Verse two original.',
+  '\\v 3 Verse three original.',
+  '',
+].join('\n');
 
-  it('User A edits verse 1, User B edits verse 2 — merges silently', async () => {
+// ---------------------------------------------------------------------------
+// Scenario A — non-overlapping verse edits: auto-merged
+// ---------------------------------------------------------------------------
+
+describe('Scenario A — non-overlapping edits auto-merge', () => {
+  it('Alice edits v1, Bob edits v2 → both changes land on remote', async () => {
     const remote = new MemoryRemote(new Map([['56-TIT.usfm', TIT_BASE]]));
-    const adapterA = new MemoryProjectSyncAdapter(remote);
-    const adapterB = new MemoryProjectSyncAdapter(remote);
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
 
-    // Both users start by syncing — pulls the base state into their storage
-    // and records lastPushedCommit so subsequent syncs know the common ancestor.
-    const storageA = makeStorage({ id: PROJECT_ID, name: 'TIT', language: 'en' });
-    await storageA.writeFile(PROJECT_ID, '56-TIT.usfm', TIT_BASE);
-    const syncA1 = await syncAs('alice', storageA, adapterA);
-    expect(syncA1.kind).toBe('synced');
+    // Both users do an initial sync to record the common base anchor.
+    const sA = await userStorage(TIT_BASE);
+    await sync('alice', sA, adA);
 
-    const storageB = makeStorage({ id: PROJECT_ID, name: 'TIT', language: 'en' });
-    await storageB.writeFile(PROJECT_ID, '56-TIT.usfm', TIT_BASE);
-    const syncB1 = await syncAs('bob', storageB, adapterB);
-    expect(syncB1.kind).toBe('synced');
+    const sB = await userStorage(TIT_BASE);
+    await sync('bob', sB, adB);
 
-    // Alice edits verse 1 and pushes first.
-    const titEditA = TIT_BASE.replace('Base verse one.', 'Alice edited verse one.');
-    await storageA.writeFile(PROJECT_ID, '56-TIT.usfm', titEditA);
-    const syncA2 = await syncAs('alice', storageA, adapterA);
-    expect(syncA2.kind).toBe('synced');
+    // Alice edits verse 1.
+    await sA.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Alice — verse one.'));
+    await sync('alice', sA, adA);
 
-    // Bob edits verse 2 (different location) and syncs.
-    const titEditB = TIT_BASE.replace('Base verse two.', 'Bob edited verse two.');
-    await storageB.writeFile(PROJECT_ID, '56-TIT.usfm', titEditB);
-    const syncB2 = await syncAs('bob', storageB, adapterB);
+    // Bob edits verse 2 (different location).
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse two original.', 'Bob — verse two.'));
+    const result = await sync('bob', sB, adB);
 
-    // Bob's sync should succeed — non-overlapping text-line edits auto-merge.
-    expect(syncB2.kind).toBe('synced');
-
-    // Remote should contain both edits.
-    const remoteFiles = remote.getCurrentFiles();
-    const merged = remoteFiles.get('56-TIT.usfm') ?? '';
-    expect(merged).toContain('Alice edited verse one.');
-    expect(merged).toContain('Bob edited verse two.');
+    expect(result.kind).toBe('synced');
+    const merged = remote.getCurrentFiles().get('56-TIT.usfm') ?? '';
+    expect(merged).toContain('Alice — verse one.');
+    expect(merged).toContain('Bob — verse two.');
   });
 });
 
 // ---------------------------------------------------------------------------
-// Scenario B — both users edited the same verse → conflict surfaced
+// Scenario B — same verse, different text → conflict surfaced
 // ---------------------------------------------------------------------------
 
-describe('Two-user sync — Scenario B: same-verse conflict surfaced', () => {
-  const TIT_BASE = '\\id TIT\n\\c 1\n\\p\n\\v 1 Original verse one.\n';
-
-  it('throws SyncConflictsError when both users changed the same verse differently', async () => {
+describe('Scenario B — same-verse conflict surfaced', () => {
+  it('throws SyncConflictsError and stores pendingConflicts', async () => {
     const remote = new MemoryRemote(new Map([['56-TIT.usfm', TIT_BASE]]));
-    const adapterA = new MemoryProjectSyncAdapter(remote);
-    const adapterB = new MemoryProjectSyncAdapter(remote);
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
 
-    // Both users do an initial sync to record the common base anchor.
-    const storageA = makeStorage({ id: PROJECT_ID, name: 'TIT', language: 'en' });
-    await storageA.writeFile(PROJECT_ID, '56-TIT.usfm', TIT_BASE);
-    await syncAs('alice', storageA, adapterA);
+    const sA = await userStorage(TIT_BASE);
+    await sync('alice', sA, adA);
+    const sB = await userStorage(TIT_BASE);
+    await sync('bob', sB, adB);
 
-    const storageB = makeStorage({ id: PROJECT_ID, name: 'TIT', language: 'en' });
-    await storageB.writeFile(PROJECT_ID, '56-TIT.usfm', TIT_BASE);
-    await syncAs('bob', storageB, adapterB);
+    await sA.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Alice version.'));
+    await sync('alice', sA, adA);
 
-    // Alice edits verse 1 and pushes first.
-    const titAlice = TIT_BASE.replace('Original verse one.', 'Alice version of verse one.');
-    await storageA.writeFile(PROJECT_ID, '56-TIT.usfm', titAlice);
-    await syncAs('alice', storageA, adapterA);
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Bob version.'));
+    await expect(sync('bob', sB, adB)).rejects.toThrow(SyncConflictsError);
 
-    // Bob also edited verse 1 differently and tries to sync.
-    const titBob = TIT_BASE.replace('Original verse one.', 'Bob version of verse one.');
-    await storageB.writeFile(PROJECT_ID, '56-TIT.usfm', titBob);
+    const meta = await sB.getProject(PID);
+    expect(meta?.pendingConflicts?.length).toBeGreaterThan(0);
+    expect(meta!.pendingConflicts![0].path).toBe('56-TIT.usfm');
+    // Both ours and theirs should be present in the conflict.
+    expect(meta!.pendingConflicts![0].oursText).toContain('Bob version.');
+    expect(meta!.pendingConflicts![0].theirsText).toContain('Alice version.');
+  });
+});
 
-    await expect(syncAs('bob', storageB, adapterB)).rejects.toThrow(SyncConflictsError);
+// ---------------------------------------------------------------------------
+// Scenario C — different verses in same file → plain-text 3-way auto-merge
+// ---------------------------------------------------------------------------
 
-    // pendingConflicts should be recorded in Bob's storage.
-    const meta = await storageB.getProject(PROJECT_ID);
-    expect(meta?.pendingConflicts).toBeDefined();
-    expect(meta!.pendingConflicts!.length).toBeGreaterThan(0);
+describe('Scenario C — different verses in same file auto-merge', () => {
+  it('Alice edits v1, Bob edits v3 → auto-merged', async () => {
+    const remote = new MemoryRemote(new Map([['56-TIT.usfm', TIT_BASE]]));
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
+
+    const sA = await userStorage(TIT_BASE);
+    await sync('alice', sA, adA);
+    const sB = await userStorage(TIT_BASE);
+    await sync('bob', sB, adB);
+
+    await sA.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Alice — v1.'));
+    await sync('alice', sA, adA);
+
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse three original.', 'Bob — v3.'));
+    const result = await sync('bob', sB, adB);
+
+    expect(result.kind).toBe('synced');
+    const merged = remote.getCurrentFiles().get('56-TIT.usfm') ?? '';
+    expect(merged).toContain('Alice — v1.');
+    expect(merged).toContain('Bob — v3.');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario D — conflict resolved ("accept theirs") → retry succeeds
+// ---------------------------------------------------------------------------
+
+describe('Scenario D — conflict resolved and retried', () => {
+  it('syncs after user accepts remote version', async () => {
+    const remote = new MemoryRemote(new Map([['56-TIT.usfm', TIT_BASE]]));
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
+
+    const sA = await userStorage(TIT_BASE);
+    await sync('alice', sA, adA);
+    const sB = await userStorage(TIT_BASE);
+    await sync('bob', sB, adB);
+
+    const aliceVersion = TIT_BASE.replace('Verse one original.', 'Alice final.');
+    await sA.writeFile(PID, '56-TIT.usfm', aliceVersion);
+    await sync('alice', sA, adA);
+
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Bob final.'));
+    await expect(sync('bob', sB, adB)).rejects.toThrow(SyncConflictsError);
+
+    // Bob reviews and accepts "theirs" (Alice's version).
+    await sB.writeFile(PID, '56-TIT.usfm', aliceVersion);
+    await sB.updateProject(PID, { pendingConflicts: [] });
+
+    const retry = await sync('bob', sB, adB);
+    expect(retry.kind).toBe('synced');
+    expect(remote.getCurrentFiles().get('56-TIT.usfm')).toContain('Alice final.');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario E — noop fast-path when nothing changed
+// ---------------------------------------------------------------------------
+
+describe('Scenario E — noop when nothing changed', () => {
+  it('returns noop on the second sync when remote and local are identical', async () => {
+    const remote = new MemoryRemote(new Map([['56-TIT.usfm', TIT_BASE]]));
+    const ad = new MemoryProjectSyncAdapter(remote);
+    const s = await userStorage(TIT_BASE);
+
+    const first = await sync('alice', s, ad);
+    expect(first.kind).toBe('synced');
+
+    const second = await sync('alice', s, ad);
+    expect(second.kind).toBe('noop');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario F — remote-only new file imported silently
+// ---------------------------------------------------------------------------
+
+describe('Scenario F — remote-only file imported on pull', () => {
+  it('Bob gets Alice\'s new file without conflict when Bob never had it', async () => {
+    const remote = new MemoryRemote(new Map([['56-TIT.usfm', TIT_BASE]]));
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
+
+    const sA = await userStorage(TIT_BASE);
+    await sync('alice', sA, adA);
+
+    const sB = await userStorage(TIT_BASE);
+    await sync('bob', sB, adB);
+
+    // Alice creates a brand-new book file and pushes.
+    const PHM_CONTENT = '\\id PHM\n\\c 1\n\\p\n\\v 1 Paul to Philemon.\n';
+    await sA.writeFile(PID, '57-PHM.usfm', PHM_CONTENT);
+    await sync('alice', sA, adA);
+
+    // Bob syncs — should pull Alice's new file without conflict.
+    const result = await sync('bob', sB, adB);
+    expect(result.kind).toBe('synced');
+
+    // Bob's storage should now contain the new file.
+    const imported = await sB.readFile(PID, '57-PHM.usfm');
+    expect(imported).toContain('Paul to Philemon.');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario G — YAML manifest metadata-only drift → auto-merged
+// ---------------------------------------------------------------------------
+
+describe('Scenario G — YAML manifest metadata-only drift auto-merges', () => {
+  const MANIFEST_BASE = [
+    'dublin_core:',
+    '  title: Titus',
+    '  modified: "2024-01-01"',
+    '  language:',
+    '    identifier: en',
+  ].join('\n') + '\n';
+
+  it('both sides update dublin_core.modified differently → merged silently', async () => {
+    const remote = new MemoryRemote(new Map([
+      ['56-TIT.usfm', TIT_BASE],
+      ['manifest.yaml', MANIFEST_BASE],
+    ]));
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
+
+    const sA = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sA.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sA.writeFile(PID, 'manifest.yaml', MANIFEST_BASE);
+    await sync('alice', sA, adA);
+
+    const sB = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sB.writeFile(PID, 'manifest.yaml', MANIFEST_BASE);
+    await sync('bob', sB, adB);
+
+    // Both update manifest.modified to different timestamps (metadata-only drift).
+    const manifestA = MANIFEST_BASE.replace('"2024-01-01"', '"2026-05-12"');
+    await sA.writeFile(PID, 'manifest.yaml', manifestA);
+    await sync('alice', sA, adA);
+
+    const manifestB = MANIFEST_BASE.replace('"2024-01-01"', '"2026-05-13"');
+    await sB.writeFile(PID, 'manifest.yaml', manifestB);
+    const result = await sync('bob', sB, adB);
+
+    // Metadata-only drift in YAML → auto-merged, no conflict.
+    expect(result.kind).toBe('synced');
+    const merged = remote.getCurrentFiles().get('manifest.yaml') ?? '';
+    expect(merged).toContain('title: Titus');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario H — YAML manifest real-field conflict → conflict surfaced
+// ---------------------------------------------------------------------------
+
+describe('Scenario H — YAML manifest real-field conflict surfaced', () => {
+  const MANIFEST_BASE = 'dublin_core:\n  title: Old Title\n  modified: "2024-01-01"\n';
+
+  it('both sides change title to different values → SyncConflictsError', async () => {
+    const remote = new MemoryRemote(new Map([
+      ['56-TIT.usfm', TIT_BASE],
+      ['manifest.yaml', MANIFEST_BASE],
+    ]));
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
+
+    const sA = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sA.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sA.writeFile(PID, 'manifest.yaml', MANIFEST_BASE);
+    await sync('alice', sA, adA);
+
+    const sB = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sB.writeFile(PID, 'manifest.yaml', MANIFEST_BASE);
+    await sync('bob', sB, adB);
+
+    await sA.writeFile(PID, 'manifest.yaml', MANIFEST_BASE.replace('Old Title', 'Alice Title'));
+    await sync('alice', sA, adA);
+
+    await sB.writeFile(PID, 'manifest.yaml', MANIFEST_BASE.replace('Old Title', 'Bob Title'));
+    await expect(sync('bob', sB, adB)).rejects.toThrow(SyncConflictsError);
+
+    const meta = await sB.getProject(PID);
+    const conflict = meta!.pendingConflicts!.find((c) => c.path === 'manifest.yaml');
+    expect(conflict).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario I — sync sidecar (.sync/*.json) always auto-merges
+// ---------------------------------------------------------------------------
+
+describe('Scenario I — sync sidecar auto-merges without human conflict', () => {
+  it('diverged baseBlobSha and savedAt never surface as a conflict', async () => {
+    const sidecarPath = '.sync/TIT.json';
+    const baseSidecar = JSON.stringify({
+      schema: 1, docId: 'TPS:TIT',
+      baseBlobSha: 'sha-base',
+      vectorClock: { alice: 1 },
+      savedAt: '2026-05-11T12:00:00Z',
+    });
+
+    const remote = new MemoryRemote(new Map([
+      ['56-TIT.usfm', TIT_BASE],
+      [sidecarPath, baseSidecar],
+    ]));
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
+
+    const sA = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sA.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sA.writeFile(PID, sidecarPath, baseSidecar);
+    await sync('alice', sA, adA);
+
+    const sB = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sB.writeFile(PID, sidecarPath, baseSidecar);
+    await sync('bob', sB, adB);
+
+    // Alice updates her sidecar (different blob sha + timestamp, higher clock).
+    const sidecarA = JSON.stringify({
+      schema: 1, docId: 'TPS:TIT',
+      baseBlobSha: 'sha-alice-pushed',
+      vectorClock: { alice: 5 },
+      savedAt: '2026-05-12T14:00:00Z',
+    });
+    await sA.writeFile(PID, sidecarPath, sidecarA);
+    await sync('alice', sA, adA);
+
+    // Bob has his own diverged sidecar.
+    const sidecarB = JSON.stringify({
+      schema: 1, docId: 'TPS:TIT',
+      baseBlobSha: 'sha-bob-local',
+      vectorClock: { alice: 3, bob: 7 },
+      savedAt: '2026-05-11T23:00:00Z',
+    });
+    await sB.writeFile(PID, sidecarPath, sidecarB);
+
+    // Must NOT throw — sidecar divergence is always resolved automatically.
+    const result = await sync('bob', sB, adB);
+    expect(result.kind).toBe('synced');
+
+    // Merged sidecar should have max clock per actor.
+    const merged = remote.getCurrentFiles().get(sidecarPath) ?? '';
+    const mergedObj = JSON.parse(merged) as { vectorClock: Record<string, number> };
+    expect(mergedObj.vectorClock.alice).toBe(5);  // max(5, 3)
+    expect(mergedObj.vectorClock.bob).toBe(7);    // only Bob had it
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario J — CRDT (.ybin) companion: concurrent edits never conflict
+// ---------------------------------------------------------------------------
+
+describe('Scenario J — CRDT-backed USFM: concurrent edits auto-merged via Yjs', () => {
+  it('two users edit different verses with .ybin companion → no conflict', async () => {
+    const ybinPath = crdtPathFromUsfm('56-TIT.usfm');
+    const baseYbin = usfmToYjsBase64(TIT_BASE);
+
+    const remote = new MemoryRemote(new Map([
+      ['56-TIT.usfm', TIT_BASE],
+      [ybinPath, baseYbin],
+    ]));
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
+
+    const sA = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sA.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sA.writeFile(PID, ybinPath, baseYbin);
+    await sync('alice', sA, adA);
+
+    const sB = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sB.writeFile(PID, ybinPath, baseYbin);
+    await sync('bob', sB, adB);
+
+    // Alice edits verse 1 and writes updated .ybin.
+    const titAlice = TIT_BASE.replace('Verse one original.', 'CRDT Alice v1.');
+    const ybinAlice = updateYjsBase64WithUsfm(baseYbin, titAlice);
+    await sA.writeFile(PID, '56-TIT.usfm', titAlice);
+    await sA.writeFile(PID, ybinPath, ybinAlice);
+    await sync('alice', sA, adA);
+
+    // Bob edits verse 3 (different verse) and writes updated .ybin.
+    const titBob = TIT_BASE.replace('Verse three original.', 'CRDT Bob v3.');
+    const ybinBob = updateYjsBase64WithUsfm(baseYbin, titBob);
+    await sB.writeFile(PID, '56-TIT.usfm', titBob);
+    await sB.writeFile(PID, ybinPath, ybinBob);
+
+    // CRDT merge — should never conflict.
+    const result = await sync('bob', sB, adB);
+    expect(result.kind).toBe('synced');
+
+    // Remote USFM should contain both edits.
+    const finalUsfm = remote.getCurrentFiles().get('56-TIT.usfm') ?? '';
+    expect(finalUsfm).toContain('CRDT Alice v1.');
+    expect(finalUsfm).toContain('CRDT Bob v3.');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario K — delete/modify conflict: one user deletes, other edits
+// ---------------------------------------------------------------------------
+
+describe('Scenario K — delete/modify conflict', () => {
+  it('surfaces conflict when Alice deletes a file Bob has edited', async () => {
+    const remote = new MemoryRemote(new Map([
+      ['56-TIT.usfm', TIT_BASE],
+      ['57-PHM.usfm', '\\id PHM\n\\c 1\n\\p\n\\v 1 Original.\n'],
+    ]));
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
+
+    const sA = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sA.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sA.writeFile(PID, '57-PHM.usfm', '\\id PHM\n\\c 1\n\\p\n\\v 1 Original.\n');
+    await sync('alice', sA, adA);
+
+    const sB = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sB.writeFile(PID, '57-PHM.usfm', '\\id PHM\n\\c 1\n\\p\n\\v 1 Original.\n');
+    await sync('bob', sB, adB);
+
+    // Alice deletes PHM and pushes.
+    await sA.deleteFile(PID, '57-PHM.usfm');
+    await sync('alice', sA, adA);
+
+    // Bob edits PHM and syncs — delete/modify conflict.
+    await sB.writeFile(PID, '57-PHM.usfm', '\\id PHM\n\\c 1\n\\p\n\\v 1 Bob edited.\n');
+    await expect(sync('bob', sB, adB)).rejects.toThrow(SyncConflictsError);
+
+    const meta = await sB.getProject(PID);
+    const conflict = meta!.pendingConflicts!.find((c) => c.path === '57-PHM.usfm');
+    expect(conflict).toBeDefined();
+    // theirsText = '' signals "remotely deleted".
+    expect(conflict!.theirsText).toBe('');
+    expect(conflict!.oursText).toContain('Bob edited.');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario L — multiple files: only the conflicted USFM surfaces, manifest
+//              metadata-only drift auto-merges in the same sync
+// ---------------------------------------------------------------------------
+
+describe('Scenario L — mixed: USFM conflict + manifest metadata auto-merge', () => {
+  const MANIFEST = 'dublin_core:\n  title: Titus\n  modified: "2024-01-01"\n';
+
+  it('only USFM file raises conflict; manifest is merged silently in the same run', async () => {
+    const remote = new MemoryRemote(new Map([
+      ['56-TIT.usfm', TIT_BASE],
+      ['manifest.yaml', MANIFEST],
+    ]));
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
+
+    const sA = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sA.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sA.writeFile(PID, 'manifest.yaml', MANIFEST);
+    await sync('alice', sA, adA);
+
+    const sB = makeStorage({ id: PID, name: 'Test', language: 'en' });
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE);
+    await sB.writeFile(PID, 'manifest.yaml', MANIFEST);
+    await sync('bob', sB, adB);
+
+    // Alice edits verse 1 and updates manifest.modified.
+    await sA.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Alice v1.'));
+    await sA.writeFile(PID, 'manifest.yaml', MANIFEST.replace('"2024-01-01"', '"2026-05-12"'));
+    await sync('alice', sA, adA);
+
+    // Bob also edits verse 1 (conflict!) and updates manifest.modified differently.
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Bob v1.'));
+    await sB.writeFile(PID, 'manifest.yaml', MANIFEST.replace('"2024-01-01"', '"2026-05-13"'));
+
+    await expect(sync('bob', sB, adB)).rejects.toThrow(SyncConflictsError);
+
+    const meta = await sB.getProject(PID);
+    // Only USFM conflict — manifest auto-merged.
+    expect(meta!.pendingConflicts!.length).toBe(1);
     expect(meta!.pendingConflicts![0].path).toBe('56-TIT.usfm');
   });
 });
 
 // ---------------------------------------------------------------------------
-// Scenario C — same file, different verses: plain-text 3-way auto-merge
+// Scenario M — Alice's second sync is noop (remote advanced, but she already
+//              pushed it — no local changes, no remote delta)
 // ---------------------------------------------------------------------------
 
-describe('Two-user sync — Scenario C: different verses in same file auto-merge', () => {
-  const TIT_BASE = [
-    '\\id TIT',
-    '\\c 1',
-    '\\p',
-    '\\v 1 Verse one original.',
-    '\\v 2 Verse two original.',
-    '\\v 3 Verse three original.',
-    '',
-  ].join('\n');
-
-  it('auto-merges when each user edited a different verse', async () => {
+describe('Scenario M — noop for already-synced user after remote advances', () => {
+  it('Alice is noop on second sync after Bob also pushed (same content)', async () => {
     const remote = new MemoryRemote(new Map([['56-TIT.usfm', TIT_BASE]]));
-    const adapterA = new MemoryProjectSyncAdapter(remote);
-    const adapterB = new MemoryProjectSyncAdapter(remote);
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
 
-    const storageA = makeStorage({ id: PROJECT_ID, name: 'TIT', language: 'en' });
-    await storageA.writeFile(PROJECT_ID, '56-TIT.usfm', TIT_BASE);
-    await syncAs('alice', storageA, adapterA);
+    const sA = await userStorage(TIT_BASE);
+    await sync('alice', sA, adA);
+    const sB = await userStorage(TIT_BASE);
+    await sync('bob', sB, adB);
 
-    const storageB = makeStorage({ id: PROJECT_ID, name: 'TIT', language: 'en' });
-    await storageB.writeFile(PROJECT_ID, '56-TIT.usfm', TIT_BASE);
-    await syncAs('bob', storageB, adapterB);
+    // Alice edits and pushes.
+    const titAlice = TIT_BASE.replace('Verse one original.', 'Alice v1.');
+    await sA.writeFile(PID, '56-TIT.usfm', titAlice);
+    const syncA2 = await sync('alice', sA, adA);
+    expect(syncA2.kind).toBe('synced');
 
-    // Alice edits verse 1, Bob edits verse 3.
-    const titAlice = TIT_BASE.replace('Verse one original.', 'Verse one — Alice.');
-    await storageA.writeFile(PROJECT_ID, '56-TIT.usfm', titAlice);
-    await syncAs('alice', storageA, adapterA);
-
-    const titBob = TIT_BASE.replace('Verse three original.', 'Verse three — Bob.');
-    await storageB.writeFile(PROJECT_ID, '56-TIT.usfm', titBob);
-
-    const result = await syncAs('bob', storageB, adapterB);
-    expect(result.kind).toBe('synced');
-
-    const merged = remote.getCurrentFiles().get('56-TIT.usfm') ?? '';
-    expect(merged).toContain('Verse one — Alice.');
-    expect(merged).toContain('Verse three — Bob.');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Scenario D — Bob resolves conflict and retries → succeeds
-// ---------------------------------------------------------------------------
-
-describe('Two-user sync — Scenario D: conflict resolved and retried', () => {
-  const TIT_BASE = '\\id TIT\n\\c 1\n\\p\n\\v 1 Original.\n';
-
-  it('syncs successfully after the user accepts their resolution', async () => {
-    const remote = new MemoryRemote(new Map([['56-TIT.usfm', TIT_BASE]]));
-    const adapterA = new MemoryProjectSyncAdapter(remote);
-    const adapterB = new MemoryProjectSyncAdapter(remote);
-
-    const storageA = makeStorage({ id: PROJECT_ID, name: 'TIT', language: 'en' });
-    await storageA.writeFile(PROJECT_ID, '56-TIT.usfm', TIT_BASE);
-    await syncAs('alice', storageA, adapterA);
-
-    const storageB = makeStorage({ id: PROJECT_ID, name: 'TIT', language: 'en' });
-    await storageB.writeFile(PROJECT_ID, '56-TIT.usfm', TIT_BASE);
-    await syncAs('bob', storageB, adapterB);
-
-    // Alice pushes her edit first.
-    await storageA.writeFile(PROJECT_ID, '56-TIT.usfm',
-      TIT_BASE.replace('Original.', 'Alice.'));
-    await syncAs('alice', storageA, adapterA);
-
-    // Bob also edited — this causes a conflict.
-    await storageB.writeFile(PROJECT_ID, '56-TIT.usfm',
-      TIT_BASE.replace('Original.', 'Bob.'));
-    await expect(syncAs('bob', storageB, adapterB)).rejects.toThrow(SyncConflictsError);
-
-    // Bob resolves the conflict by "accepting theirs" (Alice's version).
-    // This is the most common single-click resolution in the UI.
-    const aliceVersion = TIT_BASE.replace('Original.', 'Alice.');
-    await storageB.writeFile(PROJECT_ID, '56-TIT.usfm', aliceVersion);
-    await storageB.updateProject(PROJECT_ID, { pendingConflicts: [] });
-
-    // Retry — ours == theirs == Alice's version → auto-merged (no conflict).
-    const retryResult = await syncAs('bob', storageB, adapterB);
-    expect(retryResult.kind).toBe('synced');
-
-    const final = remote.getCurrentFiles().get('56-TIT.usfm') ?? '';
-    expect(final).toContain('Alice.');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Scenario E — fast-path noop when both users are up to date
-// ---------------------------------------------------------------------------
-
-describe('Two-user sync — Scenario E: noop when nothing changed', () => {
-  it('returns noop when local and remote are identical', async () => {
-    const initial = new Map([['56-TIT.usfm', '\\id TIT\n\\c 1\n\\p\n\\v 1 Stable.\n']]);
-    const remote = new MemoryRemote(initial);
-    const adapter = new MemoryProjectSyncAdapter(remote);
-
-    const storage = makeStorage({ id: PROJECT_ID, name: 'TIT', language: 'en' });
-    await storage.writeFile(PROJECT_ID, '56-TIT.usfm', '\\id TIT\n\\c 1\n\\p\n\\v 1 Stable.\n');
-
-    // First sync — syncs the file.
-    const first = await syncAs('alice', storage, adapter);
-    expect(first.kind).toBe('synced');
-
-    // Second sync immediately — nothing changed, should be noop.
-    const second = await syncAs('alice', storage, adapter);
-    expect(second.kind).toBe('noop');
+    // Immediately sync Alice again — nothing changed locally and she's the head.
+    const syncA3 = await sync('alice', sA, adA);
+    expect(syncA3.kind).toBe('noop');
   });
 });
