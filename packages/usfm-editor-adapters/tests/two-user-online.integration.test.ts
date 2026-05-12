@@ -20,14 +20,20 @@
  *   QA_INTEGRATION=1 bun run test --filter=@usfm-tools/editor-adapters \
  *     -- --testPathPattern="two-user-online"
  *
- * Scenarios mirroring the in-memory suite
- * ----------------------------------------
+ * Scenarios mirroring the in-memory suite (A–M)
+ * -----------------------------------------------
  *  OA  Non-overlapping edits → auto-merged on remote
  *  OB  Same verse, different text → SyncConflictsError with pendingConflicts
  *  OC  Different verses in same file → plain-text 3-way auto-merge
  *  OD  Conflict resolved ("accept theirs") → retry succeeds
  *  OE  Noop fast-path after sync with no local changes
  *  OF  YAML manifest metadata-only drift → auto-merged, no conflict
+ *  OG  Remote-only new file imported silently (in-memory F)
+ *  OH  Delete/modify conflict (in-memory K)
+ *  OI  Sync sidecar (.sync/*.json) always auto-merges (in-memory I)
+ *  OJ  Mixed: USFM conflict + manifest metadata auto-merge (in-memory L)
+ *  OK  YAML real-field conflict surfaced (in-memory H)
+ *  OL  Noop for already-synced user after remote advances (in-memory M)
  */
 
 import type { ProjectSyncConfig } from '@usfm-tools/types';
@@ -306,6 +312,235 @@ describeQa('QA online — two-user conflict scenarios', () => {
       expect(rB.kind).toBe('synced');
       const merged = await sB.readFile(PID, 'manifest.yaml');
       expect(merged).toContain('title: Test Project');
+    }, 60_000);
+  });
+
+  // -------------------------------------------------------------------------
+  // OG — remote-only new file imported silently (mirrors in-memory F)
+  // -------------------------------------------------------------------------
+
+  describeQa('OG — remote-only new file imported silently on DCS', () => {
+    const MAIN_FILE = '61-ROM.usfm';
+    const NEW_FILE  = '62-1CO.usfm';
+    const MAIN_BASE = '\\id ROM\n\\c 1\n\\p\n\\v 1 Paul to Rome.\n';
+    const NEW_CONTENT = '\\id 1CO\n\\c 1\n\\p\n\\v 1 Paul to Corinth.\n';
+
+    it('Bob gets Alice\'s brand-new book without conflict', async () => {
+      const sA = makeStorage({ id: PID, name: 'ROM', language: 'en' });
+      await sA.writeFile(PID, MAIN_FILE, MAIN_BASE);
+      await syncOnline(sessions[0].username, sA, sessions[0].token);
+
+      const sB = makeStorage({ id: PID, name: 'ROM', language: 'en' });
+      await sB.writeFile(PID, MAIN_FILE, MAIN_BASE);
+      await syncOnline(sessions[1].username, sB, sessions[1].token);
+
+      // Alice creates a brand-new book and pushes.
+      await sA.writeFile(PID, NEW_FILE, NEW_CONTENT);
+      await syncOnline(sessions[0].username, sA, sessions[0].token);
+
+      // Bob syncs — should import Alice's new book without conflict.
+      const rB = await syncOnline(sessions[1].username, sB, sessions[1].token);
+      expect(rB.kind).toBe('synced');
+
+      const imported = await sB.readFile(PID, NEW_FILE);
+      expect(imported).toContain('Paul to Corinth.');
+    }, 60_000);
+  });
+
+  // -------------------------------------------------------------------------
+  // OH — delete/modify conflict (mirrors in-memory K)
+  // -------------------------------------------------------------------------
+
+  describeQa('OH — delete/modify conflict surfaced on DCS', () => {
+    const SHARED_FILE  = '63-2CO.usfm';
+    const TARGET_FILE  = '64-GAL.usfm';
+    const SHARED_BASE  = '\\id 2CO\n\\c 1\n\\p\n\\v 1 Shared book.\n';
+    const TARGET_BASE  = '\\id GAL\n\\c 1\n\\p\n\\v 1 Original Galatians.\n';
+
+    it('throws SyncConflictsError with theirsText="" when remote deleted the file', async () => {
+      const sA = makeStorage({ id: PID, name: '2CO', language: 'en' });
+      await sA.writeFile(PID, SHARED_FILE, SHARED_BASE);
+      await sA.writeFile(PID, TARGET_FILE, TARGET_BASE);
+      await syncOnline(sessions[0].username, sA, sessions[0].token);
+
+      const sB = makeStorage({ id: PID, name: '2CO', language: 'en' });
+      await sB.writeFile(PID, SHARED_FILE, SHARED_BASE);
+      await sB.writeFile(PID, TARGET_FILE, TARGET_BASE);
+      await syncOnline(sessions[1].username, sB, sessions[1].token);
+
+      // Alice deletes the target file and pushes.
+      await sA.deleteFile(PID, TARGET_FILE);
+      await syncOnline(sessions[0].username, sA, sessions[0].token);
+
+      // Bob has edited the now-deleted file — conflict expected.
+      await sB.writeFile(PID, TARGET_FILE, TARGET_BASE.replace('Original Galatians.', 'Bob edited Galatians.'));
+      await expect(
+        syncOnline(sessions[1].username, sB, sessions[1].token),
+      ).rejects.toThrow(SyncConflictsError);
+
+      const meta = await sB.getProject(PID);
+      const conflict = meta!.pendingConflicts!.find((c) => c.path === TARGET_FILE);
+      expect(conflict).toBeDefined();
+      expect(conflict!.theirsText).toBe('');            // '' = remotely deleted
+      expect(conflict!.oursText).toContain('Bob edited Galatians.');
+    }, 90_000);
+  });
+
+  // -------------------------------------------------------------------------
+  // OI — sync sidecar (.sync/*.json) always auto-merges (mirrors in-memory I)
+  // -------------------------------------------------------------------------
+
+  describeQa('OI — sync sidecar auto-merges without surfacing a conflict on DCS', () => {
+    const USFM_FILE    = '65-COL.usfm';
+    const SIDECAR_PATH = '.sync/COL.json';
+    const USFM_BASE    = '\\id COL\n\\c 1\n\\p\n\\v 1 Paul to Colossae.\n';
+    const SIDECAR_BASE = JSON.stringify({
+      schema: 1, docId: 'TPS:COL',
+      baseBlobSha: 'sha-genesis',
+      vectorClock: { system: 1 },
+      savedAt: '2026-01-01T00:00:00Z',
+    });
+
+    it('diverged baseBlobSha + vectorClock never surface as a user conflict', async () => {
+      const sA = makeStorage({ id: PID, name: 'COL', language: 'en' });
+      await sA.writeFile(PID, USFM_FILE, USFM_BASE);
+      await sA.writeFile(PID, SIDECAR_PATH, SIDECAR_BASE);
+      await syncOnline(sessions[0].username, sA, sessions[0].token);
+
+      const sB = makeStorage({ id: PID, name: 'COL', language: 'en' });
+      await sB.writeFile(PID, USFM_FILE, USFM_BASE);
+      await sB.writeFile(PID, SIDECAR_PATH, SIDECAR_BASE);
+      await syncOnline(sessions[1].username, sB, sessions[1].token);
+
+      // Alice advances her sidecar (new blob sha, higher clock, newer timestamp).
+      const sidecarA = JSON.stringify({
+        schema: 1, docId: 'TPS:COL',
+        baseBlobSha: 'sha-alice-pushed',
+        vectorClock: { system: 1, alice: 5 },
+        savedAt: '2026-05-12T14:00:00Z',
+      });
+      await sA.writeFile(PID, SIDECAR_PATH, sidecarA);
+      await syncOnline(sessions[0].username, sA, sessions[0].token);
+
+      // Bob's sidecar diverged (different blob sha, independent clock, older time).
+      const sidecarB = JSON.stringify({
+        schema: 1, docId: 'TPS:COL',
+        baseBlobSha: 'sha-bob-local',
+        vectorClock: { system: 1, alice: 3, bob: 7 },
+        savedAt: '2026-05-11T23:00:00Z',
+      });
+      await sB.writeFile(PID, SIDECAR_PATH, sidecarB);
+
+      // Must NOT throw — sidecar divergence is always resolved automatically.
+      const rB = await syncOnline(sessions[1].username, sB, sessions[1].token);
+      expect(rB.kind).toBe('synced');
+
+      const mergedRaw = await sB.readFile(PID, SIDECAR_PATH);
+      const mergedObj = JSON.parse(mergedRaw!) as { vectorClock: Record<string, number> };
+      expect(mergedObj.vectorClock.alice).toBe(5);   // max(5, 3)
+      expect(mergedObj.vectorClock.bob).toBe(7);     // Bob-only actor preserved
+    }, 90_000);
+  });
+
+  // -------------------------------------------------------------------------
+  // OJ — mixed: USFM conflict + manifest metadata auto-merge (mirrors in-memory L)
+  // -------------------------------------------------------------------------
+
+  describeQa('OJ — mixed USFM conflict + manifest auto-merge on DCS', () => {
+    const USFM_FILE    = '66-EPH.usfm';
+    // Must end with "manifest.yaml" so isYamlManifest() triggers the deep-merge path.
+    const MANIFEST     = 'manifest.yaml';
+    const USFM_BASE    = '\\id EPH\n\\c 1\n\\p\n\\v 1 Paul to Ephesus.\n\\v 2 Verse two.\n';
+    const MANIFEST_BASE = 'dublin_core:\n  title: Ephesians\n  modified: "2024-01-01"\n';
+
+    it('only the USFM file raises conflict; manifest is merged silently in the same run', async () => {
+      const sA = makeStorage({ id: PID, name: 'EPH', language: 'en' });
+      await sA.writeFile(PID, USFM_FILE, USFM_BASE);
+      await sA.writeFile(PID, MANIFEST, MANIFEST_BASE);
+      await syncOnline(sessions[0].username, sA, sessions[0].token);
+
+      const sB = makeStorage({ id: PID, name: 'EPH', language: 'en' });
+      await sB.writeFile(PID, USFM_FILE, USFM_BASE);
+      await sB.writeFile(PID, MANIFEST, MANIFEST_BASE);
+      await syncOnline(sessions[1].username, sB, sessions[1].token);
+
+      // Alice edits verse 1 and bumps manifest modified date.
+      await sA.writeFile(PID, USFM_FILE, USFM_BASE.replace('Paul to Ephesus.', 'Alice v1.'));
+      await sA.writeFile(PID, MANIFEST, MANIFEST_BASE.replace('"2024-01-01"', '"2026-05-12"'));
+      await syncOnline(sessions[0].username, sA, sessions[0].token);
+
+      // Bob also edits verse 1 (conflict!) and bumps manifest modified differently.
+      await sB.writeFile(PID, USFM_FILE, USFM_BASE.replace('Paul to Ephesus.', 'Bob v1.'));
+      await sB.writeFile(PID, MANIFEST, MANIFEST_BASE.replace('"2024-01-01"', '"2026-05-13"'));
+
+      await expect(
+        syncOnline(sessions[1].username, sB, sessions[1].token),
+      ).rejects.toThrow(SyncConflictsError);
+
+      const meta = await sB.getProject(PID);
+      // Only the USFM file should be in pendingConflicts — manifest auto-merged.
+      const usfmConflict = meta!.pendingConflicts!.find((c) => c.path === USFM_FILE);
+      const manifestConflict = meta!.pendingConflicts!.find((c) => c.path === MANIFEST);
+      expect(usfmConflict).toBeDefined();
+      expect(manifestConflict).toBeUndefined();
+    }, 90_000);
+  });
+
+  // -------------------------------------------------------------------------
+  // OK — YAML real-field conflict surfaced (mirrors in-memory H)
+  // -------------------------------------------------------------------------
+
+  describeQa('OK — YAML real-field conflict surfaced on DCS', () => {
+    const MANIFEST = 'manifest-ok.yaml';
+    const MANIFEST_BASE = 'dublin_core:\n  title: Old Title\n  modified: "2024-01-01"\n';
+
+    it('both users change title to different values → SyncConflictsError', async () => {
+      const sA = makeStorage({ id: PID, name: 'Manifest OK', language: 'en' });
+      await sA.writeFile(PID, MANIFEST, MANIFEST_BASE);
+      await syncOnline(sessions[0].username, sA, sessions[0].token);
+
+      const sB = makeStorage({ id: PID, name: 'Manifest OK', language: 'en' });
+      await sB.writeFile(PID, MANIFEST, MANIFEST_BASE);
+      await syncOnline(sessions[1].username, sB, sessions[1].token);
+
+      await sA.writeFile(PID, MANIFEST, MANIFEST_BASE.replace('Old Title', 'Alice Title'));
+      await syncOnline(sessions[0].username, sA, sessions[0].token);
+
+      await sB.writeFile(PID, MANIFEST, MANIFEST_BASE.replace('Old Title', 'Bob Title'));
+      await expect(
+        syncOnline(sessions[1].username, sB, sessions[1].token),
+      ).rejects.toThrow(SyncConflictsError);
+
+      const meta = await sB.getProject(PID);
+      const conflict = meta!.pendingConflicts!.find((c) => c.path === MANIFEST);
+      expect(conflict).toBeDefined();
+      expect(conflict!.oursText).toContain('Bob Title');
+      expect(conflict!.theirsText).toContain('Alice Title');
+    }, 90_000);
+  });
+
+  // -------------------------------------------------------------------------
+  // OL — noop for already-synced user after remote advances (mirrors in-memory M)
+  // -------------------------------------------------------------------------
+
+  describeQa('OL — noop for already-synced user after remote advances on DCS', () => {
+    const REPO_FILE = '67-PHP.usfm';
+    const BASE = '\\id PHP\n\\c 1\n\\p\n\\v 1 Stable verse.\n';
+
+    it('Alice is noop on her second sync after she already pushed', async () => {
+      const sA = makeStorage({ id: PID, name: 'PHP', language: 'en' });
+      await sA.writeFile(PID, REPO_FILE, BASE);
+      await syncOnline(sessions[0].username, sA, sessions[0].token);
+
+      // Alice edits and pushes.
+      const edited = BASE.replace('Stable verse.', 'Alice edited.');
+      await sA.writeFile(PID, REPO_FILE, edited);
+      const r1 = await syncOnline(sessions[0].username, sA, sessions[0].token);
+      expect(r1.kind).toBe('synced');
+
+      // Immediately sync Alice again — nothing changed locally, she's the head.
+      const r2 = await syncOnline(sessions[0].username, sA, sessions[0].token);
+      expect(r2.kind).toBe('noop');
     }, 60_000);
   });
 });

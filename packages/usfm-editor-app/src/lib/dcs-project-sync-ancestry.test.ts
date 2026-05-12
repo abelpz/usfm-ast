@@ -40,6 +40,10 @@ mock.module('@usfm-tools/door43-rest', () => ({
   ensureOpenPullRequest: async () => ({ number: 1, htmlUrl: '' }),
   mergePullRequestOrCloseIfNothingToMerge: async () => ({ merged: true, prHtmlUrl: '' }),
   createDcsRelease: async () => {},
+  // Error class used by dcs-project-sync for commit-not-found fallback.
+  CommitNotFoundError: class CommitNotFoundError extends Error {
+    constructor(msg?: string) { super(msg ?? 'CommitNotFoundError'); this.name = 'CommitNotFoundError'; }
+  },
 }));
 
 mock.module('@usfm-tools/editor-adapters', () => {
@@ -65,6 +69,7 @@ mock.module('@usfm-tools/editor-adapters', () => {
     gitBlobShaHex: async (_content: string) => 'sha-unchanged',
     // CRDT stubs — crdt-storage.ts imports these but they are not exercised in ancestry tests.
     usfmToYjsBase64: (_usfm: string) => '',
+    updateYjsBase64WithUsfm: (_b64: string, _usfm: string) => '',
     yjsBase64ToUsfm: (_b64: string) => '',
     crdtPathFromUsfm: (p: string) => `crdt/${p.split('/').pop()?.replace(/\.(usfm|sfm)$/i, '') ?? p}.ybin`,
     isYbinPath: (p: string) => p.endsWith('.ybin'),
