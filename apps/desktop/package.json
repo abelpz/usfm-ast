@@ -1,6 +1,6 @@
 {
   "name": "@usfm-tools/desktop",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "private": true,
   "description": "Tauri desktop shell for the USFM editor (Windows, macOS, Linux)",
   "type": "module",

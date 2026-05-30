@@ -5,5 +5,18 @@
   "type": "module",
   "scripts": {
     "test": "node test.mjs"
+  },
+  "dependencies": {
+    "@usfm-tools/adapters": "workspace:*",
+    "@usfm-tools/checking": "workspace:*",
+    "@usfm-tools/editor-core": "workspace:*",
+    "@usfm-tools/editor-themes": "workspace:*",
+    "@usfm-tools/formatter": "workspace:*",
+    "@usfm-tools/parser": "workspace:*",
+    "@usfm-tools/ptxprint-driver": "workspace:*",
+    "@usfm-tools/types": "workspace:*",
+    "@usfm-tools/usj-core": "workspace:*",
+    "@usj-tools/adapters": "workspace:*",
+    "@usj-tools/core": "workspace:*"
   }
 }

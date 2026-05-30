@@ -37,10 +37,10 @@ function ok(label, fn) {
 
 // ── @usfm-tools/parser ────────────────────────────────────────────────────────
 console.log('\n@usfm-tools/parser');
-const { UsfmParser } = await import('@usfm-tools/parser');
+const { USFMParser } = await import('@usfm-tools/parser');
 const SAMPLE_USFM = `\\id GEN\n\\h Genesis\n\\c 1\n\\v 1 In the beginning God created the heavens and the earth.\n`;
 ok('parses USFM without throwing', () => {
-  const parser = new UsfmParser();
+  const parser = new USFMParser({ silentConsole: true });
   const result = parser.parse(SAMPLE_USFM);
   if (!result) throw new Error('parse returned falsy');
 });
@@ -54,9 +54,9 @@ ok('exports are defined', () => {
 
 // ── @usfm-tools/formatter ────────────────────────────────────────────────────
 console.log('\n@usfm-tools/formatter');
-const { UsfmFormatter } = await import('@usfm-tools/formatter');
+const { USFMFormatter } = await import('@usfm-tools/formatter');
 ok('formatter class exists', () => {
-  if (typeof UsfmFormatter !== 'function') throw new Error('UsfmFormatter not a constructor');
+  if (typeof USFMFormatter !== 'function') throw new Error('USFMFormatter not a constructor');
 });
 
 // ── @usfm-tools/adapters ─────────────────────────────────────────────────────
