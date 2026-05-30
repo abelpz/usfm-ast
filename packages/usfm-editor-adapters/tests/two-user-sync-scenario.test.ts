@@ -23,7 +23,7 @@
  *  M  Third sync after A's push is noop for A (already up to date)
  */
 
-import type { ProjectSyncConfig } from '@usfm-tools/types';
+import type { ProjectPushOutcome, ProjectSyncConfig, PushFilesOptions } from '@usfm-tools/types';
 import {
   syncLocalProjectWithDcs,
   SyncConflictsError,
@@ -50,6 +50,7 @@ function sync(
   username: string,
   storage: ReturnType<typeof makeStorage>,
   adapter: MemoryProjectSyncAdapter,
+  bookCode?: string,
 ) {
   return syncLocalProjectWithDcs({
     storage,
@@ -57,6 +58,7 @@ function sync(
     token: 'unused',
     sync: SYNC_CONFIG,
     username,
+    bookCode,
     _adapter: adapter,
   });
 }
@@ -446,6 +448,7 @@ describe('Scenario J — CRDT-backed USFM: concurrent edits auto-merged via Yjs'
     const finalUsfm = remote.getCurrentFiles().get('56-TIT.usfm') ?? '';
     expect(finalUsfm).toContain('CRDT Alice v1.');
     expect(finalUsfm).toContain('CRDT Bob v3.');
+    expect(finalUsfm.match(/^\\id\b/gm)).toHaveLength(1);
   });
 });
 
@@ -558,5 +561,214 @@ describe('Scenario M — noop for already-synced user after remote advances', ()
     // Immediately sync Alice again — nothing changed locally and she's the head.
     const syncA3 = await sync('alice', sA, adA);
     expect(syncA3.kind).toBe('noop');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario N - stale self-conflict: remote sidecar is already in local history
+// ---------------------------------------------------------------------------
+
+describe('Scenario N - stale self-conflict auto-resolves', () => {
+  it('keeps the local edit when the remote book snapshot is an older self save', async () => {
+    const baseSidecar = JSON.stringify({
+      schema: 1,
+      docId: `${PID}:TIT`,
+      vectorClock: { user: 1 },
+      savedAt: '2026-01-01T00:00:00Z',
+    });
+    const remoteSidecar = JSON.stringify({
+      schema: 1,
+      docId: `${PID}:TIT`,
+      vectorClock: { user: 2 },
+      savedAt: '2026-01-01T00:01:00Z',
+    });
+    const localSidecar = JSON.stringify({
+      schema: 1,
+      docId: `${PID}:TIT`,
+      vectorClock: { user: 4 },
+      savedAt: '2026-01-01T00:02:00Z',
+    });
+
+    const remote = new MemoryRemote(new Map([
+      ['56-TIT.usfm', TIT_BASE],
+      ['.sync/TIT.json', baseSidecar],
+    ]));
+    const baseSha = remote.getHead();
+    remote.push(new Map([
+      ['56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Older remote self edit.')],
+      ['.sync/TIT.json', remoteSidecar],
+    ]));
+
+    const storage = makeStorage({
+      id: PID,
+      name: 'Test',
+      language: 'en',
+      lastPushedCommit: { tit: baseSha },
+    });
+    await storage.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Newest local self edit.'));
+    await storage.writeFile(PID, '.sync/TIT.json', localSidecar);
+
+    const result = await sync('user', storage, new MemoryProjectSyncAdapter(remote), 'TIT');
+
+    expect(result.kind).toBe('synced');
+    const merged = remote.getCurrentFiles().get('56-TIT.usfm') ?? '';
+    expect(merged).toContain('Newest local self edit.');
+    expect(merged).not.toContain('Older remote self edit.');
+    const meta = await storage.getProject(PID);
+    expect(meta!.pendingConflicts).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario O - real multi-user conflict: remote has an uncovered actor clock
+// ---------------------------------------------------------------------------
+
+describe('Scenario O - multi-user conflict still surfaces', () => {
+  it('does not apply stale-self auto-resolution to another user edit', async () => {
+    const sidecarPath = '.sync/TIT.json';
+    const baseSidecar = JSON.stringify({
+      schema: 1,
+      docId: `${PID}:TIT`,
+      vectorClock: { system: 1 },
+      savedAt: '2026-01-01T00:00:00Z',
+    });
+    const remote = new MemoryRemote(new Map([
+      ['56-TIT.usfm', TIT_BASE],
+      [sidecarPath, baseSidecar],
+    ]));
+    const adA = new MemoryProjectSyncAdapter(remote);
+    const adB = new MemoryProjectSyncAdapter(remote);
+
+    const sA = await userStorage(TIT_BASE);
+    await sA.writeFile(PID, sidecarPath, baseSidecar);
+    await sync('alice', sA, adA, 'TIT');
+
+    const sB = await userStorage(TIT_BASE);
+    await sB.writeFile(PID, sidecarPath, baseSidecar);
+    await sync('bob', sB, adB, 'TIT');
+
+    await sA.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Alice v1.'));
+    await sA.writeFile(PID, sidecarPath, JSON.stringify({
+      schema: 1,
+      docId: `${PID}:TIT`,
+      vectorClock: { system: 1, alice: 2 },
+      savedAt: '2026-01-01T00:01:00Z',
+    }));
+    await sync('alice', sA, adA, 'TIT');
+
+    await sB.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Bob v1.'));
+    await sB.writeFile(PID, sidecarPath, JSON.stringify({
+      schema: 1,
+      docId: `${PID}:TIT`,
+      vectorClock: { system: 1, bob: 2 },
+      savedAt: '2026-01-01T00:01:30Z',
+    }));
+
+    await expect(sync('bob', sB, adB, 'TIT')).rejects.toThrow(SyncConflictsError);
+    const meta = await sB.getProject(PID);
+    expect(meta!.pendingConflicts![0].path).toBe('56-TIT.usfm');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario P - same Door43 user on two devices still has distinct actor clocks
+// ---------------------------------------------------------------------------
+
+describe('Scenario P - same account on two devices still conflicts correctly', () => {
+  it('does not treat another device actor as stale local history', async () => {
+    const sidecarPath = '.sync/TIT.json';
+    const baseSidecar = JSON.stringify({
+      schema: 1,
+      docId: `${PID}:TIT`,
+      vectorClock: { system: 1 },
+      savedAt: '2026-01-01T00:00:00Z',
+    });
+    const remote = new MemoryRemote(new Map([
+      ['56-TIT.usfm', TIT_BASE],
+      [sidecarPath, baseSidecar],
+    ]));
+    const adLaptop = new MemoryProjectSyncAdapter(remote);
+    const adDesktop = new MemoryProjectSyncAdapter(remote);
+
+    const laptop = await userStorage(TIT_BASE);
+    await laptop.writeFile(PID, sidecarPath, baseSidecar);
+    await sync('same-user', laptop, adLaptop, 'TIT');
+
+    const desktop = await userStorage(TIT_BASE);
+    await desktop.writeFile(PID, sidecarPath, baseSidecar);
+    await sync('same-user', desktop, adDesktop, 'TIT');
+
+    await laptop.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Laptop v1.'));
+    await laptop.writeFile(PID, sidecarPath, JSON.stringify({
+      schema: 1,
+      docId: `${PID}:TIT`,
+      vectorClock: { system: 1, 'same-user@laptop': 2 },
+      savedAt: '2026-01-01T00:01:00Z',
+    }));
+    await sync('same-user', laptop, adLaptop, 'TIT');
+
+    await desktop.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Desktop v1.'));
+    await desktop.writeFile(PID, sidecarPath, JSON.stringify({
+      schema: 1,
+      docId: `${PID}:TIT`,
+      vectorClock: { system: 1, 'same-user@desktop': 2 },
+      savedAt: '2026-01-01T00:01:30Z',
+    }));
+
+    await expect(sync('same-user', desktop, adDesktop, 'TIT')).rejects.toThrow(SyncConflictsError);
+    const meta = await desktop.getProject(PID);
+    expect(meta!.pendingConflicts![0].path).toBe('56-TIT.usfm');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario Q - stale CAS means restart pull/merge, not overwrite
+// ---------------------------------------------------------------------------
+
+describe('Scenario Q - stale push restarts sync and preserves remote edits', () => {
+  class StaleOnceAdapter extends MemoryProjectSyncAdapter {
+    private staleInjected = false;
+
+    constructor(
+      private readonly remoteRef: MemoryRemote,
+      private readonly remoteEdit: string,
+    ) {
+      super(remoteRef);
+    }
+
+    async pushFiles(
+      localFiles: Map<string, string>,
+      message: string,
+      options?: PushFilesOptions,
+    ): Promise<ProjectPushOutcome> {
+      if (!this.staleInjected) {
+        this.staleInjected = true;
+        this.remoteRef.push(new Map([
+          ['56-TIT.usfm', this.remoteEdit],
+        ]));
+      }
+      return super.pushFiles(localFiles, message, options);
+    }
+  }
+
+  it('re-pulls and merges a remote edit that appears between read and push', async () => {
+    const remote = new MemoryRemote(new Map([['56-TIT.usfm', TIT_BASE]]));
+    const baseSha = remote.getHead();
+    const storage = makeStorage({
+      id: PID,
+      name: 'Test',
+      language: 'en',
+      lastPushedCommit: { tit: baseSha },
+      lastRemoteCommit: { tit: baseSha },
+    });
+    await storage.writeFile(PID, '56-TIT.usfm', TIT_BASE.replace('Verse one original.', 'Local v1.'));
+
+    const remoteEdit = TIT_BASE.replace('Verse three original.', 'Remote v3.');
+    const result = await sync('alice', storage, new StaleOnceAdapter(remote, remoteEdit), 'TIT');
+
+    expect(result.kind).toBe('synced');
+    const finalUsfm = remote.getCurrentFiles().get('56-TIT.usfm') ?? '';
+    expect(finalUsfm).toContain('Local v1.');
+    expect(finalUsfm).toContain('Remote v3.');
   });
 });

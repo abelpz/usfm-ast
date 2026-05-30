@@ -14,6 +14,7 @@ import { getProcessedCacheStorage, getSourceCacheStorage } from '@/hooks/useSour
 import { getConfiguredDownloadQueue, triggerSchedulerDrain } from '@/hooks/useDownloadQueue';
 import { Book, Languages, LifeBuoy, Loader2, Plus, X } from 'lucide-react';
 import {
+  startTransition,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -38,6 +39,7 @@ import {
 } from '@/hooks/useAnnotatedSource';
 import { useArticleTitles, extractMarkdownH1 } from '@/hooks/useArticleTitles';
 import { useHelpsDiscovery } from '@/hooks/useHelpsDiscovery';
+import { useHelpsProcessor } from '@/hooks/useHelpsProcessor';
 import { useHelpsTsvLoader } from '@/hooks/useHelpsTsvLoader';
 import { fetchHelpArticleMarkdown } from '@/lib/fetch-help-article';
 import {
@@ -136,6 +138,9 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
     { id: newSourceSlotId(), label: 'Source', title: undefined, session: null },
   ]);
   const [activeSourceIndex, setActiveSourceIndex] = useState(0);
+  /** Immediately-applied visual index so the tab highlight updates before the heavy session sync. */
+  const [optimisticSourceIndex, setOptimisticSourceIndex] = useState<number | null>(null);
+  const effectiveSourceIndex = optimisticSourceIndex ?? activeSourceIndex;
   const [openDrawerForSlotId, setOpenDrawerForSlotId] = useState<string | null>(null);
   const slotEmitters = useRef(new Map<string, (s: SourceTextSession | null) => void>());
   /** Pending cache-first loads keyed by slot id — populated during catalog auto-load. */
@@ -223,15 +228,28 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
   // Defer sync for hidden source sessions so chapter changes only rebuild the
   // active tab's ProseMirror doc immediately; hidden sessions will rebuild
   // lazily when the user switches to their tab.
+  // The deferred-to-active transition (setDeferSync false) is scheduled in a
+  // setTimeout so the browser has a chance to paint the new tab UI before the
+  // potentially-expensive session catch-up begins.
   useEffect(() => {
+    // Immediately defer all non-active sessions.
     sourceSlots.forEach((slot, idx) => {
-      if (slot.session) {
-        slot.session.setDeferSync(idx !== activeSourceIndex);
+      if (slot.session && idx !== activeSourceIndex) {
+        slot.session.setDeferSync(true);
       }
     });
+    // Un-defer the active session after one tick so the UI paints first.
+    const id = setTimeout(() => {
+      const activeSlot = sourceSlots[activeSourceIndex];
+      if (activeSlot?.session) activeSlot.session.setDeferSync(false);
+    }, 0);
+    return () => clearTimeout(id);
   }, [sourceSlots, activeSourceIndex]);
 
   const [columnTab, setColumnTab] = useState<ColumnTab>('source');
+  /** Immediately-applied visual tab so the icon highlights before HelpsTab recomputes entries. */
+  const [optimisticColumnTab, setOptimisticColumnTab] = useState<ColumnTab | null>(null);
+  const effectiveColumnTab = optimisticColumnTab ?? columnTab;
   const [rev, setRev] = useState(0);
 
   /** Block direction for helps gateway quotes (matches active reference tab). */
@@ -261,13 +279,32 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
   const [manualSourceLang, setManualSourceLang] = useState<string | null>(
     () => sourceLanguage?.trim() || null
   );
+
+  /**
+   * Safety-net: if the `sourceLanguage` prop arrives or changes while
+   * `manualSourceLang` is null (e.g. prop was undefined on first render but
+   * is now available), adopt it so the catalog auto-load fires without the
+   * user having to re-pick the language.  We intentionally do NOT override a
+   * value the user has explicitly chosen.
+   */
+  useEffect(() => {
+    const lang = sourceLanguage?.trim();
+    if (lang && !manualSourceLang) {
+      setManualSourceLang(lang);
+    }
+  }, [sourceLanguage, manualSourceLang]);
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [langList, setLangList] = useState<Door43LanguageOption[]>([]);
   const [langQuery, setLangQuery] = useState('');
   const [langLoading, setLangLoading] = useState(false);
   const [langError, setLangError] = useState<string | null>(null);
 
-  const [scriptureLoading, setScriptureLoading] = useState(false);
+  /**
+   * True while the catalog fetch is in progress.  Initialized to `true` when
+   * a source language is already known at mount so the very first render shows
+   * a loading indicator rather than the "No reference text loaded" placeholder.
+   */
+  const [scriptureLoading, setScriptureLoading] = useState(() => Boolean(sourceLanguage?.trim()));
   /** true when catalog data came from localStorage (user is offline) */
   const [sourceFromCache, setSourceFromCache] = useState(false);
 
@@ -289,7 +326,10 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
       if (!raf)
         raf = requestAnimationFrame(() => {
           raf = 0;
-          setRev((r) => r + 1);
+          // Mark as a transition so navigation UI (chapter buttons, editor) paints
+          // first; reference column recalculations (TN/TWL filtering, decoration
+          // pushes) happen at lower priority without blocking the main thread.
+          startTransition(() => setRev((r) => r + 1));
         });
     });
     return () => {
@@ -301,7 +341,8 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
   useEffect(() => {
     const unsubs: Array<() => void> = [];
     for (const sl of sourceSlots) {
-      if (sl.session) unsubs.push(sl.session.onLoad(() => setRev((r) => r + 1)));
+      if (sl.session)
+        unsubs.push(sl.session.onLoad(() => startTransition(() => setRev((r) => r + 1))));
     }
     return () => unsubs.forEach((u) => u());
   }, [sourceSlots]);
@@ -361,6 +402,20 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
     return next;
   }, [targetSession, rev]);
   const chapterHelps = useHelpsForContentPage(twl, tn, helpsPage);
+  const sourceStore = activeSourceSession?.isLoaded() ? activeSourceSession.store : null;
+  const { processed: processedHelps, busy: helpsBusy } = useHelpsProcessor(
+    twl,
+    tn,
+    helpsPage,
+    sourceStore,
+    Boolean(sourceStore),
+    rev,
+  );
+  const displayedProcessedHelps = useMemo(() => {
+    if (!tokenFilter) return processedHelps;
+    const filteredIds = new Set(tokenFilter.map((entry) => entry.id));
+    return processedHelps.filter((row) => filteredIds.has(row.entry.id));
+  }, [processedHelps, tokenFilter]);
 
   useHelpsDecorations(activeSourceSession, twl, tn, rev);
 
@@ -373,8 +428,12 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
   const onHelpsTokenClick = useCallback(
     (entries: HelpEntry[]) => {
       prevColumnTabRef.current = columnTab;
-      setTokenFilter(entries);
-      setColumnTab('helps');
+      setOptimisticColumnTab('helps');
+      startTransition(() => {
+        setTokenFilter(entries);
+        setColumnTab('helps');
+        setOptimisticColumnTab(null);
+      });
     },
     [columnTab]
   );
@@ -428,7 +487,6 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
     [effectiveConfig, dcsAuth?.token, getTitle, getEntryTitleFromRc]
   );
 
-  const displayedHelps = tokenFilter ?? chapterHelps;
   const filterActive = Boolean(tokenFilter);
 
   const addSourceTab = useCallback(() => {
@@ -506,8 +564,13 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
   );
 
   const onClearFilter = useCallback(() => {
-    setTokenFilter(null);
-    setColumnTab(prevColumnTabRef.current);
+    const prevTab = prevColumnTabRef.current;
+    setOptimisticColumnTab(prevTab);
+    startTransition(() => {
+      setTokenFilter(null);
+      setColumnTab(prevTab);
+      setOptimisticColumnTab(null);
+    });
   }, []);
   const onCloseArticle = useCallback(() => setArticleOpen(false), []);
 
@@ -760,22 +823,28 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
         <Button
           type="button"
           size="icon"
-          variant={columnTab === 'source' ? 'secondary' : 'ghost'}
+          variant={effectiveColumnTab === 'source' ? 'secondary' : 'ghost'}
           className="size-8 shrink-0"
           aria-label="Source"
           title="Source — reference text"
-          onClick={() => setColumnTab('source')}
+          onClick={() => {
+            setOptimisticColumnTab('source');
+            startTransition(() => { setColumnTab('source'); setOptimisticColumnTab(null); });
+          }}
         >
           <Book className="size-4" aria-hidden />
         </Button>
         <Button
           type="button"
           size="icon"
-          variant={columnTab === 'helps' ? 'secondary' : 'ghost'}
+          variant={effectiveColumnTab === 'helps' ? 'secondary' : 'ghost'}
           className="size-8 shrink-0"
           aria-label="Helps"
           title="Helps — translation notes"
-          onClick={() => setColumnTab('helps')}
+          onClick={() => {
+            setOptimisticColumnTab('helps');
+            startTransition(() => { setColumnTab('helps'); setOptimisticColumnTab(null); });
+          }}
         >
           <LifeBuoy className="size-4" aria-hidden />
         </Button>
@@ -892,6 +961,20 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
               Open reference text to see scripture with translation helps underlined in the text.
             </p>
           ) : null}
+          {/*
+            * While the catalog fetch is running and no real slots have been
+            * built yet, show a loading indicator instead of the initial
+            * placeholder slot whose "No reference text loaded" message would
+            * mislead the user into thinking no sources are available.
+            * "Real" slots are those with a catalog-assigned title or a
+            * non-placeholder label (i.e. not the initial 'Source' seed slot).
+            */}
+          {scriptureLoading && sourceSlots.every((s) => !s.title && /^Source(\s+\d+)?$/.test(s.label)) ? (
+            <div className="flex flex-1 items-center justify-center text-muted-foreground" aria-label="Loading scripture resources">
+              <Loader2 className="size-5 animate-spin" aria-hidden />
+            </div>
+          ) : (
+            <>
           {/* Source slot tabs */}
           <div className="flex min-h-0 shrink-0 flex-wrap items-center gap-1 border-b border-border pb-2">
             {sourceSlots.map((slot, idx) => (
@@ -899,10 +982,13 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
                 key={slot.id}
                 type="button"
                 size="sm"
-                variant={idx === activeSourceIndex ? 'secondary' : 'ghost'}
+                variant={idx === effectiveSourceIndex ? 'secondary' : 'ghost'}
                 className="max-w-[100px] text-xs shrink-0 truncate font-bold"
                 title={slot.title ? `${slot.title} (${slot.label})` : slot.label}
-                onClick={() => setActiveSourceIndex(idx)}
+                onClick={() => {
+                  setOptimisticSourceIndex(idx);
+                  startTransition(() => { setActiveSourceIndex(idx); setOptimisticSourceIndex(null); });
+                }}
               >
                 {slot.label.toUpperCase()}
               </Button>
@@ -942,6 +1028,8 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
               </div>
             ))}
           </div>
+            </>
+          )}
         </div>
 
         {/* Helps tab */}
@@ -953,11 +1041,11 @@ export const ReferenceColumn = forwardRef<ReferenceColumnHandle, Props>(function
           aria-hidden={columnTab !== 'helps'}
         >
           <HelpsTab
-            entries={displayedHelps}
+            processedEntries={displayedProcessedHelps}
+            busy={helpsBusy}
             onOpenLink={onOpenLink}
             onClearFilter={filterActive ? onClearFilter : undefined}
             filtered={filterActive}
-            sourceStore={activeSourceSession?.isLoaded() ? activeSourceSession.store : null}
             getTitle={getTitle}
             getEntryTitleFromRc={getEntryTitleFromRc}
             sourceTextDir={activeRefTextDir}

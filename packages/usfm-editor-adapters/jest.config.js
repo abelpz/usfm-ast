@@ -8,7 +8,10 @@ module.exports = {
   moduleNameMapper: {
     '^@usfm-tools/door43-rest$': '<rootDir>/../usfm-door43-rest/src/index.ts',
     '^@usfm-tools/types$': '<rootDir>/../shared-types/src/index.ts',
+    '^@usfm-tools/adapters$': '<rootDir>/../usfm-adapters/src/index.ts',
+    '^@usfm-tools/editor-core$': '<rootDir>/../usfm-editor-core/src/index.ts',
     '^@usfm-tools/editor-adapters$': '<rootDir>/src/index.ts',
+    '^@usfm-tools/usj-core$': '<rootDir>/../usfm-usj-core/src/index.ts',
   },
   transform: {
     '^.+\\.ts$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.json' }],

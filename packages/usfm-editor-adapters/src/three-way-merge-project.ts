@@ -3,9 +3,9 @@
  *
  * Merge strategy (Phase 6 — CRDT-first):
  *   1. USFM files: if companion `.ybin` (Yjs state) exists for all three
- *      revisions, the CRDT 3-way merge is used — always deterministic, never
- *      conflicts.  OT (`transformOpLists`) is the fallback when CRDT history
- *      is absent or corrupted (e.g. files from before Phase 4 deployment).
+ *      revisions, the CRDT 3-way merge is tried first. OT (`transformOpLists`)
+ *      is the fallback when CRDT history is absent/corrupted or when the CRDT
+ *      output is structurally unsafe.
  *   2. `.ybin` files: always merged via `mergeYjsBase64ThreeWay`.
  *   3. Everything else: journal JSONL, YAML manifest, JSON, binary (unchanged).
  */
@@ -167,6 +167,10 @@ function isSyncSidecarJson(p: string): boolean {
 function isProjectJournalJsonl(p: string): boolean {
   const n = p.replace(/\\/g, '/').toLowerCase();
   return n.startsWith('journal/') && n.endsWith('.jsonl');
+}
+
+function hasDuplicateUsfmIdentity(usfm: string): boolean {
+  return (usfm.match(/^\\id\b/gm) ?? []).length > 1;
 }
 
 function isPlainTextMergeable(p: string): boolean {
@@ -657,8 +661,16 @@ export function mergeProjectMaps(opts: {
   const merged = new Map<string, string>();
   const conflicts: FileConflict[] = [];
   const deleted: string[] = [];
+  const unsafeYbinPaths = new Set<string>();
+  const pathList = [...opts.paths];
 
-  for (const path of opts.paths) {
+  for (const path of pathList) {
+    const normalizedPath = path.replace(/\\/g, '/');
+    if (unsafeYbinPaths.has(path) || unsafeYbinPaths.has(normalizedPath)) continue;
+    if (isYbinPath(path) && pathList.some((p) => isUsfmPath(p) && crdtPathFromUsfm(p) === normalizedPath)) {
+      continue;
+    }
+
     const base = opts.getBase(path);
     const ours = opts.getOurs(path);
     const theirs = opts.getTheirs(path);
@@ -704,7 +716,7 @@ export function mergeProjectMaps(opts: {
 
     // Phase 6+7: CRDT-first merge for USFM files.
     // When both sides have a companion `.ybin` (Yjs state), use the CRDT 3-way
-    // merge as the primary strategy — always deterministic, never conflicts.
+    // merge as the primary strategy.
     //
     // Phase 7 extension: `ybinBase` is allowed to be absent (empty string used).
     // This covers peer-sync (bundle/file exchange between two devices without a
@@ -714,7 +726,8 @@ export function mergeProjectMaps(opts: {
     //
     // Falls through to OT when: CRDT history is absent on either side (files
     // written before Phase 4), CRDT merge errors (corrupt state), or when only
-    // one side has a .ybin.
+    // one side has a .ybin. If there is no shared textual base, divergent USFM
+    // revisions are kept as an explicit conflict instead of inventing a merge.
     if (isUsfmPath(path)) {
       const ybinPath = crdtPathFromUsfm(path);
       const ybinBase = opts.getBase(ybinPath);
@@ -722,7 +735,7 @@ export function mergeProjectMaps(opts: {
       const ybinTheirs = opts.getTheirs(ybinPath);
       if (ybinOurs !== undefined && ybinTheirs !== undefined) {
         const crdtResult = mergeYjsBase64ThreeWay(ybinBase ?? '', ybinOurs, ybinTheirs);
-        if (crdtResult.kind === 'merged') {
+        if (crdtResult.kind === 'merged' && !hasDuplicateUsfmIdentity(crdtResult.usfm)) {
           merged.set(path, crdtResult.usfm);
           // Also persist the merged Yjs state so the .ybin stays consistent.
           // The .ybin path may be encountered again in the loop and produce the
@@ -730,7 +743,13 @@ export function mergeProjectMaps(opts: {
           merged.set(ybinPath, crdtResult.base64);
           continue;
         }
+        if (crdtResult.kind === 'merged') unsafeYbinPaths.add(ybinPath);
         // CRDT merge returned an error (corrupted state) — fall through to OT.
+      }
+      if (base === undefined && ours !== theirs) {
+        if (ybinOurs !== undefined || ybinTheirs !== undefined) unsafeYbinPaths.add(ybinPath);
+        conflicts.push(fileConflictFrom(path, '', ours, theirs, []));
+        continue;
       }
     }
 

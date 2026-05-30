@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, mock, test, beforeEach } from 'bun:test';
-import type { FileConflict, ProjectMeta, ProjectStorage, ProjectSyncConfig } from '@usfm-tools/types';
+import type { FileConflict, ProjectMeta, ProjectRelease, ProjectStorage, ProjectSyncConfig } from '@usfm-tools/types';
 
 // ---------------------------------------------------------------------------
 // Mutable mock state — reset in beforeEach
@@ -17,9 +17,16 @@ let _compareRefsCallArgs: Array<{ base: string; head: string }> = [];
 let _compareRefsTotalCommits = 0;
 let _compareRefsMergeBase: string | null = null;
 let _pullFilesAtCalls: string[] = [];
+let _pullFilesAtByRef = new Map<string, Map<string, string>>();
 let _returnConflicts = false;
+let _mockConflicts: FileConflict[] | null = null;
 let _pushCallCount = 0;
 let _remoteHeadSha = 'remote-head-sha';
+let _ensureBranchCalls: Array<{ branch: string; fromBranch: string }> = [];
+let _pullRequestCalls: Array<{ head: string; base: string; title: string }> = [];
+let _mergePullRequestCalls: Array<{ baseRef: string; headRef: string; index: number }> = [];
+let _releaseCalls: Array<{ tag: string; targetCommitish?: string }> = [];
+let _releaseMergeConflicts = new Set<string>();
 
 // ---------------------------------------------------------------------------
 // Module mocks — registered before any import of dcs-project-sync
@@ -27,7 +34,9 @@ let _remoteHeadSha = 'remote-head-sha';
 
 mock.module('@usfm-tools/door43-rest', () => ({
   ensureRepoUsesMainDefaultBranch: async () => {},
-  ensureBranch: async () => {},
+  ensureBranch: async (opts: { branch: string; fromBranch: string }) => {
+    _ensureBranchCalls.push({ branch: opts.branch, fromBranch: opts.fromBranch });
+  },
   compareRefs: async (opts: { base: string; head: string }) => {
     _compareRefsCallArgs.push({ base: opts.base, head: opts.head });
     return {
@@ -37,9 +46,20 @@ mock.module('@usfm-tools/door43-rest', () => ({
       mergeBaseCommit: _compareRefsMergeBase,
     };
   },
-  ensureOpenPullRequest: async () => ({ number: 1, htmlUrl: '' }),
-  mergePullRequestOrCloseIfNothingToMerge: async () => ({ merged: true, prHtmlUrl: '' }),
-  createDcsRelease: async () => {},
+  ensureOpenPullRequest: async (opts: { head: string; base: string; title: string }) => {
+    _pullRequestCalls.push({ head: opts.head, base: opts.base, title: opts.title });
+    return { number: _pullRequestCalls.length, htmlUrl: `https://example.test/pulls/${_pullRequestCalls.length}` };
+  },
+  mergePullRequestOrCloseIfNothingToMerge: async (opts: { baseRef: string; headRef: string; index: number }) => {
+    _mergePullRequestCalls.push({ baseRef: opts.baseRef, headRef: opts.headRef, index: opts.index });
+    const prHtmlUrl = `https://example.test/pulls/${opts.index}`;
+    return _releaseMergeConflicts.has(opts.headRef)
+      ? { merged: false, prHtmlUrl }
+      : { merged: true, prHtmlUrl };
+  },
+  createDcsRelease: async (opts: { tag: string; targetCommitish?: string }) => {
+    _releaseCalls.push({ tag: opts.tag, targetCommitish: opts.targetCommitish });
+  },
   // Error class used by dcs-project-sync for commit-not-found fallback.
   CommitNotFoundError: class CommitNotFoundError extends Error {
     constructor(msg?: string) { super(msg ?? 'CommitNotFoundError'); this.name = 'CommitNotFoundError'; }
@@ -52,6 +72,8 @@ mock.module('@usfm-tools/editor-adapters', () => {
     async getRemoteHeadCommit() { return _remoteHeadSha; }
     async pullFilesAt(ref: string) {
       _pullFilesAtCalls.push(ref);
+      const byRef = _pullFilesAtByRef.get(ref);
+      if (byRef) return new Map(byRef);
       return new Map([['files/TIT.usfm', '\\id TIT\n']]);
     }
     async getRemoteFileIndex() {
@@ -87,7 +109,7 @@ mock.module('@usfm-tools/editor-adapters', () => {
       if (_returnConflicts) {
         return {
           merged: new Map<string, string>(),
-          conflicts: [
+          conflicts: _mockConflicts ?? [
             {
               conflictId: 'c1',
               path: 'files/TIT.usfm',
@@ -115,7 +137,12 @@ mock.module('@usfm-tools/editor-adapters', () => {
 // Import after mocks are registered
 // ---------------------------------------------------------------------------
 
-const { syncLocalProjectWithDcs } = await import('./dcs-project-sync');
+const {
+  ReleasePromotionConflictError,
+  SyncConflictsError,
+  publishPendingReleasesToDcs,
+  syncLocalProjectWithDcs,
+} = await import('./dcs-project-sync');
 
 // ---------------------------------------------------------------------------
 // Storage factory
@@ -129,7 +156,10 @@ const SYNC: ProjectSyncConfig = {
   targetType: 'org',
 };
 
-function makeStorage(meta: Partial<ProjectMeta> = {}): ProjectStorage {
+function makeStorage(
+  meta: Partial<ProjectMeta> = {},
+  initialReleases: ProjectRelease[] = [],
+): ProjectStorage {
   const fullMeta: ProjectMeta = {
     id: 'TEST',
     name: 'Test',
@@ -142,6 +172,7 @@ function makeStorage(meta: Partial<ProjectMeta> = {}): ProjectStorage {
   };
   let stored = { ...fullMeta };
   const files = new Map<string, string>([['files/TIT.usfm', '\\id TIT\n']]);
+  const releases = initialReleases.map((rel) => ({ ...rel, books: [...rel.books] }));
   // sha-unchanged matches what gitBlobShaHex returns → local delta is empty by default.
   const shas: Record<string, string> = { 'files/TIT.usfm': 'sha-unchanged' };
 
@@ -157,9 +188,14 @@ function makeStorage(meta: Partial<ProjectMeta> = {}): ProjectStorage {
     readFile: async (_, path) => files.get(path) ?? null,
     deleteFile: async (_, path) => { files.delete(path); },
     listFiles: async () => [...files.keys()],
-    createRelease: async () => {},
-    listReleases: async () => [],
-    updateRelease: async () => {},
+    createRelease: async (_id, release) => {
+      releases.push({ ...release, books: [...release.books] });
+    },
+    listReleases: async () => releases.map((rel) => ({ ...rel, books: [...rel.books] })),
+    updateRelease: async (_id, version, patch) => {
+      const i = releases.findIndex((rel) => rel.version === version);
+      if (i >= 0) releases[i] = { ...releases[i]!, ...patch, version };
+    },
     getSyncShas: async () => ({ ...shas }),
     setSyncShas: async (_id, next) => { Object.assign(shas, next); },
   };
@@ -174,9 +210,78 @@ beforeEach(() => {
   _compareRefsTotalCommits = 0;
   _compareRefsMergeBase = null;
   _pullFilesAtCalls = [];
+  _pullFilesAtByRef = new Map<string, Map<string, string>>();
   _returnConflicts = false;
+  _mockConflicts = null;
   _pushCallCount = 0;
   _remoteHeadSha = 'remote-head-sha';
+  _ensureBranchCalls = [];
+  _pullRequestCalls = [];
+  _mergePullRequestCalls = [];
+  _releaseCalls = [];
+  _releaseMergeConflicts = new Set<string>();
+});
+
+describe('publishPendingReleasesToDcs release promotion', () => {
+  test('merges selected book branches into the default branch before creating the release', async () => {
+    _compareRefsTotalCommits = 1;
+    const storage = makeStorage({}, [
+      {
+        version: 'v1.0.0',
+        created: '2026-01-01T00:00:00Z',
+        books: ['TIT', '3JN'],
+      },
+    ]);
+
+    await publishPendingReleasesToDcs({
+      storage,
+      projectId: 'TEST',
+      token: 'tok',
+      sync: SYNC,
+    });
+
+    expect(_ensureBranchCalls).toEqual([
+      { branch: 'tit', fromBranch: 'main' },
+      { branch: '3jn', fromBranch: 'main' },
+    ]);
+    expect(_pullRequestCalls.map((c) => ({ head: c.head, base: c.base }))).toEqual([
+      { head: 'tit', base: 'main' },
+      { head: '3jn', base: 'main' },
+    ]);
+    expect(_mergePullRequestCalls.map((c) => ({ headRef: c.headRef, baseRef: c.baseRef }))).toEqual([
+      { headRef: 'tit', baseRef: 'main' },
+      { headRef: '3jn', baseRef: 'main' },
+    ]);
+    expect(_releaseCalls).toEqual([{ tag: 'v1.0.0', targetCommitish: 'main' }]);
+
+    const releases = await storage.listReleases('TEST');
+    expect(releases[0]?.publishedAt).toBeDefined();
+  });
+
+  test('keeps the release queued when automatic branch promotion conflicts', async () => {
+    _compareRefsTotalCommits = 1;
+    _releaseMergeConflicts = new Set(['tit']);
+    const storage = makeStorage({}, [
+      {
+        version: 'v1.0.0',
+        created: '2026-01-01T00:00:00Z',
+        books: ['TIT'],
+      },
+    ]);
+
+    await expect(
+      publishPendingReleasesToDcs({
+        storage,
+        projectId: 'TEST',
+        token: 'tok',
+        sync: SYNC,
+      }),
+    ).rejects.toBeInstanceOf(ReleasePromotionConflictError);
+
+    expect(_releaseCalls).toHaveLength(0);
+    const releases = await storage.listReleases('TEST');
+    expect(releases[0]?.publishedAt).toBeUndefined();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -311,6 +416,113 @@ describe('syncLocalProjectWithDcs — ancestry-aware (Phase 1)', () => {
     const meta = await storage.getProject('TEST');
     // lastPushedCommit must remain at old value — push never ran.
     expect(meta?.lastPushedCommit?.['main']).toBe('old-sha');
+    expect(_pushCallCount).toBe(0);
+  });
+
+  test('auto-resolves stale self-conflicts when remote sidecar clock is already in local history', async () => {
+    _compareRefsTotalCommits = 2;
+    _compareRefsMergeBase = 'mb-sha';
+    _returnConflicts = true;
+    const remoteSidecar = JSON.stringify({
+      schema: 1,
+      docId: 'TEST:TIT',
+      vectorClock: { user: 2 },
+      savedAt: '2026-01-01T00:00:00Z',
+    });
+    const localSidecar = JSON.stringify({
+      schema: 1,
+      docId: 'TEST:TIT',
+      vectorClock: { user: 4 },
+      savedAt: '2026-01-01T00:01:00Z',
+    });
+    _pullFilesAtByRef.set('remote-head-sha', new Map([
+      ['files/TIT.usfm', '\\id TIT\n\\v 1 Old remote\n'],
+      ['.sync/TIT.json', remoteSidecar],
+    ]));
+    _pullFilesAtByRef.set('mb-sha', new Map([
+      ['files/TIT.usfm', '\\id TIT\n\\v 1 Base\n'],
+      ['.sync/TIT.json', remoteSidecar],
+    ]));
+    const storage = makeStorage({ lastPushedCommit: { tit: 'old-sha' } });
+    await storage.writeFile('TEST', 'files/TIT.usfm', '\\id TIT\n\\v 1 New local\n');
+    await storage.writeFile('TEST', '.sync/TIT.json', localSidecar);
+
+    const result = await syncLocalProjectWithDcs({
+      storage,
+      projectId: 'TEST',
+      token: 'tok',
+      sync: SYNC,
+      username: 'user',
+      bookCode: 'TIT',
+    });
+
+    expect(result.kind).toBe('synced');
+    expect(_pushCallCount).toBe(1);
+    const metaAfter = await storage.getProject('TEST');
+    expect(metaAfter?.pendingConflicts).toEqual([]);
+    expect(metaAfter?.lastPushedCommit?.tit).toBe('remote-head-sha');
+  });
+
+  test('stale self-resolution leaves non-book conflicts for the user', async () => {
+    _compareRefsTotalCommits = 2;
+    _compareRefsMergeBase = 'mb-sha';
+    _returnConflicts = true;
+    _mockConflicts = [
+      {
+        conflictId: 'book',
+        path: 'files/TIT.usfm',
+        chapterIndices: [1],
+        baseText: 'base',
+        oursText: 'ours book',
+        theirsText: 'theirs book',
+      },
+      {
+        conflictId: 'manifest',
+        path: 'manifest.yaml',
+        chapterIndices: [],
+        baseText: 'base',
+        oursText: 'ours manifest',
+        theirsText: 'theirs manifest',
+      },
+    ];
+    const remoteSidecar = JSON.stringify({
+      schema: 1,
+      docId: 'TEST:TIT',
+      vectorClock: { user: 2 },
+      savedAt: '2026-01-01T00:00:00Z',
+    });
+    const localSidecar = JSON.stringify({
+      schema: 1,
+      docId: 'TEST:TIT',
+      vectorClock: { user: 4 },
+      savedAt: '2026-01-01T00:01:00Z',
+    });
+    _pullFilesAtByRef.set('remote-head-sha', new Map([
+      ['files/TIT.usfm', '\\id TIT\n\\v 1 Old remote\n'],
+      ['manifest.yaml', 'dublin_core:\n  title: Remote\n'],
+      ['.sync/TIT.json', remoteSidecar],
+    ]));
+    _pullFilesAtByRef.set('mb-sha', new Map([
+      ['files/TIT.usfm', '\\id TIT\n\\v 1 Base\n'],
+      ['manifest.yaml', 'dublin_core:\n  title: Base\n'],
+      ['.sync/TIT.json', remoteSidecar],
+    ]));
+    const storage = makeStorage({ lastPushedCommit: { tit: 'old-sha' } });
+    await storage.writeFile('TEST', 'files/TIT.usfm', '\\id TIT\n\\v 1 New local\n');
+    await storage.writeFile('TEST', 'manifest.yaml', 'dublin_core:\n  title: Local\n');
+    await storage.writeFile('TEST', '.sync/TIT.json', localSidecar);
+
+    await expect(syncLocalProjectWithDcs({
+      storage,
+      projectId: 'TEST',
+      token: 'tok',
+      sync: SYNC,
+      username: 'user',
+      bookCode: 'TIT',
+    })).rejects.toBeInstanceOf(SyncConflictsError);
+
+    const metaAfter = await storage.getProject('TEST');
+    expect(metaAfter?.pendingConflicts?.map((c) => c.path)).toEqual(['manifest.yaml']);
     expect(_pushCallCount).toBe(0);
   });
 
