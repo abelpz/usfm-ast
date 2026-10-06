@@ -61,13 +61,23 @@ function matchPhraseSubsequenceFrom(
   return matchedIdx;
 }
 
-/** All subsequence matches (each hit is the list of flat indices), in order of increasing start index. */
+/**
+ * All distinct subsequence matches (each hit is the list of flat indices), in order of
+ * increasing start index. {@link matchPhraseSubsequenceFrom} scans forward from `s`, so every
+ * start before a match yields that same match; each is kept once so `hits[occurrence - 1]`
+ * is the Nth occurrence.
+ */
 function enumerateSubsequenceMatches(flat: FlatSource[], partWords: string[], minFlatIdx: number): number[][] {
   const hits: number[][] = [];
+  const seen = new Set<string>();
   const lo = Math.max(0, minFlatIdx);
   for (let s = lo; s < flat.length; s++) {
     const m = matchPhraseSubsequenceFrom(flat, partWords, s);
-    if (m) hits.push(m);
+    if (!m) continue;
+    const key = m.join(',');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    hits.push(m);
   }
   return hits;
 }
