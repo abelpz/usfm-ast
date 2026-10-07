@@ -17,9 +17,15 @@ export function needsSpaceBetween(prev: string, next: string): boolean {
 
   const isWordContinue = (c: string) => isLetter(c) || isNum(c) || isMark(c);
 
+  // What can only open a word or a quotation: brackets, opening quotes and the inverted marks of Spanish.
+  const opens = /^[([{«„“‘¡¿]/u.test(next);
+
   if (/\d$/u.test(a) && isLetter(b)) return true;
   if (/[)\]}"'»]/u.test(a) && isWordContinue(b)) return true;
-  if (isWordContinue(a) && /^[([{"'«„]/u.test(next)) return true;
+  if (isWordContinue(a) && (opens || /^["']/u.test(next))) return true;
+  // After the punctuation that ends a clause or closes a quotation, what opens the next one stands apart
+  // («dijo:» + «¡Que»). A straight quote opens and closes alike, so it is left to the rule above.
+  if (/[.!?:;,»”’)\]}]/u.test(a) && opens) return true;
   if (/[.!?:;]$/u.test(a) && isLetter(b)) return true;
   if (/[,;]$/u.test(a) && isLetter(b)) return true;
   if (isWordContinue(a) && isWordContinue(b)) return true;

@@ -75,11 +75,28 @@ export function stripArray(
   /** Groups in the order they were opened, so nesting does not change the order of a verse. */
   const opened: Frame[] = [];
 
-  const pushGatewayFragment = (chunk: string) => {
+  /**
+   * The parser drops the white space that follows a milestone, so nothing is left between a group that closes and
+   * what comes after it. A group never ends in the middle of a word: after one, another group, a `\\w` or text that
+   * begins a word is a new token, whatever punctuation is next to it. Left to the spacing of
+   * {@link appendGatewayText} alone, «ocultos—» + «banquetean» and «dijo:» + «¡Que» came back as one word that no
+   * aligned word matched any more: the verse lost a space, and its whole alignment with the next save.
+   */
+  let closed = false;
+  let reopened = false;
+
+  /** Text that begins a word or opens a quotation, not what is still part of the word before it. */
+  const beginsToken = (chunk: string) => /^(?:[\p{L}\p{N}([{«„“‘¡¿]|[—–-]+[\p{L}\p{N}])/u.test(chunk);
+
+  const pushGatewayFragment = (chunk: string, isWord = false) => {
     if (!chunk) return;
     const last = out[out.length - 1];
+    const apart = closed && (reopened || isWord || beginsToken(chunk));
+    closed = false;
+    reopened = false;
     if (typeof last === 'string') {
-      out[out.length - 1] = appendGatewayText(last, chunk);
+      out[out.length - 1] =
+        apart && !/\s$/u.test(last) && !/^\s/u.test(chunk) ? `${last} ${chunk}` : appendGatewayText(last, chunk);
     } else {
       out.push(chunk);
     }
@@ -124,6 +141,7 @@ export function stripArray(
         stack.push(frame);
         opened.push(frame);
       }
+      if (closed) reopened = true;
       continue;
     }
 
@@ -134,6 +152,8 @@ export function stripArray(
         if (top.depth <= 0) stack.pop();
       }
       if (stack.length === 0) flushOpened();
+      closed = true;
+      reopened = false;
       continue;
     }
 
@@ -141,7 +161,7 @@ export function stripArray(
       const text = extractText(o.content);
       const top = stack[stack.length - 1];
       if (top) top.targets.push(charToAlignedWord(o, text));
-      pushGatewayFragment(text);
+      pushGatewayFragment(text, true);
       continue;
     }
 
