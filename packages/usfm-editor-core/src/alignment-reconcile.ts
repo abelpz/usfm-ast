@@ -10,10 +10,17 @@ import {
   tokenizeWords,
 } from './word-diff';
 
+/** Numbered as the tokens of a verse are (`occurrenceStats`): by the word, without its attached punctuation. */
 function occurrenceAt(words: string[], index: number): { occurrence: number; occurrences: number } {
-  const w = words[index];
-  const occurrences = words.filter((x) => x === w).length;
-  const occurrence = words.slice(0, index + 1).filter((x) => x === w).length;
+  const wordOf = (surface: string) => normalizeWordForAlignmentMatch(surface) || surface;
+  const w = wordOf(words[index] ?? '');
+  let occurrence = 0;
+  let occurrences = 0;
+  words.forEach((surface, i) => {
+    if (wordOf(surface) !== w) return;
+    occurrences++;
+    if (i <= index) occurrence++;
+  });
   return { occurrence, occurrences };
 }
 
