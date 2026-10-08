@@ -44,10 +44,15 @@ function wordStream(words: string): { tokens: string[]; groups: AlignmentGroup[]
   return { tokens, groups };
 }
 
-/** Token indices each `occurrence` of `quote` resolves to in a {@link wordStream}. */
-function resolveInStream(words: string, quote: string, occurrences: number[]): number[][] {
+/**
+ * Token indices each `occurrence` of `quote` resolves to in a {@link wordStream}. The words at
+ * the `unaligned` positions are in the verse, and counted by `x-occurrence`, but have no
+ * alignment group yet.
+ */
+function resolveInStream(words: string, quote: string, occurrences: number[], unaligned: number[] = []): number[][] {
   const { tokens, groups } = wordStream(words);
-  return occurrences.map((occ) => matchHelpEntryToTokenIndicesByAlignment(tokens, help(quote, occ), groups));
+  const aligned = groups.filter((_, i) => !unaligned.includes(i));
+  return occurrences.map((occ) => matchHelpEntryToTokenIndicesByAlignment(tokens, help(quote, occ), aligned));
 }
 
 /** Titus 1:1 shape: «Θεοῦ» twice, with other source words before the first one. */
@@ -66,6 +71,13 @@ const titusGroups: AlignmentGroup[] = [
   { sources: [src('πίστιν')], targets: [tgt('la'), tgt('fe')] },
   { sources: [src('ἐκλεκτῶν')], targets: [tgt('de', 3, 4), tgt('los'), tgt('elegidos')] },
   { sources: [src('Θεοῦ', 2, 2)], targets: [tgt('de', 4, 4), tgt('Dios', 2, 2)] },
+];
+
+/** A verse still being aligned: «καί» 1 of 2 has no alignment group yet. */
+const partialTokens = ['a', 'and'];
+const partialGroups: AlignmentGroup[] = [
+  { sources: [src('A')], targets: [tgt('a')] },
+  { sources: [src('καί', 2, 2)], targets: [tgt('and')] },
 ];
 
 describe('verseHasAlignmentTargets', () => {
@@ -248,6 +260,71 @@ describe('matchHelpEntryToTokenIndicesByAlignment', () => {
     expect(resolveInStream('καὶ Χ Υ', 'καὶ & καὶ', [1])).toEqual([[]]);
   });
 
+  describe('partially aligned verse', () => {
+    it('resolves a single-word quote by x-occurrence, not by its place among the aligned ones', () => {
+      expect(matchHelpEntryToTokenIndicesByAlignment(partialTokens, help('καί', 1), partialGroups)).toEqual([]);
+      expect(matchHelpEntryToTokenIndicesByAlignment(partialTokens, help('καί', 2), partialGroups)).toEqual([1]);
+      expect(matchHelpEntryToTokenIndicesByAlignment(partialTokens, help('καί', 3), partialGroups)).toEqual([]);
+    });
+
+    it('keeps the number of every aligned occurrence, wherever the missing ones are', () => {
+      const verse = 'καὶ Χ καὶ Υ καὶ';
+      expect(resolveInStream(verse, 'καὶ', [1, 2, 3, 4], [2])).toEqual([[0], [], [4], []]);
+      expect(resolveInStream(verse, 'καὶ', [1, 2, 3, 4], [0, 2])).toEqual([[], [], [4], []]);
+      expect(resolveInStream(verse, 'καὶ', [1, 2, 3, 4], [4])).toEqual([[0], [2], [], []]);
+    });
+
+    it('numbers by x-occurrence when the gateway also reorders the aligned occurrences', () => {
+      // «τῇ» 2 of 3 is not aligned, and the gateway reaches 3 of 3 before 1 of 3.
+      const tokens = ['sound', 'teaching'];
+      const g = [
+        { sources: [src('τῇ', 3, 3)], targets: [tgt('sound')] },
+        { sources: [src('τῇ', 1, 3)], targets: [tgt('teaching')] },
+      ];
+      const at = (occurrence: number) => matchHelpEntryToTokenIndicesByAlignment(tokens, help('τῇ', occurrence), g);
+      expect([1, 2, 3].map(at)).toEqual([[1], [], [0]]);
+    });
+
+    it('gathers every milestone of a split word under its x-occurrence', () => {
+      // «ἐκλεκτῶν» 2 of 2 carried by two milestones; 1 of 2 is not aligned.
+      const tokens = ['of', 'the', 'chosen'];
+      const g = [
+        { sources: [src('ἐκλεκτῶν', 2, 2)], targets: [tgt('of')] },
+        { sources: [src('ἐκλεκτῶν', 2, 2)], targets: [tgt('the'), tgt('chosen')] },
+      ];
+      const at = (occurrence: number) =>
+        matchHelpEntryToTokenIndicesByAlignment(tokens, help('ἐκλεκτῶν', occurrence), g);
+      expect([1, 2].map(at)).toEqual([[], [0, 1, 2]]);
+    });
+
+    it('places later & segments after the occurrence that x-occurrence names', () => {
+      expect(resolveInStream('καὶ λόγος καὶ λόγος', 'καὶ & λόγος', [1, 2], [0])).toEqual([[], [2, 3]]);
+    });
+
+    it('takes the first aligned placement when the occurrence is below 1', () => {
+      // TN has -1 for "every occurrence": no number to look up.
+      for (const occurrence of [-1, 0]) {
+        expect(matchHelpEntryToTokenIndicesByAlignment(partialTokens, help('καί', occurrence), partialGroups)).toEqual([
+          1,
+        ]);
+      }
+    });
+
+    it('numbers a multi-word quote by its place among the placements found', () => {
+      // A phrase has no x-occurrence. Its place is its number while what comes before it is aligned.
+      expect(resolveInStream('ὁ λόγος Χ ὁ λόγος Υ ὁ λόγος', 'ὁ λόγος', [1, 2, 3], [6, 7])).toEqual([
+        [0, 1],
+        [3, 4],
+        [],
+      ]);
+      // Known limit: with an earlier occurrence missing, the later one takes its number.
+      expect(resolveInStream('ὁ λόγος Χ Υ ὁ λόγος', 'ὁ λόγος', [1, 2], [0, 1])).toEqual([[4, 5], []]);
+      // The stream is the same when the verse has «ὁ λόγος» once, after a «λόγος» and a «ὁ»
+      // that stand apart: there the placement is occurrence 1. Nothing tells the two verses apart.
+      expect(resolveInStream('λόγος Χ ὁ Υ ὁ λόγος', 'ὁ λόγος', [1, 2], [0, 2])).toEqual([[4, 5], []]);
+    });
+  });
+
   describe('Hebrew words that differ only in accents', () => {
     // Psalm 1:1 shape. `x-occurrence` counts each accented form on its own, so both forms of
     // «לֹא» have an occurrence 1 although they normalize to the same text.
@@ -298,6 +375,23 @@ describe('matchHelpEntryToTokenIndicesByAlignment', () => {
       expect(at(loMerkha, 1)).toEqual([2]);
       expect(at(loMerkha, 2)).toEqual([0]);
       expect(at(loMunah, 1)).toEqual([1]);
+    });
+
+    it('numbers an accented form by x-occurrence when an earlier word of that form is not aligned', () => {
+      // The first merkha form has no alignment group yet.
+      const partial = [
+        { sources: [src(loMunah, 1, 1)], targets: [tgt('a')] },
+        { sources: [src(loMerkha, 2, 2)], targets: [tgt('b')] },
+      ];
+      const at = (quote: string, occurrence: number, groups = partial) =>
+        matchHelpEntryToTokenIndicesByAlignment(['a', 'b'], help(quote, occurrence), groups);
+      expect([1, 2].map((occ) => at(loMerkha, occ))).toEqual([[], [1]]);
+      expect(at(loMunah, 1)).toEqual([0]);
+      // A quoted form the verse lacks: the two aligned forms are counted in stream order, as
+      // their x-occurrences do not compare.
+      expect([1, 2, 3].map((occ) => at(loTipcha, occ))).toEqual([[0], [1], []]);
+      // With one form aligned, its x-occurrence stands for the quoted word's.
+      expect([1, 2].map((occ) => at(loTipcha, occ, partial.slice(1)))).toEqual([[], [1]]);
     });
 
     it('matches accent-insensitively when the verse lacks the quoted form', () => {
@@ -388,6 +482,13 @@ describe('annotateTokensByAlignment', () => {
       { tokenIndex: 15, entries: [second] },
       { tokenIndex: 16, entries: [second] },
     ]);
+  });
+
+  it('annotates only the row whose occurrence is aligned in a partially aligned verse', () => {
+    const first = help('καί', 1, 'and-1');
+    const second = help('καί', 2, 'and-2');
+    const ann = annotateTokensByAlignment(partialTokens, [first, second], { [verseSid]: partialGroups }, verseSid);
+    expect(ann).toEqual([{ tokenIndex: 1, entries: [second] }]);
   });
 
   it('falls back to quote matcher when map missing verse', () => {

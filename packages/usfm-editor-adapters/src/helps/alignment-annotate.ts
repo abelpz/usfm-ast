@@ -232,24 +232,39 @@ function enumerateDistinctMatches(
 }
 
 /**
- * The occurrences of a quote's first segment, numbered as TN/TWL `Occurrence` numbers them: in
- * original-language order. The stream follows the gateway text, which may reach a later
- * occurrence first; the `x-occurrence` of the segment's first word restores the original order.
- * It only orders words of the same exact form. That is every candidate, unless the first word
- * had to be matched without accents (see {@link keySegment}) and the verse has several forms of
- * it: no form is the quoted one then, and the stream order stands.
+ * The placement of a quote's first segment that a TN/TWL `Occurrence` names. `Occurrence` counts
+ * in the original-language verse. The stream follows the gateway text, which may reach a later
+ * occurrence first, and it only holds the words aligned so far: an occurrence may be missing.
+ * The `x-occurrence` of the segment's first word tells the placements apart:
+ *
+ * - A single word is numbered by it. Occurrence n of the quote is the source word whose
+ *   `x-occurrence` is n; when that word is not aligned the quote resolves to nothing, whichever
+ *   other occurrences are.
+ * - A phrase is only ordered by it: occurrence 2 of «ὁ λόγος» may start with the third «ὁ».
+ *   Its placements are counted in that order. The count is the phrase's number only if every
+ *   earlier occurrence of the phrase is aligned, which the stream cannot tell: «ὁ» 2 of 2 next
+ *   to «λόγος» 2 of 2 is the second «ὁ λόγος» of one verse and the only one of another, where
+ *   the first «ὁ» and the first «λόγος» stand apart.
+ *
+ * `x-occurrence` only compares words of the same exact form. That is every candidate, unless
+ * the first word had to be matched without accents (see {@link keySegment}) and the verse has
+ * several forms of it: no form is the quoted one then, and the placements are counted in stream
+ * order. An `occurrence` below 1 names no occurrence (TN has -1 for "every occurrence"): the
+ * first placement in that order is taken, whatever its number.
  */
-function enumerateOccurrences(flat: KeyedSource[], partWords: string[]): PhraseMatch[] {
+function matchOccurrence(flat: KeyedSource[], partWords: string[], occurrence: number): PhraseMatch | undefined {
   const firstWord = partWords[0]!;
   const matches = enumerateDistinctMatches(flat, partWords, new Set()).map((m) => {
     // The source word standing for the segment's first word (the earliest, if it repeats).
     const leads = m.idxs.map((k) => flat[k]!).filter((f) => f.matchKey === firstWord);
     return { m, lead: leads.sort((a, b) => a.occurrence - b.occurrence)[0]! };
   });
-  if (matches.every(({ lead }) => lead.content === matches[0]!.lead.content)) {
-    matches.sort((a, b) => a.lead.occurrence - b.lead.occurrence);
+  const sameForm = matches.every(({ lead }) => lead.content === matches[0]!.lead.content);
+  if (sameForm && partWords.length === 1 && occurrence >= 1) {
+    return matches.find(({ lead }) => lead.occurrence === occurrence)?.m;
   }
-  return matches.map(({ m }) => m);
+  if (sameForm) matches.sort((a, b) => a.lead.occurrence - b.lead.occurrence);
+  return matches[Math.max(1, occurrence || 1) - 1]?.m;
 }
 
 /**
@@ -290,7 +305,10 @@ function mapTargetToTokenIndex(
  *   milestones may reorder or separate them (see {@link enumerateTightMatches}).
  * - Occurrences share no source word, so a looser window that borrows a word from a tighter
  *   one is not an occurrence of its own, and neither is a second milestone of the same word.
- *   `occurrence` counts them in original-language order (see {@link enumerateOccurrences}).
+ * - `occurrence` names one of them as the original-language verse numbers them: a single word
+ *   by its `x-occurrence`, also when earlier occurrences are not aligned; a phrase by its place
+ *   among the placements found, which is its number only if every earlier occurrence of the
+ *   phrase is aligned (see {@link matchOccurrence}).
  * - Each later `&` segment is the first placement after the previous segment, or else the
  *   nearest one before it, and never reuses a word of an earlier segment.
  */
@@ -320,7 +338,7 @@ export function matchHelpEntryToTokenIndicesByAlignment(
     const { stream, partWords } = keySegment(flat, words);
     const match: PhraseMatch | undefined = prev
       ? matchFollowingSegment(stream, partWords, prev, takenWords)
-      : enumerateOccurrences(stream, partWords)[Math.max(1, help.occurrence || 1) - 1];
+      : matchOccurrence(stream, partWords, help.occurrence);
     if (!match) return [];
     prev = match;
 
