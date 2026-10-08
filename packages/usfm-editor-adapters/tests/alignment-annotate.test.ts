@@ -26,6 +26,30 @@ function tgt(word: string, occurrence = 1, occurrences = 1): AlignmentGroup['tar
   return { word, occurrence, occurrences };
 }
 
+/**
+ * One alignment group per source word, each aligned to its own gateway token, so a token index
+ * is also the word's position in the alignment stream. `x-occurrence` follows stream order.
+ */
+function wordStream(words: string): { tokens: string[]; groups: AlignmentGroup[] } {
+  const list = words.split(' ');
+  const totals = new Map<string, number>();
+  for (const w of list) totals.set(w, (totals.get(w) ?? 0) + 1);
+  const seen = new Map<string, number>();
+  const tokens = list.map((_, i) => `w${i}`);
+  const groups = list.map((w, i) => {
+    const occurrence = (seen.get(w) ?? 0) + 1;
+    seen.set(w, occurrence);
+    return { sources: [src(w, occurrence, totals.get(w))], targets: [tgt(tokens[i]!)] };
+  });
+  return { tokens, groups };
+}
+
+/** Token indices each `occurrence` of `quote` resolves to in a {@link wordStream}. */
+function resolveInStream(words: string, quote: string, occurrences: number[]): number[][] {
+  const { tokens, groups } = wordStream(words);
+  return occurrences.map((occ) => matchHelpEntryToTokenIndicesByAlignment(tokens, help(quote, occ), groups));
+}
+
 /** Titus 1:1 shape: «Θεοῦ» twice, with other source words before the first one. */
 const titusTokens = [
   'Pablo', 'siervo', 'de', 'Dios', 'y', 'apóstol', 'de', 'Jesucristo',
@@ -129,6 +153,52 @@ describe('matchHelpEntryToTokenIndicesByAlignment', () => {
     expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help('ὁ λόγος', 3), g)).toEqual([]);
   });
 
+  it('does not count a looser window around a tighter match as an occurrence', () => {
+    // The article of «τοῦ Κυρίου» plus the second «Θεοῦ» is not an occurrence of «τοῦ Θεοῦ».
+    expect(resolveInStream('τοῦ Θεοῦ τοῦ Κυρίου τοῦ Θεοῦ', 'τοῦ Θεοῦ', [1, 2, 3])).toEqual([[0, 1], [4, 5], []]);
+  });
+
+  it('pairs a repeated word with the nearest one, not the first in the verse', () => {
+    expect(resolveInStream('τοῦ Κυρίου τοῦ Θεοῦ', 'τοῦ Θεοῦ', [1, 2])).toEqual([[2, 3], []]);
+  });
+
+  it('resolves each occurrence when the gateway reverses the quote word order', () => {
+    // In quote order the only match is «τοῦ»(2) + «Θεοῦ»(4), which straddles two phrases.
+    expect(resolveInStream('Χ Θεοῦ τοῦ Υ Θεοῦ τοῦ', 'τοῦ Θεοῦ', [1, 2, 3])).toEqual([[1, 2], [4, 5], []]);
+  });
+
+  it('counts matches that compete for a source word once, preferring quote order', () => {
+    expect(resolveInStream('Θεοῦ Θεοῦ τοῦ', 'τοῦ Θεοῦ', [1, 2])).toEqual([[1, 2], []]);
+    expect(resolveInStream('Θεοῦ τοῦ Θεοῦ', 'τοῦ Θεοῦ', [1, 2])).toEqual([[1, 2], []]);
+  });
+
+  it('still matches across a word the gateway moved inside the quote', () => {
+    expect(resolveInStream('ἐφανέρωσεν Χ τὸν λόγον', 'ἐφανέρωσεν τὸν λόγον', [1, 2])).toEqual([[0, 2, 3], []]);
+  });
+
+  describe('source word split across milestones', () => {
+    // ULT-style split: «ἐκλεκτῶν» (1 of 1) carried by two adjacent milestones.
+    const tokens = ['the', 'faith', 'of', 'the', 'chosen', 'of', 'God'];
+    const g = [
+      { sources: [src('πίστιν')], targets: [tgt('the', 1, 2), tgt('faith')] },
+      { sources: [src('ἐκλεκτῶν')], targets: [tgt('of', 1, 2)] },
+      { sources: [src('ἐκλεκτῶν')], targets: [tgt('the', 2, 2), tgt('chosen')] },
+      { sources: [src('Θεοῦ')], targets: [tgt('of', 2, 2), tgt('God')] },
+    ];
+
+    it('matches a quote that lists the split word once', () => {
+      expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help('πίστιν ἐκλεκτῶν Θεοῦ'), g)).toEqual([
+        0, 1, 2, 3, 4, 5, 6,
+      ]);
+      expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help('πίστιν ἐκλεκτῶν'), g)).toEqual([0, 1, 2, 3, 4]);
+    });
+
+    it('does not count the second milestone as a second occurrence', () => {
+      expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help('ἐκλεκτῶν', 1), g)).toEqual([2, 3, 4]);
+      expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help('ἐκλεκτῶν', 2), g)).toEqual([]);
+    });
+  });
+
   it('handles & segments in order', () => {
     const g3 = [
       {
@@ -143,6 +213,42 @@ describe('matchHelpEntryToTokenIndicesByAlignment', () => {
     const tokens = ['A', 'B'];
     const idx = matchHelpEntryToTokenIndicesByAlignment(tokens, help('alpha&beta', 1), g3);
     expect(idx.sort()).toEqual([0, 1]);
+  });
+
+  it('places later & segments after the occurrence chosen for the first segment', () => {
+    expect(resolveInStream('καὶ λόγος καὶ λόγος', 'καὶ & λόγος', [1, 2, 3])).toEqual([[0, 1], [2, 3], []]);
+    // The first «λόγος» is nearer to the second «καὶ», but it comes before it.
+    expect(resolveInStream('καὶ ὁ λόγος καὶ ὁ λόγος', 'καὶ & λόγος', [1, 2])).toEqual([[0, 2], [3, 5]]);
+  });
+
+  it('falls back to the nearest & segment before the previous one when the gateway reorders them', () => {
+    // Titus 2:11 shape: UGNT «ἐπεφάνη γὰρ ἡ χάρις», gateway order "for the grace … has appeared".
+    expect(resolveInStream('γὰρ ἡ χάρις ἐπεφάνη', 'ἐπεφάνη & ἡ χάρις', [1])).toEqual([[1, 2, 3]]);
+    expect(resolveInStream('ἡ χάρις ἐπεφάνη Χ ἡ χάρις ἐπεφάνη', 'ἐπεφάνη & ἡ χάρις', [2])).toEqual([[4, 5, 6]]);
+  });
+
+  it('does not reuse a source word for two & segments', () => {
+    expect(resolveInStream('καὶ Χ καὶ Υ', 'καὶ & καὶ', [1])).toEqual([[0, 2]]);
+    expect(resolveInStream('καὶ Χ Υ', 'καὶ & καὶ', [1])).toEqual([[]]);
+  });
+
+  it('treats Hebrew words that differ only in accents as different source words', () => {
+    // Psalm 1:1 shape. `x-occurrence` counts each accented form on its own, so both forms of
+    // «לֹא» have an occurrence 1 although they normalize to the same text.
+    const loMerkha = 'לֹ֥א'; // לֹ֥א
+    const loMunah = 'לֹ֣א'; // לֹ֣א
+    const tokens = ['not', 'walk', 'not', 'stand', 'not', 'sit'];
+    const g = [
+      { sources: [src(loMerkha, 1, 2)], targets: [tgt('not', 1, 3)] },
+      { sources: [src('הָלַךְ')], targets: [tgt('walk')] },
+      { sources: [src(loMerkha, 2, 2)], targets: [tgt('not', 2, 3)] },
+      { sources: [src('עָמָד')], targets: [tgt('stand')] },
+      { sources: [src(loMunah, 1, 1)], targets: [tgt('not', 3, 3)] },
+      { sources: [src('יָשָׁב')], targets: [tgt('sit')] },
+    ];
+    const quote = `${loMerkha} הָלַךְ & ${loMunah} יָשָׁב`;
+    expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help(quote), g)).toEqual([0, 1, 4, 5]);
+    expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help(loMerkha, 2), g)).toEqual([2]);
   });
 });
 

@@ -5,13 +5,25 @@ import type { AlignedWord, AlignmentGroup, AlignmentMap, HelpEntry, TokenAnnotat
 import { annotateTokensByQuote, matchHelpQuoteToTokenIndices } from './quote-matcher';
 import { normalizeHelpsText, tokenizeVersePlainText, versePlainTextFromStore } from './verse-text';
 
-type FlatSource = { gIdx: number; contentNorm: string; occurrence: number };
+/**
+ * One source word of the verse's alignment stream. `wordKey` identifies the original-language
+ * word: a word that the gateway text splits across several milestones appears several times in
+ * the stream with the same `wordKey`. It uses the exact `x-content`, because `x-occurrence`
+ * counts exact forms: two Hebrew words that differ only in accents share `contentNorm` and may
+ * share an occurrence number, yet are different words.
+ */
+type FlatSource = { gIdx: number; contentNorm: string; occurrence: number; wordKey: string };
 
 function flattenSources(groups: AlignmentGroup[]): FlatSource[] {
   const out: FlatSource[] = [];
   for (let gIdx = 0; gIdx < groups.length; gIdx++) {
     for (const w of groups[gIdx]!.sources) {
-      out.push({ gIdx, contentNorm: normalizeHelpsText(w.content), occurrence: w.occurrence });
+      out.push({
+        gIdx,
+        contentNorm: normalizeHelpsText(w.content),
+        occurrence: w.occurrence,
+        wordKey: `${w.content}\x00${w.occurrence}`,
+      });
     }
   }
   return out;
@@ -61,27 +73,6 @@ function matchPhraseSubsequenceFrom(
   return matchedIdx;
 }
 
-/**
- * All distinct subsequence matches (each hit is the list of flat indices), in order of
- * increasing start index. {@link matchPhraseSubsequenceFrom} scans forward from `s`, so every
- * start before a match yields that same match; each is kept once so `hits[occurrence - 1]`
- * is the Nth occurrence.
- */
-function enumerateSubsequenceMatches(flat: FlatSource[], partWords: string[], minFlatIdx: number): number[][] {
-  const hits: number[][] = [];
-  const seen = new Set<string>();
-  const lo = Math.max(0, minFlatIdx);
-  for (let s = lo; s < flat.length; s++) {
-    const m = matchPhraseSubsequenceFrom(flat, partWords, s);
-    if (!m) continue;
-    const key = m.join(',');
-    if (seen.has(key)) continue;
-    seen.add(key);
-    hits.push(m);
-  }
-  return hits;
-}
-
 function multisetNeed(partWords: string[]): Map<string, number> {
   const need = new Map<string, number>();
   for (const w of partWords) need.set(w, (need.get(w) ?? 0) + 1);
@@ -118,21 +109,78 @@ function matchPhraseMultisetFromStart(
   return matchedIdx;
 }
 
-/** Like {@link enumerateSubsequenceMatches}, but order-agnostic multiset anchored at each start index. */
-function enumerateMultisetMatches(flat: FlatSource[], partWords: string[], minFlatIdx: number): number[][] {
-  const hits: number[][] = [];
-  const lo = Math.max(0, minFlatIdx);
-  for (let s = lo; s < flat.length; s++) {
+/** One placement of a quote segment in the alignment stream. */
+type PhraseMatch = {
+  /** Flat indices of the matched source words, ascending. */
+  idxs: number[];
+  /** The words follow the quote's own order (otherwise they only match as a multiset). */
+  ordered: boolean;
+};
+
+const matchStart = (m: PhraseMatch): number => m.idxs[0]!;
+const matchSpan = (m: PhraseMatch): number => m.idxs[m.idxs.length - 1]! - m.idxs[0]! + 1;
+
+/**
+ * Every tightest placement of a quote segment, by increasing start: the windows of the stream
+ * that hold all of `partWords` and contain no smaller such window. Words may be in any order
+ * and other words may sit between them, but a looser window around a tighter one (e.g. an
+ * earlier article paired with a later noun) is never a candidate.
+ */
+function enumerateTightMatches(flat: FlatSource[], partWords: string[]): PhraseMatch[] {
+  const windows: number[][] = [];
+  for (let s = 0; s < flat.length; s++) {
     const m = matchPhraseMultisetFromStart(flat, partWords, s);
-    if (m) hits.push(m);
+    if (!m) continue;
+    // A later start never ends earlier, so a window ending on the same word as the previous
+    // one lies inside it: the previous one was not the tightest.
+    const prev = windows[windows.length - 1];
+    if (prev && prev[prev.length - 1] === m[m.length - 1]) windows.pop();
+    windows.push(m);
   }
-  return hits;
+  return windows.map((m) => {
+    const inOrder = matchPhraseSubsequenceFrom(flat, partWords, m[0]!);
+    return inOrder && inOrder[inOrder.length - 1]! <= m[m.length - 1]!
+      ? { idxs: inOrder, ordered: true }
+      : { idxs: m, ordered: false };
+  });
 }
 
-function enumeratePhraseMatches(flat: FlatSource[], partWords: string[], minFlatIdx: number): number[][] {
-  const ordered = enumerateSubsequenceMatches(flat, partWords, minFlatIdx);
-  if (ordered.length > 0) return ordered;
-  return enumerateMultisetMatches(flat, partWords, minFlatIdx);
+/**
+ * Placements of a quote segment that share no source word with each other nor with `takenWords`,
+ * by increasing start; `[occurrence - 1]` is the Nth occurrence. Where candidates compete for a
+ * word, the tightest wins, then the one in the quote's own order, then the earliest.
+ */
+function enumerateDistinctMatches(
+  flat: FlatSource[],
+  partWords: string[],
+  takenWords: ReadonlySet<string>,
+): PhraseMatch[] {
+  const candidates = enumerateTightMatches(flat, partWords).sort(
+    (a, b) => matchSpan(a) - matchSpan(b) || Number(b.ordered) - Number(a.ordered) || matchStart(a) - matchStart(b),
+  );
+  const taken = new Set(takenWords);
+  const picked: PhraseMatch[] = [];
+  for (const m of candidates) {
+    if (m.idxs.some((k) => taken.has(flat[k]!.wordKey))) continue;
+    for (const k of m.idxs) taken.add(flat[k]!.wordKey);
+    picked.push(m);
+  }
+  return picked.sort((a, b) => matchStart(a) - matchStart(b));
+}
+
+/**
+ * Placement of a later `&` segment. TN lists segments in original-language order, so the first
+ * placement after the previous segment wins; when the gateway text moved the segment in front
+ * of it, the nearest placement before it is used instead.
+ */
+function matchFollowingSegment(
+  flat: FlatSource[],
+  partWords: string[],
+  prev: PhraseMatch,
+  takenWords: ReadonlySet<string>,
+): PhraseMatch | undefined {
+  const free = enumerateDistinctMatches(flat, partWords, takenWords);
+  return free.find((m) => matchStart(m) > matchStart(prev)) ?? free[free.length - 1];
 }
 
 function mapTargetToTokenIndex(
@@ -150,6 +198,15 @@ function mapTargetToTokenIndex(
 /**
  * Token indices for one help row using alignment (original-language phrase → gateway tokens).
  * Returns empty when the phrase cannot be matched in the verse alignment stream.
+ *
+ * How a quote is placed in the stream of aligned source words:
+ * - A segment matches the tightest window holding all its words; gateway word order and split
+ *   milestones may reorder or separate them (see {@link enumerateTightMatches}).
+ * - Occurrences share no source word, so a looser window that borrows a word from a tighter
+ *   one is not an occurrence of its own, and neither is a second milestone of the same word.
+ *   `occurrence` counts them in stream order.
+ * - Each later `&` segment is the first placement after the previous segment, or else the
+ *   nearest one before it, and never reuses a word of an earlier segment.
  */
 export function matchHelpEntryToTokenIndicesByAlignment(
   tokens: string[],
@@ -168,13 +225,12 @@ export function matchHelpEntryToTokenIndicesByAlignment(
   const flat = flattenSources(groups);
   const meta = buildGatewayTokenOccurrences(tokens);
 
-  /** When the TN `Quote` uses `&`, each segment is matched independently in verse order (UGNT-style segment order may differ from ULT `x-content` order). */
-  const multiSegment = rawParts.length > 1;
-  let minFlat = 0;
+  // Source words already matched by an earlier segment of the quote.
+  const takenWords = new Set<string>();
+  let prev: PhraseMatch | undefined;
   const tokenIdx = new Set<number>();
 
-  for (let pi = 0; pi < rawParts.length; pi++) {
-    const part = rawParts[pi]!;
+  for (const part of rawParts) {
     // Per-token normalize so commas / punctuation glued to a Greek word in TN/TWL
     // (e.g. "Θεοῦ,") still match alignment `x-content` ("Θεοῦ") after normalizeHelpsText.
     const partWords = part
@@ -182,12 +238,13 @@ export function matchHelpEntryToTokenIndicesByAlignment(
       .map((w) => normalizeHelpsText(w))
       .filter(Boolean);
     if (partWords.length === 0) return [];
-    const occ = pi === 0 ? Math.max(1, help.occurrence || 1) : 1;
-    const segmentMinFlat = multiSegment ? 0 : minFlat;
-    const hits = enumeratePhraseMatches(flat, partWords, segmentMinFlat);
-    if (hits.length < occ) return [];
-    const matchedFlatIdxs = hits[occ - 1]!;
-    if (!multiSegment) minFlat = Math.max(...matchedFlatIdxs) + 1;
+    const match: PhraseMatch | undefined = prev
+      ? matchFollowingSegment(flat, partWords, prev, takenWords)
+      : enumerateDistinctMatches(flat, partWords, takenWords)[Math.max(1, help.occurrence || 1) - 1];
+    if (!match) return [];
+    for (const k of match.idxs) takenWords.add(flat[k]!.wordKey);
+    prev = match;
+    const matchedFlatIdxs = match.idxs;
 
     // Collect the (contentNorm, occurrence) identity of each primary source word.
     // Then find ALL alignment groups that share those same identity pairs — this

@@ -29,6 +29,23 @@ describe('en_tn Titus vs en_ult (aligned gateway quotes)', () => {
     expect(gateway!.toLowerCase()).toMatch(/truth|chosen|god/);
   });
 
+  it('pairs a repeated Greek word with the phrase it belongs to (fixtures: tn_TIT.tsv + 57-TIT.usfm)', () => {
+    const store = new DocumentStore({ silentConsole: true });
+    store.loadUSFM(readFileSync(path.join(FIXTURES, 'titus-57-full.usfm'), 'utf8'));
+    const rows = parseTnTsv(readFileSync(path.join(FIXTURES, 'tn_TIT.tsv'), 'utf8'));
+    const gatewayFor = (chapter: number, verse: number, quote: string) => {
+      const row = rows.find((r) => r.ref.chapter === chapter && r.ref.verse === verse && r.origWords === quote);
+      expect(row).toBeDefined();
+      return alignedGatewayQuoteForHelp(store, row!);
+    };
+
+    // 1:7 has «μὴ» five times and 2:2 «τῇ» three times; each quote owns the adjacent one.
+    expect(gatewayFor(1, 7, 'μὴ πάροινον')).toBe('not addicted to wine');
+    expect(gatewayFor(2, 2, 'τῇ ἀγάπῃ')).toBe('in love');
+    // en_ult orders these words "various passions and pleasures"; «καὶ» is not the verse's first.
+    expect(gatewayFor(3, 3, 'ἐπιθυμίαις καὶ ἡδοναῖς ποικίλαις')).toBe('by various passions and pleasures');
+  });
+
   it('builds a non-empty gateway quote for every verse-scoped TN row (fixtures: tn_TIT.tsv + 57-TIT.usfm)', () => {
     const usfm = readFileSync(path.join(FIXTURES, 'titus-57-full.usfm'), 'utf8');
     const tsv = readFileSync(path.join(FIXTURES, 'tn_TIT.tsv'), 'utf8');
