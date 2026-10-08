@@ -18,11 +18,11 @@ function parseUsfmToUsj(usfm: string): Parameters<typeof stripAlignments>[0] {
   return p.toJSON() as Parameters<typeof stripAlignments>[0];
 }
 
-/** Remove embedded alignments and return plain USFM (no `\\zaln-*`). */
+/** Remove embedded alignments and return plain USFM (no `\\zaln-*`), saying the version of USFM the file said. */
 export function stripAlignmentFromUsfm(usfm: string): string {
   const usj = parseUsfmToUsj(usfm);
   const { editable } = stripAlignments(usj);
-  return convertUSJDocumentToUSFM(editable as EditableUSJ);
+  return keepUsfmVersionLine(convertUSJDocumentToUSFM(editable as EditableUSJ), usfm);
 }
 
 /** Extract embedded alignment into an {@link AlignmentDocument} (strip path uses alignment layer). */

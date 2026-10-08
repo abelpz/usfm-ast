@@ -219,10 +219,22 @@ describe('alignment-directory', () => {
       expect(layoutAlignedUsfm(plain)).toBe(plain);
     });
 
+    it('puts a chunk mark on a line of its own in a file that has no alignment left', () => {
+      const usfm = '\\id JUD\n\\usfm 3.0\n\\mt Judas\n\n\\ts\\*\n\\c 1\n\\p\n\\v 1 Judas.\n\\v 2 Paz.\n\n\\ts\\*\n\\p\n\\v 3 Amados.\n';
+      const none = withAlignmentVerses(extractAlignmentDocumentFromUsfm(usfm, translation, source), {});
+      const written = mergeAlignmentIntoUsfm(usfm, none);
+      expect(written).toBe(usfm);
+      expect(mergeAlignmentIntoUsfm(written, none)).toBe(written);
+    });
+
     it('keeps the version the file said it was written in', () => {
       const usfm = '\\id JUD\n\\usfm 3.0\n\\c 1\n\\p\n\\v 1 Judas.\n';
       const doc = withAlignmentVerses(extractAlignmentDocumentFromUsfm(usfm, translation, source), {});
       expect(mergeAlignmentIntoUsfm(usfm, doc)).toContain('\\usfm 3.0\n');
+      // Taken apart and put together again (the text edited in between), it still says it.
+      const aligned = '\\id JUD\n\\usfm 3.0\n\\c 1\n\\p\n\\v 1 \\zaln-s |x-content="a"\\*\\w Judas|x-occurrence="1" x-occurrences="1"\\w*\\zaln-e\\*.\n';
+      expect(stripAlignmentFromUsfm(aligned)).toContain('\\usfm 3.0\n');
+      expect(swapAlignmentInUsfm(aligned, extractAlignmentDocumentFromUsfm(aligned, translation, source))).toContain('\\usfm 3.0\n');
       expect(keepUsfmVersionLine('\\id JUD\n\\usfm 3.1\n\\c 1', '\\id JUD\n\\usfm 3.0\n')).toBe('\\id JUD\n\\usfm 3.0\n\\c 1');
       expect(keepUsfmVersionLine('\\id JUD\n\\usfm 3.1\n', '\\id JUD\n')).toBe('\\id JUD\n\\usfm 3.1\n');
     });

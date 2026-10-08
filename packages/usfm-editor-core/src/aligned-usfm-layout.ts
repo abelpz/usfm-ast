@@ -12,10 +12,12 @@ const LINE_LEAD = /^(?:\\(?!zaln-|w\s|v\s)[a-z]+\d*\s+)?(?:\\v\s+\S+\s+)?/;
  * It was written a verse to a line, in lines of five thousand characters. The change of one word showed as the
  * whole verse changed, two people who had each touched a different word of a verse were in conflict, and a file
  * written by those tools came back with every line of it changed. Only white space moves: a line end where a
- * space was is the same space to whoever reads the file. A file with no alignment is left as it is.
+ * space was is the same space to whoever reads the file. A file with no alignment and no chunk marks is left as
+ * it is; one that has lost its alignment still has its chunk marks put on their own lines, where a writer leaves
+ * them hanging off the end of the verse before.
  */
 export function layoutAlignedUsfm(usfm: string): string {
-  if (!/\\zaln-s\b/.test(usfm)) return usfm;
+  if (!/\\zaln-s\b/.test(usfm) && !/\S[ \t]*\\ts\\\*/.test(usfm)) return usfm;
   const eol = usfm.includes('\r\n') ? '\r\n' : '\n';
   const lines = usfm.split(/\r?\n/).map((line) => {
     if (!line.includes('\\zaln-s')) return line;
