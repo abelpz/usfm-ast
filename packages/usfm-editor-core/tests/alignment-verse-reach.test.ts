@@ -157,15 +157,21 @@ describe('the title of a psalm', () => {
 describe('psalms of the ULT, written back', () => {
   const usfm = readFileSync(join(__dirname, '../../usfm-parser/tests/fixtures/usfm/psa.ult-aligned.usfm'), 'utf8');
   const saved = rewrite(usfm);
-  /** The lines of the title of a psalm: from its `\d` to the empty line or the line of poetry after it. */
-  const titleOf = (text: string, chapter: number) => /\\d [\s\S]*?(?=\r?\n(?:\r?\n|\\q))/.exec(text.slice(text.indexOf(`\\c ${chapter}\n`)))?.[0];
+  /**
+   * The lines of the title of a psalm: from its `\d` to the empty line or the line of poetry after it. Line by
+   * line, since a checkout may give the fixture other line ends than the ones a book is written with.
+   */
+  const titleOf = (text: string, chapter: number) =>
+    /\\d [\s\S]*?(?=\r?\n(?:\r?\n|\\q))/.exec(text.slice(text.search(new RegExp(String.raw`\\c ${chapter}\r?\n`))))?.[0].split(/\r?\n/);
 
   it('have the lines of each title as they were', () => {
-    expect(titleOf(usfm, 3)).toMatch(/^\\d \\zaln-s [^\n]*\\w A\|/);
-    expect(titleOf(saved, 3)).toBe(titleOf(usfm, 3));
-    expect(titleOf(saved, 4)).toBe(titleOf(usfm, 4));
+    expect(titleOf(usfm, 3)![0]).toMatch(/^\\d \\zaln-s .*\\w A\|/);
+    // A word to a line: «A psalm of David, when he fled from the face of Absalom his son».
+    expect(titleOf(usfm, 3)).toHaveLength(14);
+    expect(titleOf(saved, 3)).toEqual(titleOf(usfm, 3));
+    expect(titleOf(saved, 4)).toEqual(titleOf(usfm, 4));
     // The eleventh psalm has its title after the number of its first verse: it is text of that verse.
-    expect(titleOf(saved, 11)).toBe(titleOf(usfm, 11));
+    expect(titleOf(saved, 11)).toEqual(titleOf(usfm, 11));
   });
 
   it('have every title under verse 0 of its psalm, and the last verse of a psalm with its own words', () => {
