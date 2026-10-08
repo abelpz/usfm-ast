@@ -5,6 +5,8 @@
 
 import type { AlignedWord, AlignmentMap, EditableUSJ, OriginalWord } from '@usfm-tools/types';
 
+import { passVerseMark, readHeld, type VerseCursor } from './verse-reach';
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
 }
@@ -57,14 +59,21 @@ export function readsApartAfterGroup(chunk: string, groupFollows: boolean): bool
   return beginsToken(chunk) || (groupFollows && /^"+$/u.test(chunk));
 }
 
-function transformSubtree(node: unknown, ctx: { verseRef: string }, alignments: AlignmentMap): unknown {
+/**
+ * A node with what it holds stripped. Which verse its groups are of is said by {@link passVerseMark} and
+ * {@link readHeld}, as for whoever writes them back: a group in a heading or in a note is of no verse. They were
+ * all given to the verse read last, across headings and chapters, and the title of a psalm was read as words of
+ * the last verse of the psalm before it.
+ */
+function transformSubtree(node: unknown, ctx: VerseCursor, alignments: AlignmentMap): unknown {
   if (!isRecord(node)) return node;
   const o = node as Record<string, unknown>;
-  if (o.type === 'verse' && typeof o.sid === 'string') {
-    ctx.verseRef = o.sid;
-  }
+  const mark = passVerseMark(o, ctx);
   if (Array.isArray(o.content)) {
-    return { ...o, content: stripArray(o.content as unknown[], ctx, alignments) };
+    const held = o as Record<string, unknown> & { content: unknown[] };
+    // A verse that holds its own text is read with the cursor it has just moved.
+    const content = mark ? stripArray(held.content, ctx, alignments) : readHeld(held, ctx, (inner, at) => stripArray(inner, at, alignments));
+    return { ...o, content };
   }
   return { ...o };
 }
@@ -74,7 +83,7 @@ function transformSubtree(node: unknown, ctx: { verseRef: string }, alignments: 
  */
 export function stripArray(
   nodes: unknown[],
-  ctx: { verseRef: string },
+  ctx: VerseCursor,
   alignments: AlignmentMap
 ): unknown[] {
   const out: unknown[] = [];
@@ -162,12 +171,6 @@ export function stripArray(
 
     const o = item;
     const t = o.type;
-
-    if (t === 'verse' && typeof o.sid === 'string') {
-      ctx.verseRef = o.sid;
-      out.push(transformSubtree(o, ctx, alignments));
-      continue;
-    }
 
     if (t === 'ms' && o.marker === 'zaln-s') {
       const top = stack[stack.length - 1];

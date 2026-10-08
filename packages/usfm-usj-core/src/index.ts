@@ -9,7 +9,8 @@ export {
   normalizeWordForAlignmentMatch,
   alignmentWordSurfacesEqual,
 } from './gateway-word-split';
-export { findVerseInlineNodes } from './verse-inline';
+export { chapterFrontSid, isVerseTextSpan, walkVerseStretches, type VerseCursor } from './verse-reach';
+export { collectVerseInlineNodes, findVerseInlineNodes } from './verse-inline';
 export { collectVerseTextsFromContent } from './verse-gateway-text';
 export {
   tokenizeGatewayUsj,

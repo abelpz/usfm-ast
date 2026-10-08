@@ -2,6 +2,9 @@
  * Whole books as they are in Door43, read and written back the way an application does each time somebody saves
  * the alignment of one verse: nothing of the rest of the book may change.
  *
+ * - `psa.ult-aligned`: Psalms 3, 4 and 11 of the ULT, as they are in it. The titles of the first two are written
+ *   before their first verse (`\d`) and aligned, with their words numbered on their own; the one of the third,
+ *   after the number of its first verse. Each «Selah» is aligned inside a character style (`\qs`).
  * - `jon.tpl-aligned`: Jonah of a gateway team, written by unfoldingWord's tools. Chapter 2 is a psalm: its verses
  *   are on two and three lines (`\q`, `\q2`), and it has straight quotation marks.
  * - `jud.ult-aligned`: Jude of the ULT. A group to a line, chunk marks (`\ts\*`), a footnote, groups written in
@@ -69,7 +72,7 @@ const groupsOf = (usfm: string) => {
 /** What the lines of a verse begin with: its paragraph mark and its number. */
 const LEAD = /^(?:\\(?!zaln-|w\s|v\s)[a-z]+\d*\s+)?(?:\\v\s+\S+\s+)?/;
 
-const BOOKS = ['jon.tpl-aligned.usfm', 'jud.ult-aligned.usfm', 'jud.tpl-nested-writer.usfm', 'tit.tpl-aligned.usfm', 'alignment.usfm'];
+const BOOKS = ['psa.ult-aligned.usfm', 'jon.tpl-aligned.usfm', 'jud.ult-aligned.usfm', 'jud.tpl-nested-writer.usfm', 'tit.tpl-aligned.usfm', 'alignment.usfm'];
 
 describe.each(BOOKS)('%s read and written back', (name) => {
   const usfm = fixture(name);

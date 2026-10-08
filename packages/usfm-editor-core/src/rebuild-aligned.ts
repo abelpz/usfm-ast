@@ -11,7 +11,9 @@
  *    layer reads from the original USFM. They are NOT recomputed from the aligned-only subset.
  *
  * 3. A verse is all of its words, on however many lines it is written: the words of a verse of
- *    poetry are found across its `\q` paragraphs, not only in the one that has its `\v`.
+ *    poetry are found across its `\q` paragraphs, not only in the one that has its `\v`. What a
+ *    verse reaches is said once, for who reads and for who writes (`walkVerseStretches`): not past
+ *    its chapter, not the words of a heading, and the title of a psalm as verse 0 of its chapter.
  *
  * 4. A group is written over each unbroken run of its words: `\zaln-s` for each of its original
  *    words, the `\w` of the run, and the `\zaln-e` that close them. A group that another group
@@ -38,11 +40,7 @@ import type {
   EditableUSJ,
   OriginalWord,
 } from '@usfm-tools/types';
-import { readsApartAfterGroup } from '@usfm-tools/usj-core';
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null;
-}
+import { isVerseTextSpan, readsApartAfterGroup, walkVerseStretches } from '@usfm-tools/usj-core';
 
 /** Attributes in the order unfoldingWord's tools write them, so a file they wrote is not all changed lines. */
 function msZalnS(o: OriginalWord): Record<string, unknown> {
@@ -104,56 +102,19 @@ function normalizeToken(tok: string): string {
 // The pieces of a verse
 // ---------------------------------------------------------------------------
 
-/** Nodes that are part of the line they are in; anything else with content is a container of lines. */
-const INLINE_TYPES = new Set(['char', 'note', 'ms', 'figure', 'ref', 'verse', 'optbreak', 'unmatched']);
-
-function isContainer(node: unknown): node is Record<string, unknown> & { content: unknown[] } {
-  return isRecord(node) && Array.isArray(node.content) && !INLINE_TYPES.has(String(node.type));
-}
-
-function isVerse(node: unknown): node is Record<string, unknown> & { sid: string } {
-  return isRecord(node) && node.type === 'verse' && typeof node.sid === 'string';
-}
-
 /**
- * The document with each stretch of a verse handed to `stretch`: what follows a `\v` in its paragraph, and what
- * comes before the next `\v` in the paragraphs after it (the same reach as `findVerseInlineNodes`, which is how
- * the words of a verse are numbered). A verse was rebuilt from the paragraph of its `\v` alone: one written on
- * two lines never found the words of its second line, and lost every group it had.
+ * The words of a stretch, in the order they are written: what is between white space in its text, and in the text
+ * of its character styles (`\nd`, the `\qs` of a «Selah»). What is inside a note is not counted. The stretches of a
+ * verse are the ones `walkVerseStretches` gives, which is how its words are numbered by whoever reads them.
+ *
+ * The words of a character style were not counted: a word aligned inside one was never found again, and one that
+ * the verse repeated outside it was numbered one less than who read the verse numbered it.
  */
-function walkVerses(
-  nodes: unknown[],
-  ctx: { verseRef: string },
-  stretch: (pieces: unknown[], sid: string) => unknown[],
-): unknown[] {
-  const out: unknown[] = [];
-  let buf: unknown[] = [];
-  const flush = () => {
-    if (buf.length) out.push(...(ctx.verseRef ? stretch(buf, ctx.verseRef) : buf));
-    buf = [];
-  };
-  for (const item of nodes) {
-    if (isVerse(item)) {
-      flush();
-      ctx.verseRef = item.sid;
-      // A verse that holds its own text (the editable shape of some callers) is a stretch of itself.
-      out.push(Array.isArray(item.content) ? { ...item, content: walkVerses(item.content as unknown[], ctx, stretch) } : { ...item });
-    } else if (isContainer(item)) {
-      flush();
-      out.push({ ...item, content: walkVerses(item.content, ctx, stretch) });
-    } else {
-      buf.push(item);
-    }
-  }
-  flush();
-  return out;
-}
-
-/** The words of a stretch: what is between white space in its text. What is inside a note or a character style is not counted. */
 function wordsOf(pieces: unknown[]): string[] {
   const words: string[] = [];
   for (const piece of pieces) {
     if (typeof piece === 'string') words.push(...(piece.match(/\S+/g) ?? []));
+    else if (isVerseTextSpan(piece)) words.push(...wordsOf(piece.content));
   }
   return words;
 }
@@ -259,7 +220,9 @@ function unitsOf(pieces: unknown[], plan: VersePlan): Unit[] {
   };
   for (const piece of pieces) {
     if (typeof piece !== 'string') {
-      units.push({ kind: 'node', node: piece });
+      // A character style is written here, in its turn, so its words are counted where `wordsOf` counted them. A
+      // group with words on both sides of its edge is closed and written again, as at the edge of a paragraph.
+      units.push({ kind: 'node', node: isVerseTextSpan(piece) ? { ...piece, content: emitStretch(piece.content, plan) } : piece });
       continue;
     }
     for (const chunk of piece.match(/\s+|\S+/g) ?? []) {
@@ -354,7 +317,7 @@ export function rebuildArray(
   const start = verseInlineSid ?? ctx.verseRef;
   // First the words of each verse, wherever they are; then each stretch written with its groups.
   const words = new Map<string, string[]>();
-  walkVerses(nodes, { verseRef: start }, (pieces, sid) => {
+  walkVerseStretches(nodes, { verseRef: start }, (pieces, sid) => {
     if (!words.has(sid)) words.set(sid, []);
     words.get(sid)!.push(...wordsOf(pieces));
     return pieces;
@@ -365,7 +328,7 @@ export function rebuildArray(
     if (groups.length) plans.set(sid, planVerse(groups, list));
   }
   ctx.verseRef = start;
-  return walkVerses(nodes, ctx, (pieces, sid) => {
+  return walkVerseStretches(nodes, ctx, (pieces, sid) => {
     const plan = plans.get(sid);
     return plan ? emitStretch(pieces, plan) : pieces;
   });
