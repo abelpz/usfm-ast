@@ -12,7 +12,36 @@ import { normalizeHelpsText, tokenizeVersePlainText, versePlainTextFromStore } f
  * counts exact forms: two Hebrew words that differ only in accents share `contentNorm` and may
  * share an occurrence number, yet are different words.
  */
-type FlatSource = { gIdx: number; content: string; contentNorm: string; occurrence: number; wordKey: string };
+type FlatSource = {
+  gIdx: number;
+  content: string;
+  /** `content` with its accents, as a quote word is compared with it (see {@link exactHelpsForm}). */
+  contentExact: string;
+  /** `content` without accents, compared when the verse lacks a quote word's exact form. */
+  contentNorm: string;
+  occurrence: number;
+  wordKey: string;
+};
+
+/** A source word with the form the words of one quote segment are compared with (see {@link keySegment}). */
+type KeyedSource = FlatSource & { matchKey: string };
+
+/** A word of a TN/TWL quote, in the two forms it can be compared by. */
+type QuoteWord = { exact: string; norm: string };
+
+const ZERO_WIDTH_CHARS = /\u200B|\u200C|\u200D|\u2060|\uFEFF/g;
+
+/**
+ * The exact form of a word: {@link normalizeHelpsText} without the loss of Hebrew accents. Only
+ * what does not tell two words apart is removed: zero-width characters, surrounding punctuation
+ * and differences of encoding (NFC).
+ */
+function exactHelpsForm(s: string): string {
+  return s
+    .replace(ZERO_WIDTH_CHARS, '')
+    .normalize('NFC')
+    .replace(/^[^\p{L}\p{N}\p{M}]+|[^\p{L}\p{N}\p{M}]+$/gu, '');
+}
 
 function flattenSources(groups: AlignmentGroup[]): FlatSource[] {
   const out: FlatSource[] = [];
@@ -21,6 +50,7 @@ function flattenSources(groups: AlignmentGroup[]): FlatSource[] {
       out.push({
         gIdx,
         content: w.content,
+        contentExact: exactHelpsForm(w.content),
         contentNorm: normalizeHelpsText(w.content),
         occurrence: w.occurrence,
         wordKey: `${w.content}\x00${w.occurrence}`,
@@ -28,6 +58,38 @@ function flattenSources(groups: AlignmentGroup[]): FlatSource[] {
     }
   }
   return out;
+}
+
+/**
+ * The words of one `&` segment of a quote, split where {@link normalizeHelpsText} splits them:
+ * at whitespace and at the Hebrew maqef. Each word is normalized on its own, so punctuation
+ * glued to a word in TN/TWL (e.g. "Θεοῦ,") does not keep it from matching `x-content` ("Θεοῦ").
+ */
+function quoteSegmentWords(segment: string): QuoteWord[] {
+  return segment
+    .replace(ZERO_WIDTH_CHARS, '')
+    .split(/[\s\u05BE]+/)
+    .map((w) => ({ exact: exactHelpsForm(w), norm: normalizeHelpsText(w) }))
+    .filter((w) => w.norm);
+}
+
+/**
+ * The stream and the words of one quote segment, each reduced to the key it is compared by.
+ *
+ * A quote word stands for its exact form: TN/TWL `Occurrence` counts exact forms, like
+ * `x-occurrence`, and Hebrew words that differ only in accents are different words. So a quote
+ * word matches the source words of its exact form. Only when the verse has none — accents drift
+ * between versions of the Hebrew text — does it match by normalized form, without accents.
+ * Quote words that normalize alike are compared the same way, without accents if any of them
+ * lacks its exact form: a source word then matches the quote words of one key only.
+ */
+function keySegment(flat: FlatSource[], words: QuoteWord[]): { stream: KeyedSource[]; partWords: string[] } {
+  const exactForms = new Set(flat.map((f) => f.contentExact));
+  const drifted = new Set(words.filter((w) => !exactForms.has(w.exact)).map((w) => w.norm));
+  return {
+    stream: flat.map((f) => ({ ...f, matchKey: drifted.has(f.contentNorm) ? f.contentNorm : f.contentExact })),
+    partWords: words.map((w) => (drifted.has(w.norm) ? w.norm : w.exact)),
+  };
 }
 
 /** True when this verse has alignment groups with at least one gateway target. */
@@ -56,7 +118,7 @@ export function buildGatewayTokenOccurrences(tokens: string[]): Array<{ norm: st
  * quote only lists the lemma once.
  */
 function matchPhraseSubsequenceFrom(
-  flat: FlatSource[],
+  flat: KeyedSource[],
   partWords: string[],
   startFlatIdx: number,
 ): number[] | null {
@@ -66,7 +128,7 @@ function matchPhraseSubsequenceFrom(
   const matchedIdx: number[] = [];
   for (let pw = 0; pw < n; pw++) {
     const want = partWords[pw]!;
-    while (fp < flat.length && flat[fp]!.contentNorm !== want) fp++;
+    while (fp < flat.length && flat[fp]!.matchKey !== want) fp++;
     if (fp >= flat.length) return null;
     matchedIdx.push(fp);
     fp++;
@@ -86,19 +148,19 @@ function multisetNeed(partWords: string[]): Map<string, number> {
  * token left-to-right, anchored so the first consumed token is `startFlatIdx`.
  */
 function matchPhraseMultisetFromStart(
-  flat: FlatSource[],
+  flat: KeyedSource[],
   partWords: string[],
   startFlatIdx: number,
 ): number[] | null {
   if (partWords.length === 0) return [];
   const need = multisetNeed(partWords);
-  const first = flat[startFlatIdx]!.contentNorm;
+  const first = flat[startFlatIdx]!.matchKey;
   if ((need.get(first) ?? 0) === 0) return null;
   need.set(first, need.get(first)! - 1);
   const matchedIdx: number[] = [startFlatIdx];
   let remaining = partWords.length - 1;
   for (let i = startFlatIdx + 1; i < flat.length && remaining > 0; i++) {
-    const w = flat[i]!.contentNorm;
+    const w = flat[i]!.matchKey;
     const left = need.get(w) ?? 0;
     if (left > 0) {
       need.set(w, left - 1);
@@ -127,7 +189,7 @@ const matchSpan = (m: PhraseMatch): number => m.idxs[m.idxs.length - 1]! - m.idx
  * and other words may sit between them, but a looser window around a tighter one (e.g. an
  * earlier article paired with a later noun) is never a candidate.
  */
-function enumerateTightMatches(flat: FlatSource[], partWords: string[]): PhraseMatch[] {
+function enumerateTightMatches(flat: KeyedSource[], partWords: string[]): PhraseMatch[] {
   const windows: number[][] = [];
   for (let s = 0; s < flat.length; s++) {
     const m = matchPhraseMultisetFromStart(flat, partWords, s);
@@ -152,7 +214,7 @@ function enumerateTightMatches(flat: FlatSource[], partWords: string[]): PhraseM
  * the quote's own order, then the earliest.
  */
 function enumerateDistinctMatches(
-  flat: FlatSource[],
+  flat: KeyedSource[],
   partWords: string[],
   takenWords: ReadonlySet<string>,
 ): PhraseMatch[] {
@@ -173,13 +235,15 @@ function enumerateDistinctMatches(
  * The occurrences of a quote's first segment, numbered as TN/TWL `Occurrence` numbers them: in
  * original-language order. The stream follows the gateway text, which may reach a later
  * occurrence first; the `x-occurrence` of the segment's first word restores the original order.
- * It only orders words of the same exact form, so the stream order stands when forms differ.
+ * It only orders words of the same exact form. That is every candidate, unless the first word
+ * had to be matched without accents (see {@link keySegment}) and the verse has several forms of
+ * it: no form is the quoted one then, and the stream order stands.
  */
-function enumerateOccurrences(flat: FlatSource[], partWords: string[]): PhraseMatch[] {
+function enumerateOccurrences(flat: KeyedSource[], partWords: string[]): PhraseMatch[] {
   const firstWord = partWords[0]!;
   const matches = enumerateDistinctMatches(flat, partWords, new Set()).map((m) => {
     // The source word standing for the segment's first word (the earliest, if it repeats).
-    const leads = m.idxs.map((k) => flat[k]!).filter((f) => f.contentNorm === firstWord);
+    const leads = m.idxs.map((k) => flat[k]!).filter((f) => f.matchKey === firstWord);
     return { m, lead: leads.sort((a, b) => a.occurrence - b.occurrence)[0]! };
   });
   if (matches.every(({ lead }) => lead.content === matches[0]!.lead.content)) {
@@ -194,7 +258,7 @@ function enumerateOccurrences(flat: FlatSource[], partWords: string[]): PhraseMa
  * of it, the nearest placement before it is used instead.
  */
 function matchFollowingSegment(
-  flat: FlatSource[],
+  flat: KeyedSource[],
   partWords: string[],
   prev: PhraseMatch,
   takenWords: ReadonlySet<string>,
@@ -220,6 +284,8 @@ function mapTargetToTokenIndex(
  * Returns empty when the phrase cannot be matched in the verse alignment stream.
  *
  * How a quote is placed in the stream of aligned source words:
+ * - A quote word matches the source words of its exact form, accents included, and those of
+ *   its accent-insensitive form only when the verse has none (see {@link keySegment}).
  * - A segment matches the tightest window holding all its words; gateway word order and split
  *   milestones may reorder or separate them (see {@link enumerateTightMatches}).
  * - Occurrences share no source word, so a looser window that borrows a word from a tighter
@@ -236,11 +302,11 @@ export function matchHelpEntryToTokenIndicesByAlignment(
   const quote = (help.origWords ?? '').trim();
   if (!quote || tokens.length === 0 || !verseHasAlignmentTargets(groups)) return [];
 
-  const rawParts = quote
+  const segments = quote
     .split('&')
-    .map((p) => normalizeHelpsText(p))
-    .filter(Boolean);
-  if (rawParts.length === 0) return [];
+    .map((part) => quoteSegmentWords(part))
+    .filter((words) => words.length > 0);
+  if (segments.length === 0) return [];
 
   const flat = flattenSources(groups);
   const meta = buildGatewayTokenOccurrences(tokens);
@@ -250,36 +316,26 @@ export function matchHelpEntryToTokenIndicesByAlignment(
   let prev: PhraseMatch | undefined;
   const tokenIdx = new Set<number>();
 
-  for (const part of rawParts) {
-    // Per-token normalize so commas / punctuation glued to a Greek word in TN/TWL
-    // (e.g. "Θεοῦ,") still match alignment `x-content` ("Θεοῦ") after normalizeHelpsText.
-    const partWords = part
-      .split(/\s+/)
-      .map((w) => normalizeHelpsText(w))
-      .filter(Boolean);
-    if (partWords.length === 0) return [];
+  for (const words of segments) {
+    const { stream, partWords } = keySegment(flat, words);
     const match: PhraseMatch | undefined = prev
-      ? matchFollowingSegment(flat, partWords, prev, takenWords)
-      : enumerateOccurrences(flat, partWords)[Math.max(1, help.occurrence || 1) - 1];
+      ? matchFollowingSegment(stream, partWords, prev, takenWords)
+      : enumerateOccurrences(stream, partWords)[Math.max(1, help.occurrence || 1) - 1];
     if (!match) return [];
-    for (const k of match.idxs) takenWords.add(flat[k]!.wordKey);
     prev = match;
-    const matchedFlatIdxs = match.idxs;
 
-    // Collect the (contentNorm, occurrence) identity of each primary source word.
-    // Then find ALL alignment groups that share those same identity pairs — this
-    // handles non-contiguous translations where the same Hebrew/Greek word is split
+    // Every alignment group that carries one of the matched source words gives its gateway
+    // tokens. The words are told by `wordKey`, not by normalized form: that keeps apart words
+    // that differ only in accents, and still gathers a Hebrew/Greek word that is split
     // across multiple zaln blocks (e.g. "Y" and "oró" both aligned to וַ⁠יִּתְפַּלֵּ֣ל).
-    const primaryKeys = new Set<string>();
-    for (const k of matchedFlatIdxs) {
-      const f = flat[k]!;
-      primaryKeys.add(`${f.contentNorm}\x00${f.occurrence}`);
+    const matchedWords = new Set<string>();
+    for (const k of match.idxs) {
+      matchedWords.add(flat[k]!.wordKey);
+      takenWords.add(flat[k]!.wordKey);
     }
     const touchedGroups = new Set<number>();
     for (const f of flat) {
-      if (primaryKeys.has(`${f.contentNorm}\x00${f.occurrence}`)) {
-        touchedGroups.add(f.gIdx);
-      }
+      if (matchedWords.has(f.wordKey)) touchedGroups.add(f.gIdx);
     }
     for (const gIdx of touchedGroups) {
       for (const t of groups[gIdx]!.targets) {

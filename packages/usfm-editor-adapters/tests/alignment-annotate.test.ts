@@ -248,24 +248,115 @@ describe('matchHelpEntryToTokenIndicesByAlignment', () => {
     expect(resolveInStream('καὶ Χ Υ', 'καὶ & καὶ', [1])).toEqual([[]]);
   });
 
-  it('treats Hebrew words that differ only in accents as different source words', () => {
+  describe('Hebrew words that differ only in accents', () => {
     // Psalm 1:1 shape. `x-occurrence` counts each accented form on its own, so both forms of
     // «לֹא» have an occurrence 1 although they normalize to the same text.
-    const loMerkha = 'לֹ֥א'; // accent merkha (U+05A5)
-    const loMunah = 'לֹ֣א'; // accent munah (U+05A3)
+    const loMerkha = '\u05DC\u05B9\u05A5\u05D0'; // accent merkha (U+05A5)
+    const loMunah = '\u05DC\u05B9\u05A3\u05D0'; // accent munah (U+05A3)
+    const loTipcha = '\u05DC\u05B9\u0596\u05D0'; // accent tipcha (U+0596): a form the verse lacks
+    const loPlain = '\u05DC\u05B9\u05D0'; // no accent: a form the verse lacks
+    const walk = 'הָלַךְ';
+    const walkMerkha = '\u05D4\u05B8\u05DC\u05B7\u05A5\u05DA\u05B0'; // «הָלַךְ» with an accent
+    const stand = 'עָמָד';
+    const sit = 'יָשָׁב';
     const tokens = ['not', 'walk', 'not', 'stand', 'not', 'sit'];
     const g = [
       { sources: [src(loMerkha, 1, 2)], targets: [tgt('not', 1, 3)] },
-      { sources: [src('הָלַךְ')], targets: [tgt('walk')] },
+      { sources: [src(walk)], targets: [tgt('walk')] },
       { sources: [src(loMerkha, 2, 2)], targets: [tgt('not', 2, 3)] },
-      { sources: [src('עָמָד')], targets: [tgt('stand')] },
+      { sources: [src(stand)], targets: [tgt('stand')] },
       { sources: [src(loMunah, 1, 1)], targets: [tgt('not', 3, 3)] },
-      { sources: [src('יָשָׁב')], targets: [tgt('sit')] },
+      { sources: [src(sit)], targets: [tgt('sit')] },
     ];
-    const quote = `${loMerkha} הָלַךְ & ${loMunah} יָשָׁב`;
-    expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help(quote), g)).toEqual([0, 1, 4, 5]);
-    // The two occurrence numbers 1 belong to different forms and say nothing about their order.
-    expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help(loMerkha, 2), g)).toEqual([2]);
+    const resolve = (quote: string, occurrence = 1) =>
+      matchHelpEntryToTokenIndicesByAlignment(tokens, help(quote, occurrence), g);
+
+    it('treats Hebrew words that differ only in accents as different source words', () => {
+      expect(resolve(`${loMerkha} ${walk} & ${loMunah} ${sit}`)).toEqual([0, 1, 4, 5]);
+      expect(resolve(loMerkha, 2)).toEqual([2]);
+    });
+
+    it('resolves a quote to the source word of its own accented form', () => {
+      // Both forms have an occurrence 1; each quote gets its own word and nothing of the other.
+      expect(resolve(loMerkha, 1)).toEqual([0]);
+      expect(resolve(loMunah, 1)).toEqual([4]);
+    });
+
+    it('counts occurrences among the source words of the quoted form only', () => {
+      expect(resolve(loMerkha, 3)).toEqual([]);
+      expect(resolve(loMunah, 2)).toEqual([]);
+    });
+
+    it('numbers the occurrences of an accented form by x-occurrence, not by gateway order', () => {
+      const reordered = [
+        { sources: [src(loMerkha, 2, 2)], targets: [tgt('a')] },
+        { sources: [src(loMunah, 1, 1)], targets: [tgt('b')] },
+        { sources: [src(loMerkha, 1, 2)], targets: [tgt('c')] },
+      ];
+      const at = (quote: string, occurrence: number) =>
+        matchHelpEntryToTokenIndicesByAlignment(['a', 'b', 'c'], help(quote, occurrence), reordered);
+      expect(at(loMerkha, 1)).toEqual([2]);
+      expect(at(loMerkha, 2)).toEqual([0]);
+      expect(at(loMunah, 1)).toEqual([1]);
+    });
+
+    it('matches accent-insensitively when the verse lacks the quoted form', () => {
+      // Accents drift between versions of the Hebrew text. No form can be preferred, so the
+      // occurrences are every «לֹא» in stream order, each with its own gateway token.
+      for (const drifted of [loTipcha, loPlain]) {
+        expect([1, 2, 3, 4].map((occ) => resolve(drifted, occ))).toEqual([[0], [2], [4], []]);
+      }
+    });
+
+    it('matches an accented quote against unaccented source words', () => {
+      const unaccented = `${loPlain} ${walk} ${loPlain} ${sit}`;
+      expect(resolveInStream(unaccented, loMerkha, [1, 2, 3])).toEqual([[0], [2], []]);
+      expect(resolveInStream(unaccented, `${loMunah} ${sit}`, [1])).toEqual([[2, 3]]);
+    });
+
+    it('compares exact forms regardless of zero-width characters, punctuation and mark order', () => {
+      expect(resolve(`\u2060${loMunah},`)).toEqual([4]);
+      // The accent typed before the vowel point: the same text once in NFC.
+      expect(resolve('\u05DC\u05A3\u05B9\u05D0')).toEqual([4]);
+      // A word joiner inside `x-content`, as after a Hebrew prefix, and none in the quote.
+      const prefixed = '\u05D5\u05B0';
+      expect(resolveInStream(`${loMerkha} ${prefixed}\u2060${loMunah}`, `${prefixed}${loMunah}`, [1])).toEqual([[1]]);
+    });
+
+    it('uses the accented form to choose among candidates of a multi-word quote', () => {
+      // Accent-insensitively, the tightest placement would take the munah form next to the verb.
+      expect(resolveInStream(`${walk} ${loMunah} ${loMerkha}`, `${loMerkha} ${walk}`, [1, 2])).toEqual([[0, 2], []]);
+    });
+
+    it('keeps matching the other quote words by exact form when one of them has drifted', () => {
+      expect(resolveInStream(`${walk} ${loMunah} ${loMerkha}`, `${loMerkha} ${walkMerkha}`, [1])).toEqual([[0, 2]]);
+    });
+
+    it('matches quote words that normalize alike accent-insensitively when one of them has drifted', () => {
+      // The second «לֹא» of the quote has an accent the verse lacks, and the verse's form of
+      // that word is the form of the quote's first «לֹא»: the forms cannot tell them apart.
+      expect(resolve(`${loMerkha} ${walk} ${loTipcha} ${stand}`)).toEqual([0, 1, 2, 3]);
+    });
+
+    it('keeps the milestones of a split word together, without a word that only differs in accents', () => {
+      const splitTokens = ['did', 'they', 'not', 'walk', 'nor', 'sit'];
+      const split = [
+        { sources: [src(loMerkha)], targets: [tgt('did')] },
+        { sources: [src(walk)], targets: [tgt('they')] },
+        { sources: [src(loMerkha)], targets: [tgt('not')] },
+        { sources: [src(walk)], targets: [tgt('walk')] },
+        { sources: [src(loMunah)], targets: [tgt('nor')] },
+        { sources: [src(sit)], targets: [tgt('sit')] },
+      ];
+      const at = (quote: string, occurrence = 1) =>
+        matchHelpEntryToTokenIndicesByAlignment(splitTokens, help(quote, occurrence), split);
+      expect(at(loMerkha)).toEqual([0, 2]);
+      expect(at(loMerkha, 2)).toEqual([]);
+      expect(at(loMunah)).toEqual([4]);
+      expect(at(`${loMerkha} ${walk}`)).toEqual([0, 1, 2, 3]);
+      // Without the quoted form the split word is still one occurrence, apart from the other form.
+      expect([1, 2, 3].map((occ) => at(loTipcha, occ))).toEqual([[0, 2], [4], []]);
+    });
   });
 });
 
