@@ -199,6 +199,22 @@ describe('matchHelpEntryToTokenIndicesByAlignment', () => {
     });
   });
 
+  it('numbers occurrences in original-language order when the gateway aligns them out of order', () => {
+    // Titus 1:9: UGNT «ἐν τῇ διδασκαλίᾳ τῇ ὑγιαινούσῃ», en_ult "with sound teaching".
+    const tokens = ['with', 'sound', 'teaching'];
+    const g = [
+      { sources: [src('ἐν')], targets: [tgt('with')] },
+      { sources: [src('τῇ', 2, 2), src('ὑγιαινούσῃ')], targets: [tgt('sound')] },
+      { sources: [src('τῇ', 1, 2), src('διδασκαλίᾳ')], targets: [tgt('teaching')] },
+    ];
+    expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help('τῇ', 1), g)).toEqual([2]);
+    expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help('τῇ', 2), g)).toEqual([1]);
+    expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help('τῇ', 3), g)).toEqual([]);
+    expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help('ἐν τῇ διδασκαλίᾳ τῇ ὑγιαινούσῃ'), g)).toEqual([
+      0, 1, 2,
+    ]);
+  });
+
   it('handles & segments in order', () => {
     const g3 = [
       {
@@ -235,8 +251,8 @@ describe('matchHelpEntryToTokenIndicesByAlignment', () => {
   it('treats Hebrew words that differ only in accents as different source words', () => {
     // Psalm 1:1 shape. `x-occurrence` counts each accented form on its own, so both forms of
     // «לֹא» have an occurrence 1 although they normalize to the same text.
-    const loMerkha = 'לֹ֥א'; // לֹ֥א
-    const loMunah = 'לֹ֣א'; // לֹ֣א
+    const loMerkha = 'לֹ֥א'; // accent merkha (U+05A5)
+    const loMunah = 'לֹ֣א'; // accent munah (U+05A3)
     const tokens = ['not', 'walk', 'not', 'stand', 'not', 'sit'];
     const g = [
       { sources: [src(loMerkha, 1, 2)], targets: [tgt('not', 1, 3)] },
@@ -248,6 +264,7 @@ describe('matchHelpEntryToTokenIndicesByAlignment', () => {
     ];
     const quote = `${loMerkha} הָלַךְ & ${loMunah} יָשָׁב`;
     expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help(quote), g)).toEqual([0, 1, 4, 5]);
+    // The two occurrence numbers 1 belong to different forms and say nothing about their order.
     expect(matchHelpEntryToTokenIndicesByAlignment(tokens, help(loMerkha, 2), g)).toEqual([2]);
   });
 });

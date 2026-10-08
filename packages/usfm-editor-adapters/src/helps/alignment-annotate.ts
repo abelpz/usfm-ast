@@ -12,7 +12,7 @@ import { normalizeHelpsText, tokenizeVersePlainText, versePlainTextFromStore } f
  * counts exact forms: two Hebrew words that differ only in accents share `contentNorm` and may
  * share an occurrence number, yet are different words.
  */
-type FlatSource = { gIdx: number; contentNorm: string; occurrence: number; wordKey: string };
+type FlatSource = { gIdx: number; content: string; contentNorm: string; occurrence: number; wordKey: string };
 
 function flattenSources(groups: AlignmentGroup[]): FlatSource[] {
   const out: FlatSource[] = [];
@@ -20,6 +20,7 @@ function flattenSources(groups: AlignmentGroup[]): FlatSource[] {
     for (const w of groups[gIdx]!.sources) {
       out.push({
         gIdx,
+        content: w.content,
         contentNorm: normalizeHelpsText(w.content),
         occurrence: w.occurrence,
         wordKey: `${w.content}\x00${w.occurrence}`,
@@ -147,8 +148,8 @@ function enumerateTightMatches(flat: FlatSource[], partWords: string[]): PhraseM
 
 /**
  * Placements of a quote segment that share no source word with each other nor with `takenWords`,
- * by increasing start; `[occurrence - 1]` is the Nth occurrence. Where candidates compete for a
- * word, the tightest wins, then the one in the quote's own order, then the earliest.
+ * by increasing start. Where candidates compete for a word, the tightest wins, then the one in
+ * the quote's own order, then the earliest.
  */
 function enumerateDistinctMatches(
   flat: FlatSource[],
@@ -166,6 +167,25 @@ function enumerateDistinctMatches(
     picked.push(m);
   }
   return picked.sort((a, b) => matchStart(a) - matchStart(b));
+}
+
+/**
+ * The occurrences of a quote's first segment, numbered as TN/TWL `Occurrence` numbers them: in
+ * original-language order. The stream follows the gateway text, which may reach a later
+ * occurrence first; the `x-occurrence` of the segment's first word restores the original order.
+ * It only orders words of the same exact form, so the stream order stands when forms differ.
+ */
+function enumerateOccurrences(flat: FlatSource[], partWords: string[]): PhraseMatch[] {
+  const firstWord = partWords[0]!;
+  const matches = enumerateDistinctMatches(flat, partWords, new Set()).map((m) => {
+    // The source word standing for the segment's first word (the earliest, if it repeats).
+    const leads = m.idxs.map((k) => flat[k]!).filter((f) => f.contentNorm === firstWord);
+    return { m, lead: leads.sort((a, b) => a.occurrence - b.occurrence)[0]! };
+  });
+  if (matches.every(({ lead }) => lead.content === matches[0]!.lead.content)) {
+    matches.sort((a, b) => a.lead.occurrence - b.lead.occurrence);
+  }
+  return matches.map(({ m }) => m);
 }
 
 /**
@@ -204,7 +224,7 @@ function mapTargetToTokenIndex(
  *   milestones may reorder or separate them (see {@link enumerateTightMatches}).
  * - Occurrences share no source word, so a looser window that borrows a word from a tighter
  *   one is not an occurrence of its own, and neither is a second milestone of the same word.
- *   `occurrence` counts them in stream order.
+ *   `occurrence` counts them in original-language order (see {@link enumerateOccurrences}).
  * - Each later `&` segment is the first placement after the previous segment, or else the
  *   nearest one before it, and never reuses a word of an earlier segment.
  */
@@ -240,7 +260,7 @@ export function matchHelpEntryToTokenIndicesByAlignment(
     if (partWords.length === 0) return [];
     const match: PhraseMatch | undefined = prev
       ? matchFollowingSegment(flat, partWords, prev, takenWords)
-      : enumerateDistinctMatches(flat, partWords, takenWords)[Math.max(1, help.occurrence || 1) - 1];
+      : enumerateOccurrences(flat, partWords)[Math.max(1, help.occurrence || 1) - 1];
     if (!match) return [];
     for (const k of match.idxs) takenWords.add(flat[k]!.wordKey);
     prev = match;
