@@ -74,6 +74,7 @@ export {
   type CreateOrganizationOptions,
   type Door43OrgSummary,
   type ListUserOrgsOptions,
+  CommitNotFoundError,
   type GitTreeEntry,
   type ListRepoGitTreeOptions,
 } from './repo-manage';

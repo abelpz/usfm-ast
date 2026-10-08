@@ -1,0 +1,33 @@
+{
+  "name": "@usfm-tools/ptxprint-cli",
+  "version": "0.2.0",
+  "description": "CLI for @usfm-tools/ptxprint-driver: convert USFM files to PDF via PTXprint",
+  "type": "module",
+  "bin": {
+    "usfm2pdf": "./bin/usfm2pdf.mjs"
+  },
+  "files": [
+    "bin",
+    "fixtures",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "node bin/usfm2pdf.mjs",
+    "test:smoke": "node bin/usfm2pdf.mjs --help"
+  },
+  "keywords": [
+    "usfm",
+    "ptxprint",
+    "paratext",
+    "pdf",
+    "scripture",
+    "cli"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@usfm-tools/ptxprint-driver": "workspace:*"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

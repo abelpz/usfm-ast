@@ -146,7 +146,7 @@ export function DcsSyncButton({ meta, storage, localSync, onUpdated, onResolveCo
       ? 'syncing'
       : localSync.conflictPrUrl || fileConflicts > 0
         ? 'conflict'
-        : meta.pendingSyncAt
+        : meta.pendingSyncAt || localSync.pendingReleaseCount > 0
           ? 'pending'
           : 'synced';
 
@@ -359,7 +359,7 @@ export function DcsSyncButton({ meta, storage, localSync, onUpdated, onResolveCo
                 {localSync.pendingReleaseCount > 0 ? (
                   <p className="text-primary flex items-center gap-1">
                     <Tag className="size-3 shrink-0" aria-hidden />
-                    {localSync.pendingReleaseCount}
+                    {localSync.pendingReleaseCount} release{localSync.pendingReleaseCount === 1 ? '' : 's'} pending
                   </p>
                 ) : null}
               </>

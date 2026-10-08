@@ -3,7 +3,7 @@
  */
 
 import { collectVerseTextsFromContent } from './verse-gateway-text';
-import { tokenizeWords } from './gateway-word-split';
+import { normalizeWordForAlignmentMatch, tokenizeWords } from './gateway-word-split';
 
 export type GatewayWordToken = {
   verseSid: string;
@@ -13,14 +13,28 @@ export type GatewayWordToken = {
   index: number;
 };
 
-/** 1-based occurrence of `words[index]` among identical string surfaces in `words`. */
+/**
+ * 1-based occurrence of `words[index]` among the surfaces of `words` that are the same word.
+ *
+ * Surfaces are compared as alignment compares them ({@link normalizeWordForAlignmentMatch}): without the
+ * punctuation attached to them. Counting identical strings made `Jesucristo` and `Jesucristo,` each the first
+ * of one, and an aligned word (`Jesucristo`, 1) then stood for both: the second could not be aligned, and trying
+ * to moved the first out of its box.
+ */
 export function occurrenceStats(
   words: string[],
   index: number,
 ): { occurrence: number; occurrences: number } {
-  const w = words[index];
-  const occurrences = words.filter((x) => x === w).length;
-  const occurrence = words.slice(0, index + 1).filter((x) => x === w).length;
+  // A surface that is only punctuation is its own word.
+  const wordOf = (surface: string) => normalizeWordForAlignmentMatch(surface) || surface;
+  const w = wordOf(words[index] ?? '');
+  let occurrence = 0;
+  let occurrences = 0;
+  words.forEach((surface, i) => {
+    if (wordOf(surface) !== w) return;
+    occurrences++;
+    if (i <= index) occurrence++;
+  });
   return { occurrence, occurrences };
 }
 

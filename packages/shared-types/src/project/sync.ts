@@ -64,6 +64,18 @@ export interface ProjectSyncAdapter {
   getRemoteFileIndex(): Promise<RemoteFileEntry[]>;
 
   /**
+   * Returns the current HEAD commit SHA of the adapter's branch.
+   * Used by the sync loop to detect whether Tier-2 moved since the last push.
+   */
+  getRemoteHeadCommit(): Promise<string>;
+
+  /**
+   * Pull all text files from the remote as they existed at `ref` (commit SHA or branch name).
+   * Used for fetching the merge-base and Tier-2 tip trees during a 3-way merge.
+   */
+  pullFilesAt(ref: string): Promise<Map<string, string>>;
+
+  /**
    * Push local UTF-8 text files to the remote, creating or updating as needed.
    * Returns counts and, when available, the post-push remote file index via `syncedFiles`
    * so callers can persist blob SHAs without an extra `getRemoteFileIndex()` round-trip.

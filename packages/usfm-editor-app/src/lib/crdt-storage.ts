@@ -84,3 +84,19 @@ export async function writeFileWithCrdt(
     }
   }
 }
+
+export async function deleteFileWithCrdt(
+  storage: ProjectStorage,
+  projectId: string,
+  path: string,
+): Promise<void> {
+  await storage.deleteFile(projectId, path);
+
+  if (isUsfmPath(path)) {
+    try {
+      await storage.deleteFile(projectId, crdtPathFromUsfm(path));
+    } catch {
+      // Non-fatal: deleting the canonical USFM file is the user-visible operation.
+    }
+  }
+}

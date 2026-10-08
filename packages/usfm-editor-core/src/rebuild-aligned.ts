@@ -10,12 +10,27 @@
  * 2. `\w` x-occurrence / x-occurrences come from the stored `AlignedWord` fields, which the strip
  *    layer reads from the original USFM. They are NOT recomputed from the aligned-only subset.
  *
- * 3. `\zaln-s` markers open at a group's FIRST target position and close at the LAST. This means
- *    non-contiguous groups (Sec 5) stay open while other groups' tokens are emitted between their
- *    targets, producing the correct nested USFM milestone structure.
+ * 3. A verse is all of its words, on however many lines it is written: the words of a verse of
+ *    poetry are found across its `\q` paragraphs, not only in the one that has its `\v`. What a
+ *    verse reaches is said once, for who reads and for who writes (`walkVerseStretches`): not past
+ *    its chapter, not the words of a heading, and the title of a psalm as verse 0 of its chapter.
  *
- * 4. When a raw token has punctuation attached (e.g. "Pablo,"), the word core ("Pablo") is matched
- *    and wrapped in `\w`, and the punctuation suffix is emitted as a plain string after it.
+ * 4. A group is written over each unbroken run of its words: `\zaln-s` for each of its original
+ *    words, the `\w` of the run, and the `\zaln-e` that close them. A group that another group
+ *    interrupts, or that goes on in the next paragraph, is closed and written again with the same
+ *    original words where it goes on, as unfoldingWord's tools write it (Sec 5). Groups are never
+ *    nested inside one another: read by those tools, a group inside another one is a word aligned
+ *    to the original words of both.
+ *
+ * 5. When a raw token has punctuation attached (e.g. "Pablo,"), the word core ("Pablo") is matched
+ *    and wrapped in `\w`. Punctuation after the last word of a run is written after the group, and
+ *    punctuation before its first word before it, as other writers do; between two words of a run
+ *    it stays between them.
+ *
+ * 6. The white space that follows a group is not given back by the parser, and whoever reads the
+ *    verse puts it back by what comes next (see `readsApartAfterGroup`). Where it would not be put
+ *    back («amor —arrecifes» would be read «amor—arrecifes»), that space is written inside the
+ *    group, before its `\zaln-e`, where it is kept as it is.
  */
 
 import type {
@@ -25,23 +40,20 @@ import type {
   EditableUSJ,
   OriginalWord,
 } from '@usfm-tools/types';
-import { tokenizeWords } from './word-diff';
+import { isVerseTextSpan, readsApartAfterGroup, walkVerseStretches } from '@usfm-tools/usj-core';
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null;
-}
-
+/** Attributes in the order unfoldingWord's tools write them, so a file they wrote is not all changed lines. */
 function msZalnS(o: OriginalWord): Record<string, unknown> {
   const n: Record<string, unknown> = {
     type: 'ms',
     marker: 'zaln-s',
     'x-strong': o.strong,
     'x-lemma': o.lemma,
-    'x-content': o.content,
-    'x-occurrence': String(o.occurrence),
-    'x-occurrences': String(o.occurrences),
   };
   if (o.morph !== undefined) n['x-morph'] = o.morph;
+  n['x-occurrence'] = String(o.occurrence);
+  n['x-occurrences'] = String(o.occurrences);
+  n['x-content'] = o.content;
   return n;
 }
 
@@ -83,234 +95,217 @@ export function emitAlignmentGroup(g: { sources: OriginalWord[]; targets: Aligne
  * mark (U+2019) — the usual components of an actual word.
  */
 function normalizeToken(tok: string): string {
-  return tok.replace(/^[^\p{L}\p{N}'\u2019]+|[^\p{L}\p{N}'\u2019]+$/gu, '');
+  return tok.replace(/^[^\p{L}\p{N}'’]+|[^\p{L}\p{N}'’]+$/gu, '');
 }
 
-function wordsFromStrippedFragments(buf: unknown[]): string[] {
+// ---------------------------------------------------------------------------
+// The pieces of a verse
+// ---------------------------------------------------------------------------
+
+/**
+ * The words of a stretch, in the order they are written: what is between white space in its text, and in the text
+ * of its character styles (`\nd`, the `\qs` of a «Selah»). What is inside a note is not counted. The stretches of a
+ * verse are the ones `walkVerseStretches` gives, which is how its words are numbered by whoever reads them.
+ *
+ * The words of a character style were not counted: a word aligned inside one was never found again, and one that
+ * the verse repeated outside it was numbered one less than who read the verse numbered it.
+ */
+function wordsOf(pieces: unknown[]): string[] {
   const words: string[] = [];
-  for (const x of buf) {
-    if (typeof x !== 'string') continue;
-    const trimmed = x.trim();
-    if (!trimmed) continue;
-    words.push(...tokenizeWords(x));
+  for (const piece of pieces) {
+    if (typeof piece === 'string') words.push(...(piece.match(/\S+/g) ?? []));
+    else if (isVerseTextSpan(piece)) words.push(...wordsOf(piece.content));
   }
   return words;
 }
 
-/** Groups with at least one target. */
-function activeAlignmentGroups(groups: AlignmentGroup[]): AlignmentGroup[] {
-  return groups.filter((g) => g.targets.length > 0);
-}
-
 // ---------------------------------------------------------------------------
-// Occurrence-based target position resolution
+// Where each group falls among the words of its verse
 // ---------------------------------------------------------------------------
 
-interface ResolvedGroup {
-  sources: OriginalWord[];
-  targets: AlignedWord[];
-  /** Position in the full verse raw-token stream for each target (parallel to `targets`). */
-  positions: number[];
-  /** Raw position of the group's first target (where zaln-s opens). */
-  firstPos: number;
-  /** Raw position of the group's last target (where zaln-e closes). */
-  lastPos: number;
-}
+type Owner = { group: AlignmentGroup; target: AlignedWord };
+
+/** The parts of a word that are letters and numbers: what a writer wraps in `\w`. */
+const WORD_PART = /[\p{L}\p{N}\p{M}'\u2019]+/gu;
 
 /**
- * For every AlignmentGroup, locate each target word in the full verse token stream using the
- * stored `AlignedWord.occurrence` (1-based; counts ALL occurrences including unaligned words).
- *
- * Returns null if any target cannot be resolved (triggers rebuild fallback).
+ * Whose a word of the verse is. A word is what stands between white space, and it is one aligned word («Pablo,»)
+ * unless its parts were aligned each on its own («self-condemned», «120.000», «day—as»): then each part has its
+ * owner. Other writers take those for two words; here they were one word that no aligned word matched, and both
+ * groups were lost.
  */
-function resolveTargetPositions(
-  groups: AlignmentGroup[],
-  raw: string[],
-): ResolvedGroup[] | null {
-  // Build per-normalized-word position list so we can pick the occurrence-th slot.
-  const positionsOf = new Map<string, number[]>();
-  for (let i = 0; i < raw.length; i++) {
-    const norm = normalizeToken(raw[i]!);
-    if (!norm) continue;
-    if (!positionsOf.has(norm)) positionsOf.set(norm, []);
-    positionsOf.get(norm)!.push(i);
-  }
+type WordOwners = { whole?: Owner; parts: Map<number, Owner> };
 
-  const resolved: ResolvedGroup[] = [];
-  for (const g of groups) {
-    const positions: number[] = [];
-    for (const t of g.targets) {
-      const key = normalizeToken(t.word);
-      const slots = positionsOf.get(key) ?? [];
-      // occurrence is 1-based; slots is sorted ascending by raw position
-      const pos = slots[t.occurrence - 1];
-      if (pos === undefined) return null; // target missing from verse text
-      positions.push(pos);
-    }
-    if (positions.length === 0) return null;
-    resolved.push({
-      sources: g.sources,
-      targets: g.targets,
-      positions,
-      firstPos: Math.min(...positions),
-      lastPos: Math.max(...positions),
+/** A verse while it is written: whose each of its words is, and how many of them were written so far. */
+type VersePlan = { owners: Map<number, WordOwners>; written: number };
+
+type Place = { word: number; part?: number };
+
+/**
+ * Each target of each group at its place among the words of the verse, by its stored `occurrence` (1-based, among
+ * all the words of that surface form, aligned or not). A group with a word the verse no longer has, or with a word
+ * another group already took, is left out, and the others are kept: one group that could not be placed took the
+ * alignment of its whole verse with it.
+ */
+function planVerse(groups: AlignmentGroup[], words: string[]): VersePlan {
+  const wholes = new Map<string, number[]>();
+  const parts = new Map<string, Place[]>();
+  const partCount: number[] = [];
+  const add = <T>(map: Map<string, T[]>, key: string, value: T) => {
+    if (!key) return;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(value);
+  };
+  words.forEach((word, index) => {
+    add(wholes, normalizeToken(word), index);
+    const found = word.match(WORD_PART) ?? [];
+    partCount[index] = found.length;
+    found.forEach((text, part) => add(parts, normalizeToken(text), { word: index, part }));
+  });
+
+  const placeOf = (target: AlignedWord): Place | undefined => {
+    const key = normalizeToken(target.word);
+    const asWhole = wholes.get(key) ?? [];
+    const asPart = parts.get(key) ?? [];
+    const k = target.occurrence - 1;
+    // Numbered among the parts of words when that is the count it was given.
+    const byParts = asPart.length === target.occurrences && asWhole.length !== target.occurrences;
+    const place: Place | undefined = !byParts && asWhole[k] !== undefined ? { word: asWhole[k]! } : (asPart[k] ?? (asWhole[k] !== undefined ? { word: asWhole[k]! } : undefined));
+    // The only part of a word is the word.
+    return place && place.part !== undefined && partCount[place.word] === 1 ? { word: place.word } : place;
+  };
+
+  const owners = new Map<number, WordOwners>();
+  const taken = (place: Place) => {
+    const at = owners.get(place.word);
+    if (!at) return false;
+    return place.part === undefined ? true : Boolean(at.whole) || at.parts.has(place.part);
+  };
+  for (const group of groups) {
+    if (!group.targets.length || !group.sources.length) continue;
+    const places = group.targets.map(placeOf);
+    if (places.some((place) => !place || taken(place))) continue;
+    // Two of its own words in one place, or the whole of a word and a part of it.
+    const clash = places.some((a, i) => places.some((b, j) => i < j && a!.word === b!.word && (a!.part === undefined || b!.part === undefined || a!.part === b!.part)));
+    if (clash) continue;
+    places.forEach((place, index) => {
+      const owner = { group, target: group.targets[index]! };
+      const at = owners.get(place!.word) ?? { parts: new Map<number, Owner>() };
+      if (place!.part === undefined) at.whole = owner;
+      else at.parts.set(place!.part, owner);
+      owners.set(place!.word, at);
     });
   }
-  return resolved;
+  return { owners, written: 0 };
 }
 
 // ---------------------------------------------------------------------------
-// Verse inline content rebuild
+// One stretch of a verse, written
 // ---------------------------------------------------------------------------
 
-/**
- * Rebuild inline content for one verse using span-based zaln placement:
- *
- * - Each group's `\zaln-s` markers open at the group's FIRST target position.
- * - Each group's `\zaln-e` markers close at the group's LAST target position.
- * - Groups whose last target is beyond another group's first target stay open across that other
- *   group's tokens (non-contiguous pattern, Sec 5).
- * - When multiple groups open at the same position the outermost (largest span) opens first, so
- *   the innermost closes first — preserving well-nested milestones.
- * - `\w` occurrence data is taken from the stored AlignedWord, which was read from the original
- *   USFM and already counts ALL verse tokens (including unaligned).
- * - If a raw token has punctuation attached (e.g. "Pablo,"), the word core is matched for the
- *   `\w` node and the punctuation suffix is emitted as a plain string immediately after.
- */
-function rebuildVerseInlineContent(
-  versePieces: unknown[],
-  verseRef: string,
-  alignments: AlignmentMap,
-): unknown[] {
-  const groups = activeAlignmentGroups(alignments[verseRef] ?? []);
-  if (groups.length === 0) return versePieces;
+/** `gap`: the white space and punctuation between words. `plain`: a word, or a part of one, that no group has. */
+type Unit =
+  | { kind: 'word'; owner: Owner }
+  | { kind: 'plain'; text: string }
+  | { kind: 'gap'; text: string }
+  | { kind: 'node'; node: unknown };
 
-  const stringParts = versePieces.filter((x): x is string => typeof x === 'string');
-  const raw = wordsFromStrippedFragments(stringParts);
-
-  const resolved = resolveTargetPositions(groups, raw);
-  if (!resolved) return versePieces;
-
-  // Build targetAt: rawPos → { resolvedGroup, targetIndex }.
-  // Two groups may not claim the same raw position (would be a data error).
-  const targetAt = new Map<number, { rg: ResolvedGroup; ti: number }>();
-  for (const rg of resolved) {
-    for (let ti = 0; ti < rg.positions.length; ti++) {
-      const pos = rg.positions[ti]!;
-      if (targetAt.has(pos)) return versePieces; // collision → bail
-      targetAt.set(pos, { rg, ti });
+function unitsOf(pieces: unknown[], plan: VersePlan): Unit[] {
+  const units: Unit[] = [];
+  /** One gap between two things that are not gaps, however many pieces it was read in. */
+  const gap = (text: string) => {
+    const last = units[units.length - 1];
+    if (last?.kind === 'gap') last.text += text;
+    else units.push({ kind: 'gap', text });
+  };
+  for (const piece of pieces) {
+    if (typeof piece !== 'string') {
+      // A character style is written here, in its turn, so its words are counted where `wordsOf` counted them. A
+      // group with words on both sides of its edge is closed and written again, as at the edge of a paragraph.
+      units.push({ kind: 'node', node: isVerseTextSpan(piece) ? { ...piece, content: emitStretch(piece.content, plan) } : piece });
+      continue;
+    }
+    for (const chunk of piece.match(/\s+|\S+/g) ?? []) {
+      if (/^\s/.test(chunk)) {
+        gap(chunk);
+        continue;
+      }
+      const owners = plan.owners.get(plan.written++);
+      if (owners?.whole) {
+        const core = normalizeToken(chunk);
+        const at = chunk.indexOf(core);
+        if (at > 0) gap(chunk.slice(0, at));
+        units.push({ kind: 'word', owner: owners.whole });
+        if (at + core.length < chunk.length) gap(chunk.slice(at + core.length));
+      } else if (owners?.parts.size) {
+        let from = 0;
+        let part = 0;
+        for (const found of chunk.matchAll(WORD_PART)) {
+          if (found.index! > from) gap(chunk.slice(from, found.index));
+          const owner = owners.parts.get(part++);
+          units.push(owner ? { kind: 'word', owner } : { kind: 'plain', text: found[0] });
+          from = found.index! + found[0].length;
+        }
+        if (from < chunk.length) gap(chunk.slice(from));
+      } else if (/[\p{L}\p{N}]/u.test(chunk)) {
+        units.push({ kind: 'plain', text: chunk });
+      } else {
+        // Punctuation standing alone (a dash with a space on each side) is between words, as white space is.
+        gap(chunk);
+      }
     }
   }
+  return units;
+}
 
-  // Build opensAt / closesAt keyed by raw position.
-  const opensAt = new Map<number, ResolvedGroup[]>();
-  const closesAt = new Map<number, ResolvedGroup[]>();
-  for (const rg of resolved) {
-    if (!opensAt.has(rg.firstPos)) opensAt.set(rg.firstPos, []);
-    opensAt.get(rg.firstPos)!.push(rg);
-    if (!closesAt.has(rg.lastPos)) closesAt.set(rg.lastPos, []);
-    closesAt.get(rg.lastPos)!.push(rg);
-  }
-  // Outermost (largest span) opens first so inner groups are nested inside.
-  for (const arr of opensAt.values()) {
-    arr.sort((a, b) => b.lastPos - b.firstPos - (a.lastPos - a.firstPos));
-  }
-  // Innermost (smallest span) closes first (mirror of open order).
-  for (const arr of closesAt.values()) {
-    arr.sort((a, b) => a.lastPos - a.firstPos - (b.lastPos - b.firstPos));
-  }
+function emitStretch(pieces: unknown[], plan: VersePlan): unknown[] {
+  const units = unitsOf(pieces, plan);
+  /** The nearest thing before or after that is not a gap. */
+  const beside = (from: number, step: 1 | -1): Unit | undefined => {
+    for (let i = from + step; i >= 0 && i < units.length; i += step) {
+      if (units[i]!.kind !== 'gap') return units[i];
+    }
+    return undefined;
+  };
+  const groupOf = (unit: Unit | undefined) => (unit?.kind === 'word' ? unit.owner.group : undefined);
 
   const out: unknown[] = [];
-  let rawIdx = 0;
-
-  for (const item of versePieces) {
-    if (typeof item !== 'string') {
-      out.push(item);
-      continue;
+  units.forEach((unit, index) => {
+    if (unit.kind === 'gap') return void (unit.text && out.push(unit.text));
+    if (unit.kind !== 'word') return void out.push(unit.kind === 'node' ? unit.node : unit.text);
+    const { group, target } = unit.owner;
+    if (groupOf(beside(index, -1)) !== group) {
+      for (const source of group.sources) out.push(msZalnS(source));
     }
-    if (!item.trim()) {
-      // Whitespace-only fragment — preserve as-is (spaces between verses, etc.)
-      out.push(item);
-      continue;
+    out.push(wNode(target));
+    const next = beside(index, 1);
+    if (groupOf(next) === group) return;
+    // The space after this group, when whoever reads the verse would not put it back, stays inside the group.
+    const after = units[index + 1];
+    const lead = after?.kind === 'gap' ? (/^\s+/.exec(after.text)?.[0] ?? '') : '';
+    if (after?.kind === 'gap' && lead) {
+      const rest = after.text.slice(lead.length);
+      const text = rest + (next?.kind === 'plain' ? next.text : '');
+      const putBack =
+        next === undefined ||
+        (next.kind === 'node'
+          ? false
+          : text === ''
+            ? true
+            : readsApartAfterGroup(text, next.kind === 'word' && !/\s$/.test(rest)));
+      if (!putBack) {
+        out.push(lead);
+        after.text = rest;
+      }
     }
-
-    // Walk the string with a non-whitespace regex so that spaces and trailing
-    // characters (newlines, punctuation between tokens, etc.) are preserved
-    // as plain strings in the output rather than stripped by tokenizeWords.
-    let pos = 0;
-    const tokenRe = /\S+/g;
-    let match: RegExpExecArray | null;
-    while ((match = tokenRe.exec(item)) !== null) {
-      // Preserve any leading whitespace before this token.
-      if (match.index > pos) out.push(item.slice(pos, match.index));
-      pos = match.index + match[0].length;
-      const tok = match[0];
-
-      // 1. Open groups whose first target is at this position (outermost first).
-      for (const rg of opensAt.get(rawIdx) ?? []) {
-        for (const s of rg.sources) out.push(msZalnS(s));
-      }
-
-      // 2. Emit the token — either as a \w node (aligned) or plain string (unaligned).
-      const entry = targetAt.get(rawIdx);
-      if (entry) {
-        const { rg, ti } = entry;
-        const norm = normalizeToken(tok);
-        // Split attached punctuation so the \w node contains only the word core.
-        const wordStart = tok.indexOf(norm);
-        const prefix = wordStart > 0 ? tok.slice(0, wordStart) : '';
-        const suffix = tok.slice(wordStart + norm.length);
-        if (prefix) out.push(prefix);
-        // Use stored occurrence / occurrences (relative to full verse, not aligned-only subset).
-        out.push(wNode(rg.targets[ti]!));
-        if (suffix) out.push(suffix);
-      } else {
-        out.push(tok);
-      }
-
-      // 3. Close groups whose last target was this position (innermost first).
-      for (const rg of closesAt.get(rawIdx) ?? []) {
-        for (let i = rg.sources.length - 1; i >= 0; i--) {
-          out.push(msZalnE());
-        }
-      }
-
-      rawIdx++;
-    }
-    // Preserve any trailing whitespace / characters after the last token.
-    if (pos < item.length) out.push(item.slice(pos));
-  }
-
-  // If we didn't consume every raw token the mapping is inconsistent — return original.
-  if (rawIdx !== raw.length) return versePieces;
-
+    for (let i = group.sources.length - 1; i >= 0; i--) out.push(msZalnE());
+  });
   return out;
 }
 
 // ---------------------------------------------------------------------------
-// Tree traversal (unchanged public API)
+// Public API
 // ---------------------------------------------------------------------------
-
-function transformSubtree(
-  node: unknown,
-  ctx: { verseRef: string },
-  alignments: AlignmentMap,
-): unknown {
-  if (!isRecord(node)) return node;
-  const o = node as Record<string, unknown>;
-  if (o.type === 'verse' && typeof o.sid === 'string') {
-    ctx.verseRef = o.sid;
-  }
-  if (Array.isArray(o.content)) {
-    const verseSid =
-      o.type === 'verse' && typeof o.sid === 'string' ? o.sid : undefined;
-    return {
-      ...o,
-      content: rebuildArray(o.content as unknown[], ctx, alignments, verseSid),
-    };
-  }
-  return { ...o };
-}
 
 /** Re-insert alignment milestones and `\w` (inverse of stripArray). */
 export function rebuildArray(
@@ -319,35 +314,24 @@ export function rebuildArray(
   alignments: AlignmentMap,
   verseInlineSid?: string,
 ): unknown[] {
-  const out: unknown[] = [];
-  let buf: unknown[] = [];
-  let pendingVerse = verseInlineSid ?? '';
-
-  const flushBuf = () => {
-    if (buf.length === 0 || !pendingVerse) {
-      buf = [];
-      return;
-    }
-    out.push(...rebuildVerseInlineContent(buf, pendingVerse, alignments));
-    buf = [];
-  };
-
-  for (const item of nodes) {
-    if (isRecord(item) && item.type === 'verse' && typeof item.sid === 'string') {
-      flushBuf();
-      pendingVerse = item.sid;
-      ctx.verseRef = pendingVerse;
-      out.push(transformSubtree(item, ctx, alignments));
-      continue;
-    }
-    if (pendingVerse) {
-      buf.push(item);
-    } else {
-      out.push(transformSubtree(item, ctx, alignments));
-    }
+  const start = verseInlineSid ?? ctx.verseRef;
+  // First the words of each verse, wherever they are; then each stretch written with its groups.
+  const words = new Map<string, string[]>();
+  walkVerseStretches(nodes, { verseRef: start }, (pieces, sid) => {
+    if (!words.has(sid)) words.set(sid, []);
+    words.get(sid)!.push(...wordsOf(pieces));
+    return pieces;
+  });
+  const plans = new Map<string, VersePlan>();
+  for (const [sid, list] of words) {
+    const groups = alignments[sid] ?? [];
+    if (groups.length) plans.set(sid, planVerse(groups, list));
   }
-  flushBuf();
-  return out;
+  ctx.verseRef = start;
+  return walkVerseStretches(nodes, ctx, (pieces, sid) => {
+    const plan = plans.get(sid);
+    return plan ? emitStretch(pieces, plan) : pieces;
+  });
 }
 
 export function rebuildAlignedUsj(

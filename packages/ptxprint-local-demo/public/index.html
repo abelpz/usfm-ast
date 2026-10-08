@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>USFM → PDF (PTXprint local)</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>USFM → PDF (local)</h1>
+      <p class="hint">
+        Servidor Node usa <code>@usfm-tools/ptxprint-driver</code>. Debes tener
+        <strong>PTXprint</strong> instalado (<code>ptxprint</code> en PATH o variable
+        <code>PTXPRINT_BIN</code> al arrancar el servidor).
+      </p>
+
+      <!-- ── Page layout ─────────────────────────────────────────────────── -->
+      <div class="row">
+        <span class="section-divider">Página</span>
+        <label>
+          Papel
+          <select id="paper">
+            <option value="A5" selected>A5</option>
+            <option value="A4">A4</option>
+            <option value="USletter">US Letter</option>
+          </select>
+        </label>
+        <label>
+          Columnas
+          <select id="columns">
+            <option value="1" selected>1 columna</option>
+            <option value="2">2 columnas</option>
+          </select>
+        </label>
+        <label>
+          Márgenes (mm)
+          <input id="margins" type="number" min="0" max="60" step="1" placeholder="12" />
+        </label>
+        <label class="row-label">
+          <input id="rtl" type="checkbox" />
+          Texto RTL
+        </label>
+        <label class="row-label">
+          <input id="mirrorMargins" type="checkbox" />
+          Márgenes en espejo
+        </label>
+      </div>
+
+      <!-- ── Typography ──────────────────────────────────────────────────── -->
+      <div class="row">
+        <span class="section-divider">Tipografía</span>
+        <label>
+          Fuente (familia)
+          <input id="font" type="text" placeholder="DejaVu Serif" maxlength="64" />
+        </label>
+        <label>
+          Tamaño (pt)
+          <input id="fontsize" type="number" min="6" max="36" step="0.5" placeholder="12" />
+        </label>
+        <label>
+          Interlineado (pt)
+          <input id="linespacing" type="number" min="6" max="48" step="0.5" placeholder="15" />
+        </label>
+        <label>
+          ISO idioma (opcional)
+          <input id="lang" type="text" placeholder="es" maxlength="12" />
+        </label>
+      </div>
+
+      <!-- ── Page numbers ────────────────────────────────────────────────── -->
+      <div class="row">
+        <span class="section-divider">Numeración de páginas</span>
+        <label>
+          Posición
+          <select id="pageNumbers">
+            <option value="footer-center" selected>Pie de página (centrado)</option>
+            <option value="header-center">Encabezado (centrado)</option>
+            <option value="header-outer">Encabezado (borde exterior)</option>
+            <option value="none">Sin números de página</option>
+          </select>
+        </label>
+        <label>
+          Primera página #
+          <input id="startPageNum" type="number" min="1" max="9999" step="1" placeholder="1" />
+        </label>
+      </div>
+
+      <!-- ── Books ──────────────────────────────────────────────────────── -->
+      <div class="books-header">
+        <span class="section-divider" style="margin:0">Libros USFM</span>
+        <button type="button" id="addBook" class="btn-secondary">+ Añadir libro</button>
+      </div>
+      <div id="bookList"></div>
+
+      <details id="advanced" class="advanced-details">
+        <summary>Configuración PTXprint avanzada</summary>
+        <p class="hint">
+          Fragmentos INI adicionales para <code>ptxprint.cfg</code>. Se fusionan después de los valores
+          generados; las claves de proyecto / libro impuestas por el driver tienen prioridad.
+        </p>
+        <label class="block rawcfg-label">
+          <span>rawCfg (INI)</span>
+          <textarea
+            id="rawCfg"
+            rows="8"
+            spellcheck="false"
+            placeholder="[document]&#10;sectionheads = True&#10;&#10;[notes]&#10;includefootnotes = True"
+          ></textarea>
+        </label>
+      </details>
+
+      <div class="actions">
+        <button type="button" id="btn" class="primary">Generar PDF</button>
+        <label class="filename-label">
+          <span>Nombre del archivo</span>
+          <div class="filename-wrap">
+            <input id="filename" type="text" placeholder="usfm" maxlength="120" />
+            <span class="filename-ext">.pdf</span>
+          </div>
+        </label>
+        <span id="status" class="status" aria-live="polite"></span>
+      </div>
+
+      <section id="viewer-wrap" class="viewer-wrap hidden">
+        <div class="viewer-header">
+          <h2>Vista previa</h2>
+          <a id="download-link" class="btn-download" href="#" download="usfm.pdf">⬇ usfm.pdf</a>
+        </div>
+        <iframe id="viewer" title="PDF"></iframe>
+      </section>
+
+      <pre id="err" class="err hidden"></pre>
+    </main>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

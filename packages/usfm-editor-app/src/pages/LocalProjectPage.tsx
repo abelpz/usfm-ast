@@ -281,6 +281,7 @@ export function LocalProjectPage() {
       await storage.createRelease(meta.id, rel);
       setRelOpen(false);
       await load();
+      void localSync.forceSync();
     } catch (e) {
       setRelErr(e instanceof Error ? e.message : String(e));
     } finally {

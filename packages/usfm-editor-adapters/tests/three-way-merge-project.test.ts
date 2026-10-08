@@ -52,6 +52,94 @@ describe('mergeFileContent — YAML manifest deep-merge', () => {
   });
 });
 
+describe('mergeFileContent — sync sidecar auto-merge (.sync/*.json)', () => {
+  const path = '.sync/3JN.json';
+
+  const base = JSON.stringify({
+    schema: 1,
+    docId: 'TPS:3JN',
+    baseCommit: 'abc123',
+    baseBlobSha: 'sha-base',
+    vectorClock: { abelper8: 40 },
+    savedAt: '2026-05-11T12:00:00.000Z',
+  });
+
+  it('auto-merges when baseBlobSha and savedAt differ — no human conflict', () => {
+    const ours = JSON.stringify({
+      schema: 1,
+      docId: 'TPS:3JN',
+      baseCommit: 'abc123',
+      baseBlobSha: 'sha-local',
+      vectorClock: { abelper8: 41 },
+      savedAt: '2026-05-12T14:00:09.044Z',
+    });
+    const theirs = JSON.stringify({
+      schema: 1,
+      docId: 'TPS:3JN',
+      baseCommit: 'abc123',
+      baseBlobSha: 'sha-remote',
+      vectorClock: { abelper8: 41 },
+      savedAt: '2026-05-11T23:24:07.621Z',
+    });
+    const result = mergeFileContent({ path, base, ours, theirs });
+    expect(result.kind).toBe('merged');
+  });
+
+  it('merges vectorClock per-actor max', () => {
+    const ours = JSON.stringify({
+      schema: 1, docId: 'TPS:3JN', baseBlobSha: 'sha-o',
+      vectorClock: { alice: 5, bob: 3 },
+      savedAt: '2026-05-12T10:00:00Z',
+    });
+    const theirs = JSON.stringify({
+      schema: 1, docId: 'TPS:3JN', baseBlobSha: 'sha-t',
+      vectorClock: { alice: 3, bob: 7, carol: 2 },
+      savedAt: '2026-05-12T09:00:00Z',
+    });
+    const result = mergeFileContent({ path, base, ours, theirs });
+    expect(result.kind).toBe('merged');
+    if (result.kind === 'merged') {
+      const merged = JSON.parse(result.text) as { vectorClock: Record<string, number> };
+      expect(merged.vectorClock).toEqual({ alice: 5, bob: 7, carol: 2 });
+    }
+  });
+
+  it('takes the more recent savedAt', () => {
+    const ours = JSON.stringify({
+      schema: 1, docId: 'TPS:3JN', baseBlobSha: 'sha-o',
+      savedAt: '2026-05-12T14:00:00Z',
+    });
+    const theirs = JSON.stringify({
+      schema: 1, docId: 'TPS:3JN', baseBlobSha: 'sha-t',
+      savedAt: '2026-05-13T01:00:00Z',
+    });
+    const result = mergeFileContent({ path, base, ours, theirs });
+    expect(result.kind).toBe('merged');
+    if (result.kind === 'merged') {
+      const merged = JSON.parse(result.text) as { savedAt: string };
+      expect(merged.savedAt).toBe('2026-05-13T01:00:00Z');
+    }
+  });
+
+  it('keeps ours baseBlobSha and baseCommit', () => {
+    const ours = JSON.stringify({
+      schema: 1, docId: 'TPS:3JN', baseBlobSha: 'sha-local', baseCommit: 'commit-local',
+      savedAt: '2026-05-12T14:00:00Z',
+    });
+    const theirs = JSON.stringify({
+      schema: 1, docId: 'TPS:3JN', baseBlobSha: 'sha-remote', baseCommit: 'commit-remote',
+      savedAt: '2026-05-11T23:00:00Z',
+    });
+    const result = mergeFileContent({ path, base, ours, theirs });
+    expect(result.kind).toBe('merged');
+    if (result.kind === 'merged') {
+      const merged = JSON.parse(result.text) as { baseBlobSha: string; baseCommit: string };
+      expect(merged.baseBlobSha).toBe('sha-local');
+      expect(merged.baseCommit).toBe('commit-local');
+    }
+  });
+});
+
 describe('mergeFileContent — JSON canonical equality', () => {
   it('merges identical JSON content without base (canonical comparison)', () => {
     const ours = '{"a":1,"b":2}';

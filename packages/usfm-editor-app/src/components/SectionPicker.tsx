@@ -1,6 +1,6 @@
 import type { ScriptureSession, SourceTextSession } from '@usfm-tools/editor';
 import type { EditorContentPage } from '@usfm-tools/editor';
-import { Book, ChevronDown, ChevronLeft, ChevronRight, ScrollText, SlidersHorizontal } from 'lucide-react';
+import { Book, Check, ChevronDown, ChevronLeft, ChevronRight, ScrollText, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,6 +97,13 @@ export const SectionPicker = memo(function SectionPicker({
   const [to, setTo] = useState('1');
   const [, bump] = useState(0);
   const rerender = useCallback(() => bump((n) => n + 1), []);
+  /** Chapter number awaiting delete confirmation; null when no confirmation is open. */
+  const [deleteConfirmChapter, setDeleteConfirmChapter] = useState<number | null>(null);
+  /**
+   * Optimistic active page key — set immediately on click so the button highlights
+   * before the session's async navigation resolves. Cleared on the next onChange.
+   */
+  const [optimisticActiveKey, setOptimisticActiveKey] = useState<string | null>(null);
   const lastSectionsRef = useRef(JSON.stringify(session.getVisibleSections()));
 
   useEffect(() => {
@@ -108,7 +115,10 @@ export const SectionPicker = memo(function SectionPicker({
       }
       rerender();
     });
-    const unsubCh = session.onChange(() => rerender());
+    const unsubCh = session.onChange(() => {
+      setOptimisticActiveKey(null);
+      rerender();
+    });
     return () => {
       unsub();
       unsubCh();
@@ -128,17 +138,41 @@ export const SectionPicker = memo(function SectionPicker({
     const editorPages = session.getNavigableContentPages();
     const allEntries = refMax > 0 ? mergeWithReferencePages(editorPages, refMax) : editorPages.map((p) => ({ page: p, fromReference: false }));
     const current = session.getContentPage();
-    const idx = allEntries.findIndex((e) => pageKey(e.page) === pageKey(current));
+    const effectiveActiveKey = optimisticActiveKey ?? pageKey(current);
+    const idx = allEntries.findIndex((e) => pageKey(e.page) === effectiveActiveKey);
     const canPrev = idx > 0;
     const canNext = idx >= 0 && idx < allEntries.length - 1;
 
-    const goToEntry = (entry: { page: EditorContentPage; fromReference: boolean }) => {
-      if (entry.page.kind === 'chapter') {
-        session.navigateToChapter(entry.page.chapter);
-      } else {
-        session.setContentPage(entry.page);
+    const chapterCount = editorPages.filter((p) => p.kind === 'chapter').length;
+
+    const executeDeleteChapter = (chapter: number) => {
+      const pages = session.getNavigableContentPages();
+      const chIdx = pages.findIndex((p) => p.kind === 'chapter' && (p as { chapter: number }).chapter === chapter);
+      session.store.deleteChapterSlice(chapter);
+      // Navigate to the nearest remaining page so the editor is never left blank.
+      const remaining = session.getNavigableContentPages();
+      const targetIdx = Math.min(Math.max(0, chIdx), remaining.length - 1);
+      const target = remaining[targetIdx];
+      if (target) {
+        if (target.kind === 'chapter') session.navigateToChapter((target as { chapter: number }).chapter);
+        else session.setContentPage(target);
       }
+      setDeleteConfirmChapter(null);
       rerender();
+    };
+
+    const goToEntry = (entry: { page: EditorContentPage; fromReference: boolean }) => {
+      // Paint the optimistic active state first so the button highlights instantly,
+      // then defer the session navigation to the next frame so the browser has a
+      // chance to flush the optimistic UI before the synchronous ProseMirror work.
+      setOptimisticActiveKey(pageKey(entry.page));
+      requestAnimationFrame(() => {
+        if (entry.page.kind === 'chapter') {
+          session.navigateToChapter(entry.page.chapter);
+        } else {
+          session.setContentPage(entry.page);
+        }
+      });
     };
 
     const onChapterButtonClick = (entry: { page: EditorContentPage; fromReference: boolean }) => {
@@ -163,10 +197,42 @@ export const SectionPicker = memo(function SectionPicker({
         </Button>
         <div className="scrollbar-thin bg-muted/60 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-md px-1.5 py-1">
           {allEntries.map(({ page: p, fromReference }) => {
-            const active = pageKey(p) === pageKey(current);
-            return (
+            const active = pageKey(p) === effectiveActiveKey;
+            const isConfirming = active && p.kind === 'chapter' && deleteConfirmChapter === p.chapter;
+            const canDelete = active && p.kind === 'chapter' && chapterCount > 1;
+
+            // Inline confirmation: replace the active chapter slot with [✓] [×]
+            if (isConfirming) {
+              return (
+                <span key={pageKey(p)} className="flex shrink-0 items-center gap-0.5">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="destructive"
+                    className="h-7 w-7"
+                    title="Confirm delete"
+                    aria-label={`Confirm delete chapter ${p.chapter}`}
+                    onClick={() => executeDeleteChapter(p.chapter)}
+                  >
+                    <Check className="size-3" aria-hidden />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="h-7 w-7"
+                    title="Cancel"
+                    aria-label="Cancel delete"
+                    onClick={() => setDeleteConfirmChapter(null)}
+                  >
+                    <X className="size-3" aria-hidden />
+                  </Button>
+                </span>
+              );
+            }
+
+            const chapterBtn = (
               <Button
-                key={pageKey(p)}
                 type="button"
                 size={p.kind === 'chapter' ? 'sm' : 'icon'}
                 variant={active ? 'default' : fromReference ? 'ghost' : 'outline'}
@@ -210,6 +276,28 @@ export const SectionPicker = memo(function SectionPicker({
                 )}
               </Button>
             );
+
+            // For the active chapter, add an inline trash trigger right beside it.
+            if (canDelete) {
+              return (
+                <span key={pageKey(p)} className="flex shrink-0 items-center gap-0.5">
+                  {chapterBtn}
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    title="Delete chapter"
+                    aria-label={`Delete chapter ${p.chapter}`}
+                    onClick={() => setDeleteConfirmChapter(p.chapter)}
+                  >
+                    <Trash2 className="size-3" aria-hidden />
+                  </Button>
+                </span>
+              );
+            }
+
+            return <span key={pageKey(p)}>{chapterBtn}</span>;
           })}
         </div>
         <Button
@@ -228,6 +316,7 @@ export const SectionPicker = memo(function SectionPicker({
         </Button>
       </div>
     );
+
     if (inline) return inner;
     return (
       <div className="border-border bg-card/50 rounded-xl border px-2 py-1 shadow-sm">

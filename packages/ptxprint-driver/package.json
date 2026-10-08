@@ -1,0 +1,62 @@
+{
+  "name": "@usfm-tools/ptxprint-driver",
+  "version": "0.2.1",
+  "description": "PTXprint CLI wrapper: scaffold Paratext-shaped projects from USFM/USJ/USX and produce PDF",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "vendor",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "jest",
+    "test:integration": "jest tests/integration --runInBand --testTimeout=900000",
+    "test:watch": "jest --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "clean": "rm -rf dist",
+    "check-types": "tsc --noEmit -p tsconfig.tsup.json"
+  },
+  "keywords": [
+    "usfm",
+    "ptxprint",
+    "paratext",
+    "pdf",
+    "scripture"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abelpz/usfm-ast.git",
+    "directory": "packages/ptxprint-driver"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@usfm-tools/adapters": "workspace:*",
+    "@usfm-tools/parser": "workspace:*",
+    "pdf-lib": "1.17.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "tsup": "^8.3.5",
+    "typescript": "5.9.3"
+  }
+}

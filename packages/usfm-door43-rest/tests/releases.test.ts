@@ -71,6 +71,34 @@ describe('createDcsRelease', () => {
     expect(capturedBody?.body).toBe('Changelog entry');
   });
 
+  it('includes target_commitish when a publish branch is provided', async () => {
+    let capturedBody: Record<string, unknown> | undefined;
+    const capturingFetch: typeof fetch = (_url, init) => {
+      if (init?.body) {
+        capturedBody = JSON.parse(init.body as string) as Record<string, unknown>;
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 201,
+        statusText: 'Created',
+        json: () => Promise.resolve(FAKE_RELEASE),
+        text: () => Promise.resolve(JSON.stringify(FAKE_RELEASE)),
+      } as Response);
+    };
+
+    await createDcsRelease({
+      token: 'tok',
+      owner: 'org',
+      repo: 'repo',
+      tag: 'v2.0.0',
+      name: 'v2',
+      targetCommitish: 'main',
+      fetch: capturingFetch,
+    });
+
+    expect(capturedBody?.target_commitish).toBe('main');
+  });
+
   it('throws on non-ok response', async () => {
     await expect(
       createDcsRelease({

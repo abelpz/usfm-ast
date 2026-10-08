@@ -14,7 +14,6 @@ import {
   StalePushError,
   SyncConflictsError,
 } from '../../usfm-editor-app/src/lib/dcs-project-sync';
-
 // ---------------------------------------------------------------------------
 // Minimal in-memory ProjectStorage
 // ---------------------------------------------------------------------------
