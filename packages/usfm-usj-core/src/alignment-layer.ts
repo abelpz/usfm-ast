@@ -5,8 +5,6 @@
 
 import type { AlignedWord, AlignmentMap, EditableUSJ, OriginalWord } from '@usfm-tools/types';
 
-import { appendGatewayText } from './gateway-text-spacing';
-
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
 }
@@ -43,6 +41,22 @@ function extractText(content: unknown): string {
   return s;
 }
 
+/** Text that begins a word or opens a quotation, not what is still part of the word before it. */
+const beginsToken = (chunk: string) =>
+  /^(?:[\p{L}\p{N}([{«„“‘¡¿]|[—–…-]+[\p{L}\p{N}]|"+[\p{L}\p{N}([{«„“‘¡¿])/u.test(chunk);
+
+/**
+ * Whether what is written right after a group that closed is read as apart from it, the white space between the
+ * two being the one thing the parser does not give back. `groupFollows`: a group or a `\\w` comes right after this
+ * text, stuck to it; a straight quotation mark alone is then the one that opens what follows.
+ *
+ * Whoever writes aligned text asks this before leaving punctuation between two groups: what would be read stuck to
+ * the group before it («amor» + «—» + «arrecifes» for «amor —arrecifes») is written inside the group it goes with.
+ */
+export function readsApartAfterGroup(chunk: string, groupFollows: boolean): boolean {
+  return beginsToken(chunk) || (groupFollows && /^"+$/u.test(chunk));
+}
+
 function transformSubtree(node: unknown, ctx: { verseRef: string }, alignments: AlignmentMap): unknown {
   if (!isRecord(node)) return node;
   const o = node as Record<string, unknown>;
@@ -76,45 +90,69 @@ export function stripArray(
   const opened: Frame[] = [];
 
   /**
-   * The parser drops the white space that follows a milestone, so nothing is left between a group that closes and
-   * what comes after it. A group never ends in the middle of a word: after one, another group, a `\\w` or text that
-   * begins a word is a new token, whatever punctuation is next to it. Left to the spacing of
-   * {@link appendGatewayText} alone, «ocultos—» + «banquetean» and «dijo:» + «¡Que» came back as one word that no
-   * aligned word matched any more: the verse lost a space, and its whole alignment with the next save.
+   * The text of a verse is what is written between its marks, as it is written. The one thing the parser does not
+   * give back is the white space that follows a milestone, so nothing is left between a group that closes and what
+   * comes after it; that space alone is worked out here. A group never ends in the middle of a word: after one,
+   * another group, a `\\w` or text that begins a word is a new token, whatever punctuation is next to it.
+   *
+   * Everywhere else the pieces are joined as they are. They were all spaced again by the look of their characters
+   * ({@link appendGatewayText}), which cannot tell a quotation mark that opens from one that closes: «dije: "Yo» was
+   * read as «dije: " Yo» and «templo".» as «templo ".». Saving the alignment of one verse wrote those spaces into
+   * every verse of the book that had such a mark, and each of them was then taken for a verse somebody had changed.
    */
   let closed = false;
   let reopened = false;
+  /** The last piece read was a `\\w`, with nothing after it yet: another one right after it is another word. */
+  let afterWord = false;
 
-  /** Text that begins a word or opens a quotation, not what is still part of the word before it. */
-  const beginsToken = (chunk: string) => /^(?:[\p{L}\p{N}([{«„“‘¡¿]|[—–-]+[\p{L}\p{N}])/u.test(chunk);
-
-  const pushGatewayFragment = (chunk: string, isWord = false) => {
+  /** `opensNext`: a group or a word comes right after this text, with no white space of its own between them. */
+  const pushGatewayFragment = (chunk: string, isWord = false, opensNext = false) => {
     if (!chunk) return;
     const last = out[out.length - 1];
-    const apart = closed && (reopened || isWord || beginsToken(chunk));
+    const apart = (closed && (reopened || isWord || readsApartAfterGroup(chunk, opensNext))) || (isWord && afterWord);
     closed = false;
     reopened = false;
+    afterWord = isWord;
     if (typeof last === 'string') {
-      out[out.length - 1] =
-        apart && !/\s$/u.test(last) && !/^\s/u.test(chunk) ? `${last} ${chunk}` : appendGatewayText(last, chunk);
+      out[out.length - 1] = apart && !/\s$/u.test(last) && !/^\s/u.test(chunk) ? `${last} ${chunk}` : `${last}${chunk}`;
     } else {
       out.push(chunk);
     }
   };
+
+  /**
+   * The same original words, in the same order: one group written in more than one piece. Other writers
+   * (unfoldingWord's) do not nest a group that is interrupted by another: they close it and write its original
+   * words again where it goes on («May … be multiplied», both under πληθυνθείη). So does a group whose words fall
+   * on two lines of a poem, since a milestone cannot stay open from one paragraph to the next.
+   */
+  const sameSources = (a: OriginalWord[], b: OriginalWord[]) =>
+    a.length === b.length &&
+    a.every((s, i) => {
+      const o = b[i]!;
+      return s.content === o.content && s.strong === o.strong && s.occurrence === o.occurrence && s.occurrences === o.occurrences;
+    });
 
   /** Once nothing is open, what was read goes to the map, in opening order. */
   const flushOpened = () => {
     for (const frame of opened) {
       if (!frame.verseRef || frame.sources.length === 0 || frame.targets.length === 0) continue;
       if (!alignments[frame.verseRef]) alignments[frame.verseRef] = [];
-      alignments[frame.verseRef].push({ sources: frame.sources, targets: frame.targets });
+      const groups = alignments[frame.verseRef]!;
+      const begun = groups.find((group) => sameSources(group.sources, frame.sources));
+      if (begun) begun.targets.push(...frame.targets);
+      else groups.push({ sources: frame.sources, targets: frame.targets });
     }
     opened.length = 0;
   };
 
-  for (const item of nodes) {
+  const opensGroupOrWord = (node: unknown) =>
+    isRecord(node) && ((node.type === 'ms' && node.marker === 'zaln-s') || (node.type === 'char' && node.marker === 'w'));
+
+  for (let index = 0; index < nodes.length; index++) {
+    const item = nodes[index];
     if (typeof item === 'string') {
-      pushGatewayFragment(item);
+      pushGatewayFragment(item, false, !/\s$/u.test(item) && opensGroupOrWord(nodes[index + 1]));
       continue;
     }
     if (!isRecord(item)) {

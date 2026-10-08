@@ -7,6 +7,7 @@ import { convertUSJDocumentToUSFM } from '@usfm-tools/adapters';
 import { USFMParser } from '@usfm-tools/parser';
 import type { ActiveAlignmentPointer, AlignmentDocument, AlignmentMap, EditableUSJ } from '@usfm-tools/types';
 
+import { keepUsfmVersionLine, layoutAlignedUsfm } from './aligned-usfm-layout';
 import { createAlignmentDocument, parseAlignmentJson, serializeAlignmentJson } from './alignment-io';
 import { stripAlignments } from '@usfm-tools/usj-core';
 import { rebuildAlignedUsj } from './rebuild-aligned';
@@ -35,12 +36,15 @@ export function extractAlignmentDocumentFromUsfm(
   return createAlignmentDocument(translation, source, alignments);
 }
 
-/** Merge alignment map from `doc` into plain USFM (weaves `\\zaln-s` / `\\w` / `\\zaln-e`). */
+/**
+ * Merge alignment map from `doc` into plain USFM (weaves `\\zaln-s` / `\\w` / `\\zaln-e`), laid out a group to a
+ * line (see {@link layoutAlignedUsfm}) and saying the version of USFM the file said it was in.
+ */
 export function mergeAlignmentIntoUsfm(usfm: string, doc: AlignmentDocument): string {
   const usj = parseUsfmToUsj(usfm);
   const { editable } = stripAlignments(usj);
   const merged = rebuildAlignedUsj(editable as EditableUSJ, doc.verses);
-  return convertUSJDocumentToUSFM(merged as unknown as EditableUSJ);
+  return layoutAlignedUsfm(keepUsfmVersionLine(convertUSJDocumentToUSFM(merged as unknown as EditableUSJ), usfm));
 }
 
 /** Strip current embedded alignment, then merge `doc` (atomic “swap source” at the USFM text level). */
