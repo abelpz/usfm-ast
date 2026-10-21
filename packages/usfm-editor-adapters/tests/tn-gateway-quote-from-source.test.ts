@@ -163,6 +163,45 @@ describe('TN gateway quote from source (USFM / USJ + parseTnTsv)', () => {
     expect(gateway).toContain('Yahweh'); // from יְהוָה → "of Yahweh"
   });
 
+  it('resolves a Hebrew TN Quote to the source word of its own accented form', () => {
+    // Psalm 1:1 shape: `x-occurrence` counts each accented form of the same word on its own,
+    // so the merkha form (1 of 2, 2 of 2) and the munah form (1 of 1) both have an occurrence 1.
+    const loMerkha = '\u05DC\u05B9\u05A5\u05D0';
+    const loMunah = '\u05DC\u05B9\u05A3\u05D0';
+    const zaln = (content: string, occurrence: number, occurrences: number, word: string) =>
+      `\\zaln-s |x-strong="H3808" x-occurrence="${occurrence}" x-occurrences="${occurrences}" x-content="${content}"\\*` +
+      `\\w ${word}|x-occurrence="1" x-occurrences="1"\\w*\\zaln-e\\*`;
+    const alignedUsfm = [
+      '\\id PSA EN_ULT',
+      '\\c 1',
+      '\\q1',
+      '\\v 1 ' +
+        [
+          zaln(loMerkha, 1, 2, 'not'),
+          zaln('\u05D4\u05B8\u05DC\u05B7\u05DA\u05B0', 1, 1, 'walk'),
+          zaln(loMerkha, 2, 2, 'nor'),
+          zaln('\u05E2\u05B8\u05DE\u05B8\u05D3', 1, 1, 'stand'),
+          zaln(loMunah, 1, 1, 'never'),
+          zaln('\u05D9\u05B8\u05E9\u05B8\u05C1\u05D1', 1, 1, 'sit'),
+        ].join(' '),
+    ].join('\n');
+
+    const store = new DocumentStore({ silentConsole: true });
+    store.loadUSFM(alignedUsfm);
+    expect(tokenizeVersePlainText(versePlainTextFromStore(store, 1, 1))).toEqual([
+      'not', 'walk', 'nor', 'stand', 'never', 'sit',
+    ]);
+
+    const tsv = `${TN_HEADER}
+1:1\tn1\t\t\t${loMerkha}\t1\tfirst
+1:1\tn2\t\t\t${loMerkha}\t2\tsecond
+1:1\tn3\t\t\t${loMunah}\t1\tthird
+1:1\tn4\t\t\t${loMunah}\t2\tno such occurrence
+`;
+    const rows = parseTnTsv(tsv);
+    expect(rows.map((tn) => alignedGatewayQuoteForHelp(store, tn))).toEqual(['not', 'nor', 'never', null]);
+  });
+
   it('respects TN Occurrence when the same Quote appears twice in the verse', () => {
     const usfm = String.raw`\id JON EN_ULT
 \c 1
