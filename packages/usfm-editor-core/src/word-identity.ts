@@ -10,7 +10,7 @@ import {
   tokenizeGatewayUsj,
   collectVerseTextsFromContent,
   occurrenceStats,
-  findVerseInlineNodes,
+  collectVerseInlineNodes,
 } from '@usfm-tools/usj-core';
 import type { GatewayWordToken } from '@usfm-tools/usj-core';
 import { tokenizeWords } from './word-diff';
@@ -95,10 +95,11 @@ export function tokenizeOriginalDocument(
 
   const content = doc.content ?? [];
   const bySid = collectVerseTextsFromContent(content as unknown[]);
+  const inlineBySid = collectVerseInlineNodes(content as unknown[]);
   const out: Record<string, OriginalWordToken[]> = {};
 
   for (const sid of Object.keys(bySid)) {
-    const inline = findVerseInlineNodes(content as unknown[], sid);
+    const inline = inlineBySid[sid] ?? [];
     const spans = collectWSpansFromInline(inline);
     const withText = spans
       .map((w) => ({ w, surface: extractCharWText(w).trim() }))

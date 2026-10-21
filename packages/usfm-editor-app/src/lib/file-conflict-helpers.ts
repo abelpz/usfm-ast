@@ -1,6 +1,6 @@
 import { USFM_BOOK_CODES } from '@usfm-tools/editor';
 import type { FileConflict, ProjectStorage } from '@usfm-tools/types';
-import { writeFileWithCrdt } from './crdt-storage';
+import { deleteFileWithCrdt, writeFileWithCrdt } from './crdt-storage';
 
 /** Book code from a USFM path like `65-3JN.usfm`, or null for non-USFM paths. */
 export function inferBookCodeFromPath(path: string): string | null {
@@ -44,7 +44,7 @@ export async function applySingleFileConflictResolution(
       : choice === 'theirs'
         ? c.theirsText
         : c.oursText;
-  if (text === '') await storage.deleteFile(projectId, c.path);
+  if (text === '') await deleteFileWithCrdt(storage, projectId, c.path);
   else await writeFileWithCrdt(storage, projectId, c.path, text);
 }
 

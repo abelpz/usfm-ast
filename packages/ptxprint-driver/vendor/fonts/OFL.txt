@@ -1,0 +1,2 @@
+Source Code Pro is bundled under the SIL Open Font License 1.1.
+Upstream: https://github.com/adobe-fonts/source-code-pro

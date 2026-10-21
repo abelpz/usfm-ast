@@ -326,9 +326,13 @@ The idiom **by and large** corresponds to **en general**. This is **3:2**, and f
 
 ## 5. Non-contiguous Spanish-side words
 
-A Spanish-side alignment group is **non-contiguous** when one of its Spanish words is separated from another by a different aligned Spanish word.
+A Spanish-side alignment group is **non-contiguous** when one of its Spanish words is separated from another by a word that is not of the group: a word of another group, a word that is not aligned, or the end of a paragraph (a verse of poetry written on two lines).
 
-Punctuation, spaces, and line breaks do not break contiguity. Only another aligned `\w` from a different group does.
+Punctuation, spaces, and line breaks inside a paragraph do not break contiguity.
+
+A non-contiguous group is written **once for each unbroken run of its words**: it is closed where the run ends, and its `\zaln-s` markers are written again, with the same `x-content` and `x-occurrence`, where it goes on. This is how unfoldingWord's tools write it (in Jude 1:2 of the ULT, _May_ … _be multiplied_ are two runs under the same πληθυνθείη). A reader takes the runs with the same original words, in the same verse, as one group.
+
+A group is **never left open around another group**. Nested `\zaln-s` markers mean one thing only: several original words aligned to the same Spanish words (section 4). A group left open around another one is read by those tools as its inner words being aligned to the original words of both. This library wrote it that way before and still reads it, for the files it wrote.
 
 ### 5a. Non-contiguous 1\:N
 
@@ -348,13 +352,9 @@ El que[Comforter|1] los[you|1] consuela[Comforter|1]
 
 ```usfm
 \w El|x-occurrence="1"\w*
-\zaln-s |x-content="Comforter" x-occurrence="1"\*
-\w que|x-occurrence="1"\w*
-\zaln-s |x-content="you" x-occurrence="1"\*
-\w los|x-occurrence="1"\w*
-\zaln-e\*
-\w consuela|x-occurrence="2"\w*
-\zaln-e\*
+\zaln-s |x-content="Comforter" x-occurrence="1"\*\w que|x-occurrence="1"\w*\zaln-e\*
+\zaln-s |x-content="you" x-occurrence="1"\*\w los|x-occurrence="1"\w*\zaln-e\*
+\zaln-s |x-content="Comforter" x-occurrence="1"\*\w consuela|x-occurrence="1"\w*\zaln-e\*
 ```
 
 ### 5b. Non-contiguous N\:M
@@ -377,20 +377,29 @@ The idiom **carry out** corresponds to **llevar a cabo**, so the group is **2:3*
 
 ```usfm
 \w Él|x-occurrence="1"\w*
-\zaln-s |x-content="carried" x-occurrence="1"\*
-\zaln-s |x-content="out" x-occurrence="1"\*
-\w llevó|x-occurrence="1"\w*
-\zaln-s |x-content="the" x-occurrence="1"\*
-\w la|x-occurrence="1"\w*
-\zaln-e\*
-\zaln-s |x-content="mission" x-occurrence="1"\*
-\w misión|x-occurrence="1"\w*
-\zaln-e\*
-\w a|x-occurrence="2"\w*
-\w cabo|x-occurrence="3"\w*
-\zaln-e\*
-\zaln-e\*
+\zaln-s |x-content="carried" x-occurrence="1"\*\zaln-s |x-content="out" x-occurrence="1"\*\w llevó|x-occurrence="1"\w*\zaln-e\*\zaln-e\*
+\zaln-s |x-content="the" x-occurrence="1"\*\w la|x-occurrence="1"\w*\zaln-e\*
+\zaln-s |x-content="mission" x-occurrence="1"\*\w misión|x-occurrence="1"\w*\zaln-e\*
+\zaln-s |x-content="carried" x-occurrence="1"\*\zaln-s |x-content="out" x-occurrence="1"\*\w a|x-occurrence="1"\w*
+\w cabo|x-occurrence="1"\w*\zaln-e\*\zaln-e\*
 ```
+
+### 5c. A verse on more than one line
+
+A milestone does not stay open from one paragraph to the next, so a group whose words are on two lines of a poem is non-contiguous too: one run in each line.
+
+```usfm
+\q \zaln-s |x-content="קרא" x-occurrence="1"\*\w Clamé|x-occurrence="1"\w*\zaln-e\*
+\w a|x-occurrence="1"\w* \w Jehová|x-occurrence="1"\w*;
+\q2 \w desde|x-occurrence="1"\w* \w el|x-occurrence="1"\w* \w vientre|x-occurrence="1"\w*
+\zaln-s |x-content="קרא" x-occurrence="1"\*\w clamé|x-occurrence="1"\w*\zaln-e\*.
+```
+
+### 5d. Where punctuation and line ends go
+
+- Punctuation after the last word of a run is written after the group (`…\w Judas|…\w*\zaln-e\*,`), and punctuation before its first word before it (`: «\zaln-s |…\*\w hermano|…`). Between two words of a run it stays between them.
+- A group begins a line, and each further word of a group is on a line of its own: a space and a line end are the same white space to a reader.
+- The white space that follows a milestone is not given back by this library's parser; whoever reads a verse puts the space after a group back by what comes next. Where it would not be put back (a dash that opens an aside, «amor —arrecifes»), the space is written inside the group, before its `\zaln-e\*`.
 
 ---
 
@@ -477,7 +486,7 @@ la[the|2] paz[peace|1] de[of|2] Cristo[Christ|1] y la[the|1] gracia[grace|1] de[
 | 1\:N           | one source-side word aligns to several aligned-side words     |
 | N:1            | several source-side words align to one aligned-side word      |
 | N\:M           | several source-side words align to several aligned-side words |
-| Non-contiguous | one alignment group is interrupted by another                 |
+| Non-contiguous | one alignment group is interrupted; written once for each run |
 | Inverted order | the two sides present the aligned material in different order |
 
 ---

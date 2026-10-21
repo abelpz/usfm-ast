@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FileConflict } from '@usfm-tools/types';
-import { Check, CheckCircle2, Circle, HardDriveDownload, Pencil, ServerOff, GitCompare, X } from 'lucide-react';
+import { Check, CheckCircle2, Circle, Laptop, CloudDownload, Columns2, PenLine, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConflictRenderer } from '@/components/conflict-renderers/renderer-dispatcher';
 import type { Picks, HunkRequirements } from '@/components/conflict-renderers/usfm-stitch';
@@ -351,27 +351,15 @@ export function ConflictSolverPanel({
 
   return (
     <div className={['usfm-conflict-panel', className].filter(Boolean).join(' ')}>
-      {showHeader && (
+      {showHeader && title && (
         <div className="usfm-conflict-header px-6 py-4 border-b shrink-0">
-          <h2 className="text-lg font-semibold">
-            {title ?? `Resolve ${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''}`}
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            1) Choose the best text for each change. 2) Apply all when ready.
-          </p>
-          {active && (
-            <p className="text-sm text-muted-foreground mt-1">
-              <span className="font-medium">{active.path}</span>
-              {' — '}
-              {conflictSummary(active)}
-            </p>
-          )}
+          <h2 className="text-lg font-semibold">{title}</h2>
         </div>
       )}
 
       <div className="usfm-conflict-body flex flex-1 min-h-0 overflow-hidden">
         <div className="usfm-conflict-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {showFilePicker && conflicts.length > 0 ? (
+          {showFilePicker && conflicts.length > 1 ? (
             <div className="shrink-0 border-b px-4 pt-2 pb-2">
               <div className="flex min-h-0 shrink-0 flex-wrap items-center gap-1">
                 {conflicts.map((c, i) => {
@@ -406,27 +394,27 @@ export function ConflictSolverPanel({
                 variant={activeMode === 'ours' ? 'default' : 'outline'}
                 onClick={() => setFileMode(active.path, 'ours')}
                 className="h-7 w-7 shrink-0"
-                title={`Use local version — ${oursLabel}`}
+                title={`Keep my version — ${oursLabel}`}
               >
-                <HardDriveDownload className="size-3.5" />
+                <Laptop className="size-3.5" />
               </Button>
               <Button
                 size="icon"
                 variant={activeMode === 'theirs' ? 'default' : 'outline'}
                 onClick={() => setFileMode(active.path, 'theirs')}
                 className="h-7 w-7 shrink-0"
-                title={`Use imported version — ${theirsLabel}`}
+                title={`Accept their version — ${theirsLabel}`}
               >
-                <ServerOff className="size-3.5" />
+                <CloudDownload className="size-3.5" />
               </Button>
               <Button
                 size="icon"
                 variant={activeMode === 'skip' ? 'secondary' : 'ghost'}
                 onClick={() => setFileMode(active.path, 'skip')}
                 className="h-7 w-7 shrink-0 text-muted-foreground"
-                title="Compare manually"
+                title="View side by side"
               >
-                <GitCompare className="size-3.5" />
+                <Columns2 className="size-3.5" />
               </Button>
               <Button
                 size="icon"
@@ -435,7 +423,7 @@ export function ConflictSolverPanel({
                 className="h-7 w-7 shrink-0"
                 title="Edit a custom resolution (3)"
               >
-                <Pencil className="size-3.5" />
+                <PenLine className="size-3.5" />
               </Button>
 
               {(activeMode === 'merged' || activeMode === 'custom') && (

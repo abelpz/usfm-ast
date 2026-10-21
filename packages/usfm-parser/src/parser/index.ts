@@ -1016,6 +1016,16 @@ export class USFMParser {
     let currentValue = '';
     let inValue = false;
     let inQuotes = false;
+    /**
+     * The value of the attribute being read was written in quotes, so it is a value even when nothing is in them.
+     * `x-lemma=""` was not taken for one: what followed was read as its value (`x-lemma="" x-morph="He,R"` came
+     * out as a lemma `x-morphHe,R`), and the attribute after it was lost.
+     */
+    let valueQuoted = false;
+    const hasPair = () => Boolean(currentAttr) && (Boolean(currentValue) || valueQuoted);
+    const commitPair = () => {
+      attributes[currentAttr.trim()] = currentValue.trim().replace(/^"|"$/g, '');
+    };
 
     // Skip any leading spaces
     while (this.pos < this.input.length && this.input[this.pos] === ' ') {
@@ -1073,6 +1083,7 @@ export class USFMParser {
       // Handle quotes
       if (char === '"') {
         inQuotes = !inQuotes;
+        if (inValue) valueQuoted = true;
         this.advance(false);
         continue;
       }
@@ -1081,9 +1092,7 @@ export class USFMParser {
       if (!inQuotes) {
         // Check for closing marker
         if (char === '\\') {
-          if (currentAttr && currentValue) {
-            attributes[currentAttr.trim()] = currentValue.trim().replace(/^"|"$/g, '');
-          }
+          if (hasPair()) commitPair();
           break;
         }
 
@@ -1096,11 +1105,12 @@ export class USFMParser {
 
         // Handle space between attributes
         if (char === ' ') {
-          if (currentAttr && currentValue) {
-            attributes[currentAttr.trim()] = currentValue.trim().replace(/^"|"$/g, '');
+          if (hasPair()) {
+            commitPair();
             currentAttr = '';
             currentValue = '';
             inValue = false;
+            valueQuoted = false;
           }
           this.advance(false);
           continue;
@@ -1129,9 +1139,7 @@ export class USFMParser {
     }
 
     // Handle the last attribute-value pair
-    if (currentAttr && currentValue) {
-      attributes[currentAttr.trim()] = currentValue.trim().replace(/^"|"$/g, '');
-    }
+    if (hasPair()) commitPair();
 
     return attributes;
   }

@@ -1,0 +1,15 @@
+{
+  "name": "@usfm-tools/ptxprint-local-demo",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Tiny local web UI to test USFM → PDF via PTXprint",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs"
+  },
+  "dependencies": {
+    "@usfm-tools/ptxprint-driver": "workspace:*",
+    "express": "^4.21.2"
+  }
+}

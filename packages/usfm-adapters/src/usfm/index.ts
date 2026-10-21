@@ -83,28 +83,6 @@ function isNoteContentMarkerName(marker: string): boolean {
   return Boolean(info?.context?.includes('NoteContent'));
 }
 
-/**
- * Subset of [note character markers](https://docs.usfm.bible/usfm/3.1/char/notes/index.html)
- * for which USFMVisitor may emit a generic `\\f*` / `\\x*` (instead of `\\marker*`) before
- * non-chained text in the same note — serialization detail, not the full NoteContent list
- * (those come from the registry’s `NoteContent` context).
- */
-const NOTE_CONTENT_CHAR_MARKERS_REQUIRING_EXPLICIT_CLOSE = new Set([
-  'fq',
-  'fqa',
-  'fk',
-  'fl',
-  'fv',
-  'fw',
-  'fdc',
-  'fm',
-  'fp',
-]);
-
-function noteContentMarkerRequiresExplicitClose(marker: string): boolean {
-  return NOTE_CONTENT_CHAR_MARKERS_REQUIRING_EXPLICIT_CLOSE.has(marker);
-}
-
 /** Next sibling is another `\\fr` / `\\ft`-style span inside the same note (omit star between them in legacy USFM). */
 function isSiblingNoteContentCharacterSpan(node: unknown): boolean {
   if (!node || typeof node !== 'object') return false;
@@ -691,15 +669,11 @@ export class USFMVisitor implements BaseUSFMVisitor {
       (!isNoteContent || needsExplicitCloseBeforeNonMarkerSibling);
 
     if (needsClosing) {
-      const noteCtx = this.contextStack.find((c) => typeof c === 'string' && c.startsWith('note:'));
-      const useGenericNoteClose =
-        isNoteContent &&
-        noteCtx !== undefined &&
-        noteContentMarkerRequiresExplicitClose(marker);
-      const closeMarker = useGenericNoteClose
-        ? (noteCtx as string).slice('note:'.length)
-        : effectiveMarker;
-      this.formatter.mergeMarkerIntoBuffer(this.out, closeMarker, true);
+      // A span inside a note is closed by its own mark (`\fq …\fq*`), never by the note's (`\f*`). `\fq`,
+      // `\fqa` and their kind were closed with `\f*` when text followed them inside the note: to every other
+      // reader of USFM the note ended there, and what was left of it («but some manuscripts have …») became
+      // text of the verse.
+      this.formatter.mergeMarkerIntoBuffer(this.out, effectiveMarker, true);
     }
 
     // Pop context from stack

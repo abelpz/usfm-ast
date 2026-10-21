@@ -34,6 +34,8 @@ export type CreateDcsReleaseOptions = {
   name: string;
   /** Optional markdown body / changelog */
   body?: string;
+  /** Branch, tag, or commit SHA to tag. Defaults to the repository default branch. */
+  targetCommitish?: string;
   /** Create as a draft (not yet published). Defaults to false. */
   isDraft?: boolean;
   /** Create as a pre-release. Defaults to false. */
@@ -81,6 +83,7 @@ export async function createDcsRelease(options: CreateDcsReleaseOptions): Promis
     prerelease: options.isPrerelease ?? false,
   };
   if (options.body) body.body = options.body;
+  if (options.targetCommitish) body.target_commitish = options.targetCommitish;
 
   const res = await fetchFn(
     `${base}/repos/${enc(options.owner)}/${enc(options.repo)}/releases`,

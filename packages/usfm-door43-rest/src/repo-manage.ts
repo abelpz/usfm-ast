@@ -9,6 +9,21 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
+/**
+ * Thrown by {@link listRepoGitTree} when a commit OID can't be resolved to a tree SHA
+ * via either the `/commits/{sha}` or `/git/commits/{sha}` APIs (both returned 404).
+ * Callers can catch this to fall back gracefully (e.g. treating the reference as
+ * having no known base rather than hard-failing the sync).
+ */
+export class CommitNotFoundError extends Error {
+  readonly commitOid: string;
+  constructor(commitOid: string) {
+    super(`Commit ${commitOid.slice(0, 8)} not found on remote (404 from both commit APIs)`);
+    this.name = 'CommitNotFoundError';
+    this.commitOid = commitOid;
+  }
+}
+
 function authHeaders(token: string): HeadersInit {
   return {
     Authorization: `token ${token}`,
@@ -556,7 +571,10 @@ async function fetchRootTreeShaFromCommitsApi(options: {
   return sha || null;
 }
 
-/** `GET .../git/commits/{sha}` — full commit includes `tree` even when `GET .../branches/{ref}` omits it. */
+/**
+ * `GET .../git/commits/{sha}` — full commit includes `tree` even when `GET .../branches/{ref}` omits it.
+ * Returns `null` when the server returns 404 (stale OID or Gitea instance doesn't support this endpoint).
+ */
 async function fetchTreeShaFromGitCommit(options: {
   base: string;
   enc: typeof encodeURIComponent;
@@ -565,10 +583,11 @@ async function fetchTreeShaFromGitCommit(options: {
   commitOid: string;
   headers: Record<string, string>;
   fetchFn: typeof fetch;
-}): Promise<string> {
+}): Promise<string | null> {
   const { base, enc, owner, repo, commitOid, headers, fetchFn } = options;
   const u = `${base}/repos/${enc(owner)}/${enc(repo)}/git/commits/${enc(commitOid)}`;
   const res = await fetchFn(u, { headers, cache: 'no-store' });
+  if (res.status === 404) return null;
   if (!res.ok) await door43HttpError('Door43 get git commit', res);
   const j: unknown = await res.json();
   if (!isRecord(j)) throw new Error('Invalid git commit response');
@@ -579,8 +598,7 @@ async function fetchTreeShaFromGitCommit(options: {
     const innerTree = inner ? treeObjectToSha(inner.tree) : '';
     if (innerTree && innerTree.toLowerCase() !== head) sha = innerTree;
   }
-  if (!sha) throw new Error('Missing tree sha');
-  return sha;
+  return sha || null;
 }
 
 /**
@@ -614,15 +632,19 @@ export async function listRepoGitTree(options: ListRepoGitTreeOptions): Promise<
         fetchFn,
       })) ?? '';
     if (!treeSha) {
-      treeSha = await fetchTreeShaFromGitCommit({
-        base,
-        enc,
-        owner: options.owner,
-        repo: options.repo,
-        commitOid: refName,
-        headers,
-        fetchFn,
-      });
+      treeSha =
+        (await fetchTreeShaFromGitCommit({
+          base,
+          enc,
+          owner: options.owner,
+          repo: options.repo,
+          commitOid: refName,
+          headers,
+          fetchFn,
+        })) ?? '';
+    }
+    if (!treeSha) {
+      throw new CommitNotFoundError(refName);
     }
   } else {
     let br = await fetchFn(branchUrl(refName), { headers, cache: 'no-store' });
@@ -704,15 +726,17 @@ export async function listRepoGitTree(options: ListRepoGitTreeOptions): Promise<
     }
     if (!treeSha) {
       if (!oid) throw new Error('Missing tree sha');
-      treeSha = await fetchTreeShaFromGitCommit({
-        base,
-        enc,
-        owner: options.owner,
-        repo: options.repo,
-        commitOid: oid,
-        headers,
-        fetchFn,
-      });
+      treeSha =
+        (await fetchTreeShaFromGitCommit({
+          base,
+          enc,
+          owner: options.owner,
+          repo: options.repo,
+          commitOid: oid,
+          headers,
+          fetchFn,
+        })) ?? '';
+      if (!treeSha) throw new CommitNotFoundError(oid);
     }
   }
 

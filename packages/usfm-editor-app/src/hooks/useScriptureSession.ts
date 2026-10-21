@@ -31,6 +31,7 @@ import {
 import { getStoredMarkerShortcuts } from '@/marker-shortcuts';
 import { directionForLang } from '@/lib/lang-direction';
 import type { DcsStoredCredentials, DcsStoredTarget } from '@/lib/dcs-storage';
+import { getLocalJournalActorId } from '@/lib/local-actor-id';
 
 export type UseScriptureSessionArgs = {
   mountRef: React.RefObject<HTMLDivElement | null>;
@@ -77,6 +78,17 @@ export function useScriptureSession({
   useEffect(() => {
     onEditorChangeRef.current = onEditorChange;
   }, [onEditorChange]);
+
+  /**
+   * Track the latest `initialUsfm` value via a ref so the session-creation
+   * `useLayoutEffect` can read it without having `initialUsfm` in its own
+   * dependency array (which would unnecessarily destroy/recreate the whole
+   * session every time the USFM content changes).
+   */
+  const pendingUsfmRef = useRef(initialUsfm);
+  pendingUsfmRef.current = initialUsfm;
+  /** The USFM that was loaded when the current session was created. */
+  const sessionCreatedWithUsfmRef = useRef('');
 
   useEffect(() => {
     const s = ctrl?.session;
@@ -133,10 +145,13 @@ export function useScriptureSession({
     const getSnapshotUsjRef = {
       current: null as null | (() => UsjDocument),
     };
+    const displayName = dcsCreds?.username?.trim() || 'local';
+    const localActorId = getLocalJournalActorId(displayName);
 
     if (projectBookJournalStore) {
       const headless = new HeadlessCollabSession({
-        userId: dcsCreds?.username?.trim() || 'local',
+        userId: localActorId,
+        displayName,
         journalStore: projectBookJournalStore,
         realtimeTransport: collabActive ? buildCollabTransport() : undefined,
       });
@@ -156,7 +171,8 @@ export function useScriptureSession({
         branch: dcsTarget.branch,
       });
       const headless = new HeadlessCollabSession({
-        userId: dcsCreds.username,
+        userId: localActorId,
+        displayName,
         remoteTransport,
         realtimeTransport: collabActive ? buildCollabTransport() : undefined,
       });
@@ -192,7 +208,10 @@ export function useScriptureSession({
     if (collabActive && !collabRealtimeEngine && session.sync instanceof RealtimeSyncEngine) {
       collabRealtimeEngine = session.sync;
     }
-    session.loadUSFM(initialUsfm);
+    // Load with the latest pending USFM (may already be the real content if the
+    // async storage read completed before the session was created).
+    session.loadUSFM(pendingUsfmRef.current);
+    sessionCreatedWithUsfmRef.current = pendingUsfmRef.current;
 
     let cancelled = false;
     void (async () => {
@@ -262,7 +281,9 @@ export function useScriptureSession({
     };
   }, [
     mountRef,
-    initialUsfm,
+    // NOTE: initialUsfm is intentionally NOT here — USFM content changes are
+    // handled by the separate useEffect below so the session is not destroyed
+    // and recreated every time the USFM source content updates.
     collabActive,
     wsRelay,
     dcsCreds?.host,
@@ -277,6 +298,21 @@ export function useScriptureSession({
     projectBookJournalStore,
     localBookCode,
   ]);
+
+  /**
+   * When `initialUsfm` changes after the session is already live (e.g. the
+   * async project storage read completing after the editor has mounted with a
+   * blank placeholder), reload the session content in-place instead of
+   * destroying and recreating the whole session.  Recreating the session would
+   * unmount `ReferenceColumn` (because `ctrl` briefly becomes `null`), causing
+   * it to lose its source-language state and trigger a full scripture reload.
+   */
+  useEffect(() => {
+    if (!ctrl) return;
+    if (initialUsfm === sessionCreatedWithUsfmRef.current) return;
+    sessionCreatedWithUsfmRef.current = initialUsfm;
+    ctrl.session.loadUSFM(initialUsfm);
+  }, [ctrl, initialUsfm]);
 
   return ctrl;
 }

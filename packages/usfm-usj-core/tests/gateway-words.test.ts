@@ -4,6 +4,7 @@ import { USFMParser } from '@usfm-tools/parser';
 import {
   alignmentWordSurfacesEqual,
   normalizeWordForAlignmentMatch,
+  occurrenceStats,
   tokenizeWords,
   stripAlignments,
   tokenizeGatewayUsj,
@@ -24,6 +25,26 @@ describe('gateway-word-split', () => {
 
   it('normalizeWordForAlignmentMatch strips outer punctuation only', () => {
     expect(normalizeWordForAlignmentMatch('  Pablo,  ')).toBe('Pablo');
+  });
+});
+
+describe('occurrenceStats', () => {
+  it('numbers a word repeated with different punctuation as the same word', () => {
+    const words = tokenizeWords('siervo de Jesucristo y guardados para Jesucristo, llamados:');
+    expect(occurrenceStats(words, 2)).toEqual({ occurrence: 1, occurrences: 2 });
+    expect(occurrenceStats(words, 6)).toEqual({ occurrence: 2, occurrences: 2 });
+    // Each token is then found back by its own (word, occurrence), and by no other.
+    const tokens = words.map((surface, index) => ({ verseSid: 'JUD 1:1', surface, index, ...occurrenceStats(words, index) }));
+    expect(transIndexForAlignedWord(tokens, { word: 'Jesucristo', occurrence: 1, occurrences: 2 })).toBe(2);
+    expect(transIndexForAlignedWord(tokens, { word: 'Jesucristo,', occurrence: 2, occurrences: 2 })).toBe(6);
+  });
+
+  it('keeps counting words that differ, and a surface of punctuation alone', () => {
+    const words = tokenizeWords('de — del — de');
+    expect(occurrenceStats(words, 0)).toEqual({ occurrence: 1, occurrences: 2 });
+    expect(occurrenceStats(words, 2)).toEqual({ occurrence: 1, occurrences: 1 });
+    expect(occurrenceStats(words, 3)).toEqual({ occurrence: 2, occurrences: 2 });
+    expect(occurrenceStats(words, 4)).toEqual({ occurrence: 2, occurrences: 2 });
   });
 });
 

@@ -1,5 +1,6 @@
 import { DcsRestProjectSync, gitBlobShaHex } from '@usfm-tools/editor-adapters';
 import {
+  CommitNotFoundError,
   ensureRepoUsesMainDefaultBranch,
   ensureBranch,
   createDcsRelease,
@@ -8,13 +9,16 @@ import {
   compareRefs,
 } from '@usfm-tools/door43-rest';
 import type { IBrowserGitAdapter } from './browser-git-adapter';
-import { writeFileWithCrdt } from './crdt-storage';
+import { deleteFileWithCrdt, writeFileWithCrdt } from './crdt-storage';
+import { parseSyncSidecarJson, syncSidecarPathForBook } from './sync-sidecar';
 import { isProjectPushStale } from '@usfm-tools/types';
 import type {
   FileConflict,
   ProjectMeta,
+  ProjectRelease,
   ProjectPushResult,
   ProjectStorage,
+  ProjectSyncAdapter,
   ProjectSyncConfig,
   RemoteFileEntry,
 } from '@usfm-tools/types';
@@ -134,6 +138,85 @@ function isLocalDeltaEmpty(summary: LocalChangeSummary): boolean {
   );
 }
 
+function getMapValueCaseInsensitive(map: Map<string, string>, wanted: string): string | undefined {
+  const normalizedWanted = wanted.replace(/\\/g, '/').toLowerCase();
+  for (const [path, value] of map) {
+    if (path.replace(/\\/g, '/').toLowerCase() === normalizedWanted) return value;
+  }
+  return undefined;
+}
+
+function vectorClockCovers(
+  local: Record<string, number> | undefined,
+  remote: Record<string, number> | undefined,
+): boolean {
+  if (!local || !remote) return false;
+  const remoteEntries = Object.entries(remote);
+  if (remoteEntries.length === 0) return false;
+  for (const [actor, remoteClock] of remoteEntries) {
+    if ((local[actor] ?? 0) < remoteClock) return false;
+  }
+  return true;
+}
+
+function remoteBookSnapshotIsLocalAncestor(options: {
+  bookCode: string | undefined;
+  oursFiles: Map<string, string>;
+  theirsFiles: Map<string, string>;
+}): boolean {
+  const { bookCode, oursFiles, theirsFiles } = options;
+  if (!bookCode) return false;
+
+  const sidecarPath = syncSidecarPathForBook(bookCode);
+  const oursRaw = getMapValueCaseInsensitive(oursFiles, sidecarPath);
+  const theirsRaw = getMapValueCaseInsensitive(theirsFiles, sidecarPath);
+  if (!oursRaw || !theirsRaw) return false;
+
+  const ours = parseSyncSidecarJson(oursRaw);
+  const theirs = parseSyncSidecarJson(theirsRaw);
+  if (!ours || !theirs || ours.docId !== theirs.docId) return false;
+
+  return vectorClockCovers(ours.vectorClock, theirs.vectorClock);
+}
+
+function pathBelongsToBook(path: string, bookCode: string | undefined): boolean {
+  if (!bookCode) return false;
+  const book = bookCode.trim().toLowerCase();
+  if (!book) return false;
+  const norm = path.replace(/\\/g, '/').replace(/^\.\//, '').toLowerCase();
+  const file = norm.split('/').pop() ?? norm;
+
+  if (norm === `.sync/${book}.json`) return true;
+  if (norm === `journal/${book}.jsonl`) return true;
+  if (norm.startsWith(`journal/snapshots/${book}/`)) return true;
+  if (norm === `crdt/${book}.ybin`) return true;
+  if (file === `${book}.alignment.json`) return true;
+  return new RegExp(`^(?:\\d{2}-)?${book.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.(?:usfm|sfm)$`).test(file);
+}
+
+function preferLocalForConflicts(
+  merged: Map<string, string>,
+  deleted: string[],
+  conflicts: FileConflict[],
+  oursFiles: Map<string, string>,
+  bookCode: string | undefined,
+): FileConflict[] {
+  const remaining: FileConflict[] = [];
+  for (const conflict of conflicts) {
+    if (!pathBelongsToBook(conflict.path, bookCode)) {
+      remaining.push(conflict);
+      continue;
+    }
+    const ours = oursFiles.get(conflict.path);
+    if (ours === undefined) {
+      deleted.push(conflict.path);
+    } else {
+      merged.set(conflict.path, ours);
+    }
+  }
+  return remaining;
+}
+
 /** Returns `true` if any local file differs from the last recorded remote state. */
 export async function hasLocalChanges(
   storage: ProjectStorage,
@@ -141,6 +224,125 @@ export async function hasLocalChanges(
 ): Promise<boolean> {
   const { changedPaths, newPaths, deletedPaths } = await detectLocalChanges(storage, projectId);
   return changedPaths.length + newPaths.length + deletedPaths.length > 0;
+}
+
+export type ReleasePromotionConflict = {
+  version: string;
+  bookCode: string;
+  branch: string;
+  prUrl: string;
+};
+
+export class ReleasePromotionConflictError extends Error {
+  constructor(public readonly conflicts: ReleasePromotionConflict[]) {
+    super('Release branch promotion has conflicts');
+    this.name = 'ReleasePromotionConflictError';
+  }
+}
+
+export type ReleaseBookPromotionResult = {
+  bookCode: string;
+  branch: string;
+  status: 'already-current' | 'merged';
+  prUrl?: string;
+};
+
+async function promoteBookBranchesForRelease(options: {
+  release: ProjectRelease;
+  token: string;
+  sync: ProjectSyncConfig;
+}): Promise<ReleaseBookPromotionResult[]> {
+  const { release, token, sync } = options;
+  const defaultBranch = sync.branch || 'main';
+  const seen = new Set<string>();
+  const results: ReleaseBookPromotionResult[] = [];
+  const conflicts: ReleasePromotionConflict[] = [];
+
+  if (defaultBranch.trim().toLowerCase() === 'main') {
+    await ensureRepoUsesMainDefaultBranch({
+      host: sync.host,
+      token,
+      owner: sync.owner,
+      repo: sync.repo,
+    });
+  }
+
+  for (const rawBookCode of release.books) {
+    const bookCode = rawBookCode.trim().toUpperCase();
+    if (!bookCode || seen.has(bookCode)) continue;
+    seen.add(bookCode);
+
+    const branch = bookBranchName(bookCode);
+    if (!branch || branch === defaultBranch) {
+      results.push({ bookCode, branch: defaultBranch, status: 'already-current' });
+      continue;
+    }
+
+    await ensureBranch({
+      host: sync.host,
+      token,
+      owner: sync.owner,
+      repo: sync.repo,
+      branch,
+      fromBranch: defaultBranch,
+    });
+
+    const cmp = await compareRefs({
+      host: sync.host,
+      token,
+      owner: sync.owner,
+      repo: sync.repo,
+      base: defaultBranch,
+      head: branch,
+    });
+    const noCommitsToPromote =
+      cmp.totalCommits === 0 || (cmp.aheadBy !== null && cmp.aheadBy === 0);
+    if (noCommitsToPromote) {
+      results.push({ bookCode, branch, status: 'already-current' });
+      continue;
+    }
+
+    const pr = await ensureOpenPullRequest({
+      host: sync.host,
+      token,
+      owner: sync.owner,
+      repo: sync.repo,
+      head: branch,
+      base: defaultBranch,
+      title: `Publish ${release.version}: merge ${bookCode} into ${defaultBranch}`,
+      body: [
+        `Automatic release preparation for ${release.version}.`,
+        '',
+        `Book: ${bookCode}`,
+        `Source branch: ${branch}`,
+        `Target branch: ${defaultBranch}`,
+      ].join('\n'),
+    });
+
+    const merge = await mergePullRequestOrCloseIfNothingToMerge({
+      host: sync.host,
+      token,
+      owner: sync.owner,
+      repo: sync.repo,
+      index: pr.number,
+      baseRef: defaultBranch,
+      headRef: branch,
+      method: 'merge',
+      message: `Publish ${release.version}: merge ${bookCode}`,
+    });
+
+    if (merge.merged) {
+      results.push({ bookCode, branch, status: 'merged', prUrl: merge.prHtmlUrl });
+    } else {
+      conflicts.push({ version: release.version, bookCode, branch, prUrl: merge.prHtmlUrl });
+    }
+  }
+
+  if (conflicts.length > 0) {
+    throw new ReleasePromotionConflictError(conflicts);
+  }
+
+  return results;
 }
 
 /**
@@ -170,6 +372,7 @@ export async function publishPendingReleasesToDcs(options: {
     }
 
     try {
+      await promoteBookBranchesForRelease({ release: rel, token, sync });
       await createDcsRelease({
         host: sync.host,
         token,
@@ -178,11 +381,13 @@ export async function publishPendingReleasesToDcs(options: {
         tag: rel.version,
         name: rel.title ?? rel.version,
         body: bodyLines.join('\n'),
+        targetCommitish: sync.branch,
       });
       await storage.updateRelease(projectId, rel.version, {
         publishedAt: new Date().toISOString(),
       });
     } catch (err) {
+      if (err instanceof ReleasePromotionConflictError) throw err;
       // Log but don't rethrow — one failed release should not block others.
       console.warn(`Failed to publish release ${rel.version} to DCS:`, err);
     }
@@ -357,6 +562,29 @@ const _syncInFlight = new Map<string, Promise<SyncLocalProjectWithDcsResult>>();
  * same queued promise rather than stacking unboundedly.
  */
 const _syncPending = new Set<string>();
+const MAX_STALE_SYNC_RESTARTS = 2;
+
+async function syncWithStaleRestarts(options: {
+  storage: ProjectStorage;
+  projectId: string;
+  token: string;
+  sync: ProjectSyncConfig;
+  username: string;
+  bookCode?: string;
+  gitAdapter?: IBrowserGitAdapter;
+  _adapter?: ProjectSyncAdapter;
+}): Promise<SyncLocalProjectWithDcsResult> {
+  let lastStale: StalePushError | null = null;
+  for (let attempt = 0; attempt <= MAX_STALE_SYNC_RESTARTS; attempt++) {
+    try {
+      return await _syncOnce(options);
+    } catch (err) {
+      if (!(err instanceof StalePushError)) throw err;
+      lastStale = err;
+    }
+  }
+  throw lastStale ?? new StalePushError({});
+}
 
 /**
  * Pull from the Tier-2 (`{bookCode}`) branch, 3-way merge into local storage,
@@ -398,6 +626,13 @@ export async function syncLocalProjectWithDcs(options: {
    *   so subsequent syncs can use the local snapshot.
    */
   gitAdapter?: IBrowserGitAdapter;
+  /**
+   * Injectable sync adapter (test seam).  When supplied, all remote I/O goes
+   * through this adapter instead of constructing a real {@link DcsRestProjectSync}.
+   * DCS-specific coordination calls (ensureBranch, compareRefs) are skipped.
+   * This lets unit tests simulate multi-user conflict scenarios without HTTP.
+   */
+  _adapter?: ProjectSyncAdapter;
 }): Promise<SyncLocalProjectWithDcsResult> {
   const { projectId, sync, bookCode } = options;
   const tier2 = bookCode ? bookBranchName(bookCode) : sync.branch;
@@ -416,7 +651,7 @@ export async function syncLocalProjectWithDcs(options: {
     return existing;
   }
 
-  const run = _syncOnce(options);
+  const run = syncWithStaleRestarts(options);
   _syncInFlight.set(mutexKey, run);
   // Clean up the map when the run settles.  The cleanup chain must not propagate
   // a rejection (which would create an unhandled-rejection noise in the process).
@@ -443,8 +678,10 @@ async function _syncOnce(options: {
   username: string;
   bookCode?: string;
   gitAdapter?: IBrowserGitAdapter;
+  _adapter?: ProjectSyncAdapter;
 }): Promise<SyncLocalProjectWithDcsResult> {
   const { storage, projectId, token, sync, username, bookCode } = options;
+  const injected = options._adapter;
 
   const meta = await storage.getProject(projectId);
   if (!meta) throw new Error(`Project not found: ${projectId}`);
@@ -452,28 +689,31 @@ async function _syncOnce(options: {
   // Phase 5: push target is the Tier-2 (book) branch directly — no Tier-1 personal branch.
   const tier2 = bookCode ? bookBranchName(bookCode) : sync.branch;
 
-  if (sync.branch.trim().toLowerCase() === 'main') {
-    await ensureRepoUsesMainDefaultBranch({
-      host: sync.host,
-      token,
-      owner: sync.owner,
-      repo: sync.repo,
-    });
+  // DCS-specific coordination: skipped when an injected adapter is provided.
+  if (!injected) {
+    if (sync.branch.trim().toLowerCase() === 'main') {
+      await ensureRepoUsesMainDefaultBranch({
+        host: sync.host,
+        token,
+        owner: sync.owner,
+        repo: sync.repo,
+      });
+    }
+
+    // Ensure the book branch exists before reading its tip or pushing to it.
+    if (bookCode && tier2 !== sync.branch) {
+      await ensureBranch({
+        host: sync.host,
+        token,
+        owner: sync.owner,
+        repo: sync.repo,
+        branch: tier2,
+        fromBranch: sync.branch,
+      });
+    }
   }
 
-  // Ensure the book branch exists before reading its tip or pushing to it.
-  if (bookCode && tier2 !== sync.branch) {
-    await ensureBranch({
-      host: sync.host,
-      token,
-      owner: sync.owner,
-      repo: sync.repo,
-      branch: tier2,
-      fromBranch: sync.branch,
-    });
-  }
-
-  const adapterTier2 = new DcsRestProjectSync({
+  const adapterTier2 = injected ?? new DcsRestProjectSync({
     host: sync.host,
     token,
     owner: sync.owner,
@@ -495,25 +735,35 @@ async function _syncOnce(options: {
     return { kind: 'noop', tier2HeadSha };
   }
 
-  // --- Ancestry check via compareRefs ---
+  // --- Ancestry check via compareRefs (DCS only; injected adapter uses simple equality) ---
   let needsMerge = true;
   let mergeBaseOid: string | null = null;
 
   if (lastPushed) {
-    const cmp = await compareRefs({
-      host: sync.host,
-      token,
-      owner: sync.owner,
-      repo: sync.repo,
-      base: lastPushed,   // what we last owned on Tier-2
-      head: tier2HeadSha, // current Tier-2 tip
-    });
-    if (cmp.totalCommits === 0) {
-      // Tier-2 has no commits beyond our last push — nothing new to pull.
-      needsMerge = false;
+    if (injected) {
+      // Injected adapter: no compareRefs API. Use simple equality — if head hasn't moved,
+      // no merge needed. If it has, we use lastPushed as the base ref.
+      if (lastPushed === tier2HeadSha) {
+        needsMerge = false;
+      } else {
+        mergeBaseOid = lastPushed;
+      }
     } else {
-      // Use the API-supplied merge-base as the true common ancestor for 3-way.
-      mergeBaseOid = cmp.mergeBaseCommit;
+      const cmp = await compareRefs({
+        host: sync.host,
+        token,
+        owner: sync.owner,
+        repo: sync.repo,
+        base: lastPushed,   // what we last owned on Tier-2
+        head: tier2HeadSha, // current Tier-2 tip
+      });
+      if (cmp.totalCommits === 0) {
+        // Tier-2 has no commits beyond our last push — nothing new to pull.
+        needsMerge = false;
+      } else {
+        // Use the API-supplied merge-base as the true common ancestor for 3-way.
+        mergeBaseOid = cmp.mergeBaseCommit;
+      }
     }
   } else if (lastBase && lastBase === tier2HeadSha && isLocalDeltaEmpty(localDelta)) {
     // Legacy fallback noop (no lastPushed recorded yet).
@@ -525,7 +775,21 @@ async function _syncOnce(options: {
     // Prefer the true merge-base from compareRefs; fall back to the legacy lastBase anchor.
     const baseRef = mergeBaseOid ?? lastBase ?? tier2HeadSha;
 
-    const theirsFiles = await adapterTier2.pullFilesAt(tier2HeadSha);
+    // Fetch the current remote tree. If the commit OID is not accessible via the
+    // commits API (some Gitea instances return 404 for /git/commits/{sha}), fall back
+    // to fetching by branch name — we'll get the latest remote files, which is still
+    // a correct (if slightly non-atomic) view of the remote state.
+    let theirsFiles: Map<string, string>;
+    if (injected) {
+      theirsFiles = await injected.pullFilesAt(tier2HeadSha);
+    } else {
+      try {
+        theirsFiles = await adapterTier2.pullFilesAt(tier2HeadSha);
+      } catch (e) {
+        if (!(e instanceof CommitNotFoundError)) throw e;
+        theirsFiles = await adapterTier2.pullFilesAt(tier2);
+      }
+    }
 
     // Phase 3: read base files from local git when a snapshot for this DCS OID is cached,
     // avoiding a REST round-trip for `pullFilesAt(baseRef)`.
@@ -537,8 +801,18 @@ async function _syncOnce(options: {
       baseFiles = await options.gitAdapter.readFilesAt(localBaseOid);
     } else if (baseRef === tier2HeadSha) {
       baseFiles = new Map(theirsFiles);
+    } else if (injected) {
+      baseFiles = await injected.pullFilesAt(baseRef);
     } else {
-      baseFiles = await adapterTier2.pullFilesAt(baseRef);
+      try {
+        baseFiles = await adapterTier2.pullFilesAt(baseRef);
+      } catch (e) {
+        if (!(e instanceof CommitNotFoundError)) throw e;
+        // Stale base anchor — the OID no longer exists on the remote.
+        // Degrade to a 2-way merge (no common ancestor). This is conservative:
+        // more lines may appear as conflicts, but no data is lost.
+        baseFiles = new Map();
+      }
     }
 
     const oursFiles = await gatherProjectFileMap(storage, projectId);
@@ -548,12 +822,20 @@ async function _syncOnce(options: {
       ...oursFiles.keys(),
     ]);
 
-    const { merged, conflicts, deleted } = mergeProjectMaps({
+    const mergeResult = mergeProjectMaps({
       paths: allPaths,
       getBase: (p) => baseFiles.get(p),
       getOurs: (p) => oursFiles.get(p),
       getTheirs: (p) => theirsFiles.get(p),
     });
+    const { merged, deleted } = mergeResult;
+    let { conflicts } = mergeResult;
+
+    if (conflicts.length > 0) {
+      if (remoteBookSnapshotIsLocalAncestor({ bookCode, oursFiles, theirsFiles })) {
+        conflicts = preferLocalForConflicts(merged, deleted, conflicts, oursFiles, bookCode);
+      }
+    }
 
     if (conflicts.length > 0) {
       await storage.updateProject(projectId, { pendingConflicts: conflicts });
@@ -571,7 +853,7 @@ async function _syncOnce(options: {
 
     // Remove files silently deleted by the merge (one side deleted, other unchanged).
     for (const path of deleted) {
-      await storage.deleteFile(projectId, path);
+      await deleteFileWithCrdt(storage, projectId, path);
     }
 
   } else if (isLocalDeltaEmpty(localDelta)) {
@@ -582,6 +864,48 @@ async function _syncOnce(options: {
 
   // Phase 5: push directly to the book branch (tier2), not a personal Tier-1 branch.
   const pushBranch = tier2;
+
+  // When an injected adapter is present, push through it directly without HTTP coordination.
+  if (injected) {
+    const map = await gatherProjectFileMap(storage, projectId);
+    const storedShas = await storage.getSyncShas(projectId);
+    const previouslySyncedPaths = new Set(Object.keys(storedShas));
+    const remoteIndex = await injected.getRemoteFileIndex();
+    const expectedBaseShaByPath = buildExpectedBaseShasForPush({
+      remoteIndex,
+      localMap: map,
+      previouslySyncedPaths,
+    });
+
+    const pushOutcome = await injected.pushFiles(map, 'Project sync', {
+      previouslySyncedPaths,
+      expectedBaseShaByPath,
+    });
+    if (isProjectPushStale(pushOutcome)) {
+      throw new StalePushError(pushOutcome.staleByPath);
+    }
+
+    // Compute git-compatible blob SHAs for the files just pushed.
+    // We derive them locally (gitBlobShaHex) so detectLocalChanges — which
+    // also uses gitBlobShaHex — sees no changes on the next sync cycle.
+    const next: Record<string, string> = {};
+    for (const [lk, content] of map) {
+      next[lk] = await gitBlobShaHex(content);
+    }
+    await storage.setSyncShas(projectId, next);
+
+    const newHeadSha = await injected.getRemoteHeadCommit();
+    await storage.updateProject(projectId, {
+      lastRemoteCommit: { ...(meta.lastRemoteCommit ?? {}), [tier2]: newHeadSha },
+      lastPushedCommit: { ...(meta.lastPushedCommit ?? {}), [tier2]: newHeadSha },
+      pendingConflicts: [],
+    });
+
+    return { kind: 'synced' as const, pushResult: pushOutcome, tier2HeadSha: newHeadSha };
+  }
+
+  // DCS path — a stale CAS result bubbles to syncWithStaleRestarts so the next
+  // attempt re-pulls and re-merges against the current remote state.
   const adapterPush = new DcsRestProjectSync({
     host: sync.host,
     token,
@@ -593,68 +917,54 @@ async function _syncOnce(options: {
   const map = await gatherProjectFileMap(storage, projectId);
   const storedShas = await storage.getSyncShas(projectId);
   const previouslySyncedPaths = new Set(Object.keys(storedShas));
-  let expectedBaseShaByPath = buildExpectedBaseShasForPush({
+  const expectedBaseShaByPath = buildExpectedBaseShasForPush({
     remoteIndex: await adapterPush.getRemoteFileIndex(),
     localMap: map,
     previouslySyncedPaths,
   });
 
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  const pushResult = await pushLocalProjectToDcs({
+    storage,
+    projectId,
+    token,
+    sync,
+    workingBranch: pushBranch !== sync.branch ? pushBranch : undefined,
+    expectedBaseShaByPath,
+  });
+
+  // Phase 3: commit the merged file snapshot into the local git adapter so
+  // subsequent syncs can read the base tree locally without a REST round-trip.
+  let newLocalOidByDcsRef: Record<string, string> | undefined;
+  if (options.gitAdapter) {
     try {
-      const pushResult = await pushLocalProjectToDcs({
-        storage,
-        projectId,
-        token,
-        sync,
-        workingBranch: pushBranch !== sync.branch ? pushBranch : undefined,
-        expectedBaseShaByPath,
-      });
-
-      // Phase 3: commit the merged file snapshot into the local git adapter so
-      // subsequent syncs can read the base tree locally without a REST round-trip.
-      let newLocalOidByDcsRef: Record<string, string> | undefined;
-      if (options.gitAdapter) {
-        try {
-          const mergedMap = await gatherProjectFileMap(storage, projectId);
-          const localOid = await options.gitAdapter.commitAll(
-            mergedMap,
-            `sync ${tier2HeadSha.slice(0, 8)}`,
-            { name: username, email: `${username}@local` },
-          );
-          newLocalOidByDcsRef = {
-            ...(meta.localGitOidByDcsRef ?? {}),
-            [tier2HeadSha]: localOid,
-          };
-        } catch {
-          // Non-fatal — local git snapshot failure does not block the sync result.
-        }
-      }
-
-      // Record the Tier-2 tip we synced from as the new push anchor.
-      await storage.updateProject(projectId, {
-        lastRemoteCommit: { ...(meta.lastRemoteCommit ?? {}), [tier2]: tier2HeadSha },
-        lastPushedCommit: { ...(meta.lastPushedCommit ?? {}), [tier2]: tier2HeadSha },
-        ...(newLocalOidByDcsRef ? { localGitOidByDcsRef: newLocalOidByDcsRef } : {}),
-        pendingConflicts: [],
-      });
-
-      return { kind: 'synced' as const, pushResult, tier2HeadSha };
-    } catch (e) {
-      lastError = e;
-      if (e instanceof StalePushError && attempt < 2) {
-        const fresh = await adapterPush.getRemoteFileIndex();
-        const mapNow = await gatherProjectFileMap(storage, projectId);
-        const shasNow = await storage.getSyncShas(projectId);
-        expectedBaseShaByPath = buildExpectedBaseShasForPush({
-          remoteIndex: fresh,
-          localMap: mapNow,
-          previouslySyncedPaths: new Set(Object.keys(shasNow)),
-        });
-        continue;
-      }
-      throw e;
+      const mergedMap = await gatherProjectFileMap(storage, projectId);
+      const localOid = await options.gitAdapter.commitAll(
+        mergedMap,
+        `sync ${tier2HeadSha.slice(0, 8)}`,
+        { name: username, email: `${username}@local` },
+      );
+      newLocalOidByDcsRef = {
+        ...(meta.localGitOidByDcsRef ?? {}),
+        [tier2HeadSha]: localOid,
+      };
+    } catch {
+      // Non-fatal — local git snapshot failure does not block the sync result.
     }
   }
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+
+  // Use the commit SHA from the push result as the new anchor when available.
+  // pushResult.commitSha is the SHA of the new commit we just created on DCS —
+  // the correct anchor for the next sync. Falls back to tier2HeadSha (the
+  // remote HEAD *before* our push) when the API didn't return a commit SHA
+  // (e.g. a no-op push where all files matched and no PUT was issued).
+  const pushedSha = pushResult.commitSha ?? tier2HeadSha;
+
+  await storage.updateProject(projectId, {
+    lastRemoteCommit: { ...(meta.lastRemoteCommit ?? {}), [tier2]: pushedSha },
+    lastPushedCommit: { ...(meta.lastPushedCommit ?? {}), [tier2]: pushedSha },
+    ...(newLocalOidByDcsRef ? { localGitOidByDcsRef: newLocalOidByDcsRef } : {}),
+    pendingConflicts: [],
+  });
+
+  return { kind: 'synced' as const, pushResult, tier2HeadSha: pushedSha };
 }

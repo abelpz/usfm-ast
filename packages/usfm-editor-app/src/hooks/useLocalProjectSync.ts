@@ -10,12 +10,14 @@ import {
   type SyncLocalProjectWithDcsResult,
   SyncConflictsError,
   StalePushError,
+  ReleasePromotionConflictError,
 } from '@/lib/dcs-project-sync';
 import { createBrowserGitAdapter, type IBrowserGitAdapter } from '@/lib/browser-git-adapter';
 import {
   notifySyncSuccess,
   notifySyncFailure,
 } from '@/lib/tauri-notifications';
+import { deleteFileWithCrdt, writeFileWithCrdt } from '@/lib/crdt-storage';
 import type { FileConflict, ProjectSyncConfig } from '@usfm-tools/types';
 
 /** How long after a save (ms) before we attempt an auto-push to DCS. */
@@ -112,6 +114,17 @@ export function useLocalProjectSync(
   const getSyncWatermarkRef = useRef(options?.getSyncWatermark);
   getSyncWatermarkRef.current = options?.getSyncWatermark;
 
+  const refreshPendingReleaseCount = useCallback(async (): Promise<number> => {
+    if (!projectId) {
+      setPendingReleaseCount(0);
+      return 0;
+    }
+    const releases = await storage.listReleases(projectId);
+    const count = releases.filter((r) => !r.publishedAt).length;
+    setPendingReleaseCount(count);
+    return count;
+  }, [projectId, storage]);
+
   useEffect(() => {
     if (!projectId) return;
     void (async () => {
@@ -120,10 +133,9 @@ export function useLocalProjectSync(
       setAutoSyncState(meta.autoSync !== false);
       setLastSyncAt(meta.lastRemoteSyncAt);
       setPendingFileConflicts(meta.pendingConflicts ?? []);
-      const releases = await storage.listReleases(projectId);
-      setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
+      await refreshPendingReleaseCount();
     })();
-  }, [projectId]);
+  }, [projectId, refreshPendingReleaseCount, storage]);
 
   const resolveConflict = useCallback(
     async (path: string, choice: 'ours' | 'theirs' | 'merged', mergedText?: string) => {
@@ -140,9 +152,9 @@ export function useLocalProjectSync(
             : c.oursText;
       // An empty string means the chosen side deleted the file.
       if (text === '') {
-        await storage.deleteFile(projectId, path);
+        await deleteFileWithCrdt(storage, projectId, path);
       } else {
-        await storage.writeFile(projectId, path, text);
+        await writeFileWithCrdt(storage, projectId, path, text);
       }
       const next = list.filter((x) => x.path !== path);
       await storage.updateProject(projectId, {
@@ -205,17 +217,26 @@ export function useLocalProjectSync(
         const projectMeta = await storage.getProject(projectId!);
         const projectLabel = projectMeta?.name ?? projectId!;
 
-        // Phase 5: pushed directly to the book branch — no PR auto-merge loop.
+        await publishPendingReleasesToDcs({ storage, projectId: projectId!, token, sync });
+        const pendingAfterPublish = await refreshPendingReleaseCount();
+        if (pendingAfterPublish > 0) {
+          await storage.updateProject(projectId!, { pendingSyncAt: new Date().toISOString() });
+        }
+        // Phase 5: pushed directly to the book branch. Release publishing promotes books separately.
         setDetail(`Local project: synced → ${sync.owner}/${sync.repo} (${tier2})`);
         notifySyncSuccess(projectLabel, `${sync.owner}/${sync.repo}`);
-        await publishPendingReleasesToDcs({ storage, projectId: projectId!, token, sync });
-        const releases = await storage.listReleases(projectId!);
-        setPendingReleaseCount(releases.filter((r) => !r.publishedAt).length);
       } catch (err) {
         if (err instanceof SyncConflictsError) {
           setPendingFileConflicts(err.conflicts);
           await storage.updateProject(projectId!, { pendingConflicts: err.conflicts });
           setDetail('Local project: merge conflicts — choose which version to keep');
+          return;
+        }
+        if (err instanceof ReleasePromotionConflictError) {
+          const prUrl = err.conflicts[0]?.prUrl;
+          setConflictPrUrl(prUrl);
+          setDetail('Local project: release merge conflict - resolve on Door43');
+          await storage.updateProject(projectId!, { pendingSyncAt: new Date().toISOString() });
           return;
         }
         if (err instanceof StalePushError) {
@@ -239,21 +260,25 @@ export function useLocalProjectSync(
         }
       }
     },
-    [bookCode, projectId, storage],
+    [bookCode, projectId, refreshPendingReleaseCount, storage],
   );
 
   const tryPush = useCallback(async () => {
     if (!projectId) return;
     const meta = await storage.getProject(projectId);
+    const pendingReleases = await refreshPendingReleaseCount();
     if (!meta?.syncConfig) return;
     const creds = loadDcsCredentials();
     if (!creds?.token) return;
     if (!navigator.onLine) {
+      if (pendingReleases > 0 || isDirtyRef.current) {
+        await storage.updateProject(projectId, { pendingSyncAt: new Date().toISOString() });
+      }
       setDetail('Local project: offline — will retry on reconnect');
       return;
     }
     await runSync(meta.syncConfig, creds.token, creds.username);
-  }, [projectId, runSync, storage]);
+  }, [projectId, refreshPendingReleaseCount, runSync, storage]);
 
   const notifyChange = useCallback(() => {
     if (!projectId) return;
@@ -274,12 +299,12 @@ export function useLocalProjectSync(
 
   useEffect(() => {
     const onOnline = () => {
-      if (!isDirtyRef.current || !autoSyncRef.current) return;
+      if ((!isDirtyRef.current && pendingReleaseCount === 0) || !autoSyncRef.current) return;
       void tryPush();
     };
     window.addEventListener('online', onOnline);
     return () => window.removeEventListener('online', onOnline);
-  }, [tryPush]);
+  }, [pendingReleaseCount, tryPush]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -287,8 +312,9 @@ export function useLocalProjectSync(
       const meta = await storage.getProject(projectId);
       if (!meta) return;
       const dirty = await hasLocalChanges(storage, projectId);
+      const pending = await refreshPendingReleaseCount();
       setIsDirty(dirty);
-      if (dirty) {
+      if (dirty || pending > 0) {
         setDetail(
           meta.pendingSyncAt
             ? 'Local project: sync pending — will retry on reconnect'
@@ -299,7 +325,7 @@ export function useLocalProjectSync(
         }
       }
     })();
-  }, [projectId]);
+  }, [projectId, refreshPendingReleaseCount, storage, tryPush]);
 
   useEffect(() => {
     return () => {

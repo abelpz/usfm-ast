@@ -12,6 +12,7 @@ import { ReferenceColumn } from '@/components/ReferenceColumn';
 import { EditorPanel } from '@/components/EditorPanel';
 import { loadDcsCredentials } from '@/lib/dcs-storage';
 import type { FileConflict, ProjectMeta } from '@usfm-tools/types';
+import { deleteFileWithCrdt, writeFileWithCrdt } from '@/lib/crdt-storage';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ScriptureSessionController } from '@/hooks/useScriptureSession';
@@ -160,8 +161,8 @@ export function ConflictWorkspacePage() {
           ? c.theirsText
           : c.oursText;
 
-    if (text === '') await storage.deleteFile(projectId, path);
-    else await storage.writeFile(projectId, path, text);
+    if (text === '') await deleteFileWithCrdt(storage, projectId, path);
+    else await writeFileWithCrdt(storage, projectId, path, text);
 
     const next = fileConflicts.filter((x) => x.path !== path);
     setFileConflicts(next);
@@ -281,6 +282,7 @@ export function ConflictWorkspacePage() {
                   onClose={closeWorkspace}
                   defaultOursLabel={payload.defaultOursLabel}
                   defaultTheirsLabel={payload.defaultTheirsLabel}
+                  showHeader={false}
                   showCancelButton
                   activeIndex={activeConflictIndex}
                   onActiveIndexChange={setActiveConflictIndex}

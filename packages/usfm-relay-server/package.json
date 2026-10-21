@@ -12,7 +12,7 @@
     "dev": "node ./node_modules/wrangler/bin/wrangler.js dev",
     "lint": "eslint src tests --ext .ts",
     "lint:fix": "eslint src tests --ext .ts --fix",
-    "test": "vitest run"
+    "test": "node scripts/run-tests.mjs"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.8.0",

@@ -354,7 +354,7 @@ describe('mergeProjectMaps — Phase 7 peer sync (no shared .ybin base)', () => 
     return updateYjsBase64WithUsfm(genesis, newUsfm);
   }
 
-  it('merges two devices\' edits when no base .ybin is provided (peer import)', () => {
+  it('surfaces conflict when divergent peer edits have no shared base', () => {
     const genesisUsfm = '\\id JHN\n\\c 1\n\\p\n\\v 1 In the beginning.\n';
     const genesis = makeSharedGenesis(genesisUsfm);
 
@@ -372,15 +372,12 @@ describe('mergeProjectMaps — Phase 7 peer sync (no shared .ybin base)', () => 
       getTheirs: (p) => p === USFM_PATH ? theirsUsfm : p === YBIN_PATH ? theirsYbin : undefined,
     });
 
-    // CRDT-first should fire (ours + theirs have .ybin), no conflict
-    expect(result.conflicts).toHaveLength(0);
-    const merged = result.merged.get(USFM_PATH);
-    expect(merged).toBeDefined();
-    // Both devices' edits should be present in the merged result
-    expect(merged).toContain('Word');
-    expect(merged).toContain('Added verse');
-    // .ybin companion must also be stored
-    expect(result.merged.has(YBIN_PATH)).toBe(true);
+    expect(result.conflicts).toHaveLength(1);
+    expect(result.conflicts[0]!.path).toBe(USFM_PATH);
+    expect(result.conflicts[0]!.oursText).toContain('Word');
+    expect(result.conflicts[0]!.theirsText).toContain('Added verse');
+    expect(result.merged.has(USFM_PATH)).toBe(false);
+    expect(result.merged.has(YBIN_PATH)).toBe(false);
   });
 
   it('no-conflict when peer sent identical content (idempotent import)', () => {

@@ -8,12 +8,12 @@
     "url": "https://github.com/abelpz/usfm-ast.git"
   },
   "scripts": {
-    "build": "turbo run build",
+    "build": "node scripts/turbo-run.mjs build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
-    "check-types": "turbo run check-types",
-    "test": "turbo run test",
+    "check-types": "node scripts/turbo-run.mjs check-types",
+    "test": "node scripts/turbo-run.mjs test",
     "test:usfm-parser-local": "cd packages/usfm-parser && bun run build && bunx jest --testPathIgnorePatterns=performance",
     "test:integration": "turbo run build --filter=@usfm-tools/editor-adapters && bunx jest tests/integration",
     "test:performance": "bunx jest tests/performance",
@@ -50,6 +50,8 @@
     "playground": "turbo run dev --filter=@usfm-tools/playground",
     "editor-app": "turbo run dev --filter=@usfm-tools/editor-app",
     "readonly-demo": "turbo run dev --filter=demo-usfm-readonly",
+    "ptxprint-demo": "bun run --filter @usfm-tools/ptxprint-local-demo start",
+    "usfm2pdf": "node packages/ptxprint-cli/bin/usfm2pdf.mjs",
     "relay:dev": "turbo run dev --filter=@usfm-tools/relay-server",
     "relay:deploy": "turbo run deploy --filter=@usfm-tools/relay-server"
   },

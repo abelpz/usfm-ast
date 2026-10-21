@@ -15,6 +15,7 @@ export {
 } from '@usfm-tools/usj-core';
 export { reconcileAlignments } from './alignment-reconcile';
 export { rebuildAlignedUsj, rebuildArray, emitAlignmentGroup } from './rebuild-aligned';
+export { layoutAlignedUsfm, keepUsfmVersionLine } from './aligned-usfm-layout';
 export {
   tokenizeWords,
   lcsWordIndices,

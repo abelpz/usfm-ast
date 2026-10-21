@@ -8,6 +8,18 @@ module.exports = {
     '^@usfm-tools/usj-core$': '<rootDir>/../usfm-usj-core/src/index.ts',
   },
   transform: {
-    '^.+\\.ts$': ['ts-jest', { tsconfig: { module: 'commonjs' } }],
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          module: 'commonjs',
+          baseUrl: '../..',
+          paths: {
+            '@usfm-tools/editor-adapters': ['packages/usfm-editor-adapters/src/index.ts'],
+            '@usfm-tools/usj-core': ['packages/usfm-usj-core/src/index.ts'],
+          },
+        },
+      },
+    ],
   },
 };

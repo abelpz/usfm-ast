@@ -21,6 +21,18 @@ describe('gateway-text-spacing', () => {
     expect(needsSpaceBetween('1', 'Pablo')).toBe(true);
   });
 
+  it('needsSpaceBetween keeps what opens a quotation apart from the punctuation before it', () => {
+    expect(needsSpaceBetween('dijo:', '«¡Que')).toBe(true);
+    expect(needsSpaceBetween('dijo', '¡Que')).toBe(true);
+    expect(needsSpaceBetween('reprenda!»', '«Y')).toBe(true);
+    expect(needsSpaceBetween('pregunta,', '¿quién')).toBe(true);
+    // What opens stays with what it opens, and a reference keeps its colon.
+    expect(needsSpaceBetween('«', '¡Que')).toBe(false);
+    expect(needsSpaceBetween('3:', '16')).toBe(false);
+    expect(needsSpaceBetween('said.', '"')).toBe(false);
+    expect(appendGatewayText('Más bien, dijo:', '«¡Que el Señor te reprenda!»')).toBe('Más bien, dijo: «¡Que el Señor te reprenda!»');
+  });
+
   it('appendGatewayText concatenates with a single space when needed', () => {
     expect(appendGatewayText('siervo', 'de')).toBe('siervo de');
     expect(appendGatewayText('hello,', 'next')).toBe('hello, next');

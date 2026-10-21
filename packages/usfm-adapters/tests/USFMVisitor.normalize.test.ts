@@ -75,12 +75,14 @@ describe('USFMVisitor with New Formatter API', () => {
       expect((root?.content?.[1] as { type?: string }).type).toBe('ms');
     });
 
-    it('should close \\fqa with generic \\f* inside a footnote so trailing text stays in \\ft (re-parse safe)', () => {
-      // Jonah 1:13-style: \\fqa … \\f* closes only the inner span; text continues in \\ft until \\f*.
+    it('closes a span inside a footnote with its own mark when text follows it in the note (re-parse safe)', () => {
+      // Read as this parser reads it: the first \\f* closes only the inner span, and the note goes on.
       const input =
         '\\p \\v 13 rowed hard\\f + \\fr 1:13 \\ft Hebrew \\fqa the men dug in\\f* to get back.\\f*';
       const result = normalizeWithOptions(input);
-      expect(result).toMatch(/\\\+?fqa the men dug in\\f\*/);
+      // Written so that any reader of USFM takes it the same way: `\\f*` only where the note ends.
+      expect(result).toContain('\\fqa the men dug in\\fqa* to get back.\\f*');
+      expect(result.match(/\\f\*/g)).toHaveLength(1);
       const p1 = new USFMParser();
       p1.load(input).parse();
       const j1 = p1.toJSON();
@@ -89,6 +91,23 @@ describe('USFMVisitor with New Formatter API', () => {
       const p2 = new USFMParser();
       p2.load(visitor.getResult()).parse();
       expect(p2.toJSON()).toEqual(j1);
+    });
+
+    it('writes back a footnote whose spans are closed one by one, as unfoldingWord writes them', () => {
+      // Jude 1:5 of the ULT. Each \\fq was closed with \\f*: the note ended at «Jesus,» for every other reader,
+      // and «but some manuscripts have the Lord.» became text of the verse.
+      const input =
+        '\\p\n\\v 5 that Jesus,\\f + \\ft Many of the best ancient manuscripts have \\fq Jesus,\\fq* but some manuscripts have \\fq the Lord\\fq*.\\f* having saved a people';
+      const p1 = new USFMParser();
+      p1.load(input).parse();
+      const visitor = new USFMVisitor();
+      p1.visit(visitor);
+      const result = visitor.getResult();
+      expect(result).toContain('\\fq Jesus,\\fq* but some manuscripts have \\fq the Lord\\fq*.\\f* having saved a people');
+      expect(result.match(/\\f\*/g)).toHaveLength(1);
+      const p2 = new USFMParser();
+      p2.load(result).parse();
+      expect(p2.toJSON()).toEqual(p1.toJSON());
     });
 
     it('should round-trip \\jmp with link-href / link-title attributes (USJ naming)', () => {
