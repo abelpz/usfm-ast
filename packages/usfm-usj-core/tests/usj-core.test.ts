@@ -41,3 +41,27 @@ describe('stripAlignments', () => {
     expect(flat).not.toContain('"marker":"w"');
   });
 });
+
+describe('stripAlignments: non-contiguous groups (docs/29, section 5)', () => {
+  const ms = (content: string) => ({ type: 'ms', marker: 'zaln-s', 'x-content': content, 'x-strong': content, 'x-occurrence': '1', 'x-occurrences': '1' });
+  const end = { type: 'ms', marker: 'zaln-e' };
+  const w = (word: string) => ({ type: 'char', marker: 'w', content: [word], 'x-occurrence': '1', 'x-occurrences': '1' });
+  const verse = (content: unknown[]) => ({ type: 'USJ', version: '3.1', content: [{ type: 'para', marker: 'p', content: [{ type: 'verse', marker: 'v', number: '1', sid: 'TIT 1:1' }, ...content] }] });
+  const read = (content: unknown[]) =>
+    (stripAlignments(verse(content)).alignments['TIT 1:1'] ?? []).map((g) => `${g.sources.map((s) => s.content).join('+')}=${g.targets.map((t) => t.word).join(' ')}`);
+
+  it('keeps a group that interrupts another apart from it (5a)', () => {
+    // El que[Comforter] los[you] consuela[Comforter]
+    expect(read([w('El'), ' ', ms('Comforter'), w('que'), ' ', ms('you'), w('los'), end, ' ', w('consuela'), end])).toEqual(['Comforter=que consuela', 'you=los']);
+  });
+
+  it('reads an interrupted N:M group whole (5b)', () => {
+    // llevó[carried out] la[the] misión[mission] a cabo[carried out]
+    const content = [ms('carried'), ms('out'), w('llevó'), ' ', ms('the'), w('la'), end, ' ', ms('mission'), w('misión'), end, ' ', w('a'), ' ', w('cabo'), end, end];
+    expect(read(content)).toEqual(['carried+out=llevó a cabo', 'the=la', 'mission=misión']);
+  });
+
+  it('still reads milestones opened together as the sources of one group', () => {
+    expect(read([ms('a'), ms('b'), w('uno'), end, end, ' ', ms('c'), w('dos'), end])).toEqual(['a+b=uno', 'c=dos']);
+  });
+});

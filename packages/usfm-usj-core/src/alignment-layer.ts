@@ -64,9 +64,16 @@ export function stripArray(
   alignments: AlignmentMap
 ): unknown[] {
   const out: unknown[] = [];
-  let openZaln = 0;
-  const sources: OriginalWord[] = [];
-  const targets: AlignedWord[] = [];
+  /**
+   * Open alignment groups, outermost first. Milestones opened one right after another are the
+   * sources of ONE group (N:1). A milestone opened after the group above it already has words is
+   * a different group that interrupts it (non-contiguous pattern: the outer group goes on after
+   * the inner one closes), so its words belong to the inner group only.
+   */
+  type Frame = { sources: OriginalWord[]; targets: AlignedWord[]; depth: number; verseRef: string };
+  const stack: Frame[] = [];
+  /** Groups in the order they were opened, so nesting does not change the order of a verse. */
+  const opened: Frame[] = [];
 
   const pushGatewayFragment = (chunk: string) => {
     if (!chunk) return;
@@ -78,21 +85,14 @@ export function stripArray(
     }
   };
 
-  const flushGroup = () => {
-    if (!ctx.verseRef) {
-      sources.length = 0;
-      targets.length = 0;
-      return;
+  /** Once nothing is open, what was read goes to the map, in opening order. */
+  const flushOpened = () => {
+    for (const frame of opened) {
+      if (!frame.verseRef || frame.sources.length === 0 || frame.targets.length === 0) continue;
+      if (!alignments[frame.verseRef]) alignments[frame.verseRef] = [];
+      alignments[frame.verseRef].push({ sources: frame.sources, targets: frame.targets });
     }
-    if (sources.length === 0 || targets.length === 0) {
-      sources.length = 0;
-      targets.length = 0;
-      return;
-    }
-    if (!alignments[ctx.verseRef]) alignments[ctx.verseRef] = [];
-    alignments[ctx.verseRef].push({ sources: [...sources], targets: [...targets] });
-    sources.length = 0;
-    targets.length = 0;
+    opened.length = 0;
   };
 
   for (const item of nodes) {
@@ -115,24 +115,32 @@ export function stripArray(
     }
 
     if (t === 'ms' && o.marker === 'zaln-s') {
-      openZaln++;
-      sources.push(milestoneToOriginal(o));
+      const top = stack[stack.length - 1];
+      if (top && top.targets.length === 0) {
+        top.sources.push(milestoneToOriginal(o));
+        top.depth++;
+      } else {
+        const frame: Frame = { sources: [milestoneToOriginal(o)], targets: [], depth: 1, verseRef: ctx.verseRef };
+        stack.push(frame);
+        opened.push(frame);
+      }
       continue;
     }
 
     if (t === 'ms' && o.marker === 'zaln-e') {
-      openZaln = Math.max(0, openZaln - 1);
-      if (openZaln === 0) {
-        flushGroup();
+      const top = stack[stack.length - 1];
+      if (top) {
+        top.depth--;
+        if (top.depth <= 0) stack.pop();
       }
+      if (stack.length === 0) flushOpened();
       continue;
     }
 
     if (t === 'char' && o.marker === 'w') {
       const text = extractText(o.content);
-      if (openZaln > 0) {
-        targets.push(charToAlignedWord(o, text));
-      }
+      const top = stack[stack.length - 1];
+      if (top) top.targets.push(charToAlignedWord(o, text));
       pushGatewayFragment(text);
       continue;
     }
@@ -140,6 +148,7 @@ export function stripArray(
     out.push(transformSubtree(o, ctx, alignments));
   }
 
+  flushOpened();
   return out;
 }
 
