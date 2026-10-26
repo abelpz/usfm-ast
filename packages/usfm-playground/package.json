@@ -24,7 +24,7 @@
     "@usfm-tools/parser": "workspace:*"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.0",
     "serve": "^14.2.4",
     "typescript": "5.9.3",
     "vite": "^6.0.0"
