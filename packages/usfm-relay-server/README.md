@@ -116,6 +116,7 @@ Messages are JSON text frames.
 | `relay`      | `{ type: 'relay', message: RealtimeMessage }` |
 | `peer-join`  | `{ type: 'peer-join', peer: PeerPresence }` |
 | `peer-leave` | `{ type: 'peer-leave', userId }` — when the person's last socket in the room closes |
+| `joined`     | `{ type: 'joined', userId }` — the join was accepted (a client alone in a room hears nothing else) |
 | `denied`     | `{ type: 'denied', reason: 'auth' \| 'access' \| 'room' \| 'full' }` — the join was refused; the socket closes with 4403 |
 | `pong`       | `{ type: 'pong' }` — response to `ping` |
 
@@ -132,8 +133,9 @@ All optional; without them the relay behaves as before (anyone may join any room
 | `ALLOWED_ORIGINS` | Pages that may connect, comma separated (exact `Origin`); others get 403. |
 | `MAX_MESSAGE_BYTES` | Larger messages are dropped (default 65536). |
 | `MAX_PEERS` | People in one room at most (default 50); one more gets `denied: full`. |
+| `PRESENCE_STALE_MS` | A socket whose last presence is older than this is taken as gone (a phone that lost its signal): not handed to newcomers, not counted, closed. Only for clients that say their presence again regularly. Unset: off. |
 
-Taller (gateway-tasks) deploys it with `AUTH_MODE=door43`, its hosts and its origin, and `MAX_MESSAGE_BYTES=4096`.
+Taller (gateway-tasks) deploys it with `AUTH_MODE=door43`, its hosts and its origin, `MAX_MESSAGE_BYTES=4096` and `PRESENCE_STALE_MS=50000` (it says its presence every 20 s).
 
 ## Tests (this package)
 

@@ -37,6 +37,8 @@ export type ServerMessage =
   | { type: 'peer-join'; peer: PeerPresenceWire }
   | { type: 'peer-leave'; userId: string }
   | { type: 'denied'; reason: DeniedReason }
+  /** The join was accepted: a client alone in a room hears nothing else, and needs to know it is in. */
+  | { type: 'joined'; userId: string }
   | { type: 'pong' };
 
 export const PING_FRAME = '{"type":"ping"}';

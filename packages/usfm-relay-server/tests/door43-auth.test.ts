@@ -4,7 +4,8 @@ import type { ServerMessage } from '../src/protocol';
 
 /**
  * The relay as a Door43 app deploys it (vitest.auth.config.ts): AUTH_MODE=door43, ALLOWED_HOSTS=door43.test,
- * ALLOWED_ORIGINS=https://taller.test, MAX_MESSAGE_BYTES=4096, MAX_PEERS=2. Door43 is mocked with `fetchMock`.
+ * ALLOWED_ORIGINS=https://taller.test, MAX_MESSAGE_BYTES=4096, MAX_PEERS=2, PRESENCE_STALE_MS=1500. Door43 is mocked
+ * with `fetchMock`.
  */
 const runRelayPoolTests = env.RUN_RELAY_POOL_TESTS === '1';
 const BASE = 'http://relay.test';
@@ -155,6 +156,28 @@ describe.skipIf(!runRelayPoolTests)('relay with Door43 sign-in', () => {
     expect(relayed.type === 'relay' && relayed.message.type).toBe('small');
     a.close();
     b.close();
+  });
+
+  it('does not hand a newcomer somebody who stopped giving signs, nor count them in the room', async () => {
+    const room = `${ROOM}.stale`;
+    const a = await openClient(room);
+    const boxA = messages(a);
+    a.send(join(room, 'ana-token'));
+    await boxA.next('joined');
+    // Ana's phone lost its signal: her socket stays, and says nothing more.
+    await new Promise((r) => setTimeout(r, 1800));
+    const b = await openClient(room);
+    const boxB = messages(b);
+    b.send(join(room, 'bea-token'));
+    await boxB.next('joined');
+    await new Promise((r) => setTimeout(r, 300));
+    expect(boxB.got.filter((m) => m.type === 'peer-join')).toEqual([]);
+    const c = await openClient(room);
+    const boxC = messages(c);
+    c.send(join(room, 'carla-token'));
+    expect((await boxC.next('joined')).type).toBe('joined');
+    b.close();
+    c.close();
   });
 
   it('denies join when the room is full', async () => {

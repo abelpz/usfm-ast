@@ -88,13 +88,29 @@ export class RelayRoom extends DurableObject<Env> {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  /** The other joined sockets of the room. */
+  /**
+   * The other joined sockets of the room that still give signs. A phone that lost its signal leaves its socket open
+   * here, maybe for minutes; with PRESENCE_STALE_MS such a socket is closed instead of being handed to newcomers.
+   */
   private others(ws: WebSocket): { ws: WebSocket; peer: Joined }[] {
-    return this.ctx
-      .getWebSockets()
-      .filter((w) => w !== ws)
-      .map((w) => ({ ws: w, peer: joinedOf(w) }))
-      .filter((row): row is { ws: WebSocket; peer: Joined } => Boolean(row.peer));
+    const stale = numberOr(this.env.PRESENCE_STALE_MS, 0);
+    const now = Date.now();
+    const rows: { ws: WebSocket; peer: Joined }[] = [];
+    for (const w of this.ctx.getWebSockets()) {
+      if (w === ws) continue;
+      const peer = joinedOf(w);
+      if (!peer) continue;
+      if (stale && now - peer.presence.lastSeen > stale) {
+        try {
+          w.close(1001, 'stale');
+        } catch {
+          /* ignore */
+        }
+        continue;
+      }
+      rows.push({ ws: w, peer });
+    }
+    return rows;
   }
 
   private deny(ws: WebSocket, reason: DeniedReason): void {
@@ -148,6 +164,7 @@ export class RelayRoom extends DurableObject<Env> {
         lastSeen: Date.now(),
       };
       setAttachment(ws, { room: readAttachment(ws)?.room ?? '', userId: who.userId, presence });
+      send(ws, { type: 'joined', userId: who.userId });
 
       const others = this.others(ws);
       for (const other of others) send(ws, { type: 'peer-join', peer: other.peer.presence });

@@ -45,14 +45,18 @@ async function openClient(room: string) {
   return ws!;
 }
 
-async function nextJson(ws: WebSocket, timeoutMs = 5000): Promise<ServerMessage> {
+/** The next message, past the `joined` each socket gets when its join is accepted. */
+async function nextJson(ws: WebSocket, timeoutMs = 5000, keepJoined = false): Promise<ServerMessage> {
   const got = inbox.get(ws)!;
   const start = Date.now();
-  while (!got.length) {
-    if (Date.now() - start > timeoutMs) throw new Error('timeout waiting for message');
-    await new Promise((r) => setTimeout(r, 10));
+  for (;;) {
+    while (!got.length) {
+      if (Date.now() - start > timeoutMs) throw new Error('timeout waiting for message');
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    const msg = JSON.parse(got.shift()!) as ServerMessage;
+    if (keepJoined || msg.type !== 'joined') return msg;
   }
-  return JSON.parse(got.shift()!) as ServerMessage;
 }
 
 describe.skipIf(!runRelayPoolTests)('RelayRoom', () => {
@@ -222,7 +226,9 @@ describe.skipIf(!runRelayPoolTests)('RelayRoom', () => {
     const a2 = await openClient('two-devices');
     const b = await openClient('two-devices');
     const raw = inbox.get(b)!;
-    const seen = { get length() { return raw.length; }, set length(n: number) { raw.length = n; }, filter: (f: (m: ServerMessage) => boolean) => raw.map((m) => JSON.parse(m) as ServerMessage).filter(f) };
+    // Only what the others did is looked at here.
+    const isJoined = (m: string) => (JSON.parse(m) as ServerMessage).type === 'joined';
+    const seen = { get length() { return raw.length; }, set length(n: number) { raw.length = n; }, filter: (f: (m: ServerMessage) => boolean) => raw.filter((m) => !isJoined(m)).map((m) => JSON.parse(m) as ServerMessage).filter(f) };
     a1.send(JSON.stringify({ type: 'join', roomId: 'two-devices', userId: 'a', presence: presence('a', 'A', '#111') }));
     a2.send(JSON.stringify({ type: 'join', roomId: 'two-devices', userId: 'a', presence: presence('a', 'A', '#111') }));
     b.send(JSON.stringify({ type: 'join', roomId: 'two-devices', userId: 'b', presence: presence('b', 'B', '#222') }));
@@ -235,6 +241,13 @@ describe.skipIf(!runRelayPoolTests)('RelayRoom', () => {
     await new Promise((r) => setTimeout(r, 300));
     expect(seen.filter((m) => m.type === 'peer-leave')).toEqual([{ type: 'peer-leave', userId: 'a' }]);
     b.close();
+  });
+
+  it('tells the joiner it joined', async () => {
+    const ws = await openClient('joined-room');
+    ws.send(JSON.stringify({ type: 'join', roomId: 'joined-room', userId: 'a', presence: presence('a', 'A', '#111') }));
+    expect(await nextJson(ws, 3000, true)).toEqual({ type: 'joined', userId: 'a' });
+    ws.close();
   });
 
   it('relays focus in presence', async () => {

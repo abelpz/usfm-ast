@@ -20,6 +20,7 @@ export default defineWorkersProject({
             ALLOWED_ORIGINS: 'https://taller.test',
             MAX_MESSAGE_BYTES: '4096',
             MAX_PEERS: '2',
+            PRESENCE_STALE_MS: '1500',
           },
         },
       },

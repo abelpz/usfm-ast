@@ -11,6 +11,11 @@ interface Env {
   MAX_MESSAGE_BYTES?: string;
   /** People in one room at most (default 50). */
   MAX_PEERS?: string;
+  /**
+   * A socket whose presence is older than this (ms) is taken as gone: not handed to newcomers, not counted, closed.
+   * For clients that say their presence again regularly (Taller: every 20 s, 50000 here). Unset: off.
+   */
+  PRESENCE_STALE_MS?: string;
   /** Tests only: run the Worker pool tests. */
   RUN_RELAY_POOL_TESTS?: string;
 }
