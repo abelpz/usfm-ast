@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@usfm-tools/types": "workspace:*",
-    "@xmldom/xmldom": "0.8.11"
+    "@xmldom/xmldom": "0.9.9"
   },
   "keywords": [
     "usfm",
