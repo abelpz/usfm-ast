@@ -1,4 +1,4 @@
-import { SELF } from 'cloudflare:test';
+import { SELF, env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import type { ServerMessage } from '../src/protocol';
 
@@ -7,7 +7,8 @@ import type { ServerMessage } from '../src/protocol';
  * - GitHub Actions Test step sets `RUN_RELAY_POOL_TESTS=1` (Linux).
  * - Locally: `RUN_RELAY_POOL_TESTS=1 bun run test` in this package, or rely on `protocol.test.ts` only.
  */
-const runRelayPoolTests = process.env.RUN_RELAY_POOL_TESTS === '1';
+// The flag reaches the Worker runtime as a binding (vitest.config.ts): `process.env` there is not the shell's.
+const runRelayPoolTests = env.RUN_RELAY_POOL_TESTS === '1';
 
 const BASE = 'http://relay.test';
 
@@ -26,27 +27,36 @@ function presence(userId: string, displayName: string, color: string) {
   };
 }
 
+/**
+ * What each socket received, kept from the moment it opens: a listener added after sending missed a message that
+ * had already come (the tests waited for it until their timeout).
+ */
+const inbox = new WeakMap<WebSocket, string[]>();
+
 async function openClient(room: string) {
   const res = await connectRoom(room);
   expect(res.status).toBe(101);
   const ws = res.webSocket;
   expect(ws).toBeTruthy();
   ws!.accept();
+  const got: string[] = [];
+  inbox.set(ws!, got);
+  ws!.addEventListener('message', (ev) => got.push(String(ev.data)));
   return ws!;
 }
 
-function nextJson(ws: WebSocket, timeoutMs = 5000): Promise<ServerMessage> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('timeout waiting for message')), timeoutMs);
-    ws.addEventListener('message', (ev) => {
-      clearTimeout(t);
-      try {
-        resolve(JSON.parse(String(ev.data)) as ServerMessage);
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
+/** The next message, past the `joined` each socket gets when its join is accepted. */
+async function nextJson(ws: WebSocket, timeoutMs = 5000, keepJoined = false): Promise<ServerMessage> {
+  const got = inbox.get(ws)!;
+  const start = Date.now();
+  for (;;) {
+    while (!got.length) {
+      if (Date.now() - start > timeoutMs) throw new Error('timeout waiting for message');
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    const msg = JSON.parse(got.shift()!) as ServerMessage;
+    if (keepJoined || msg.type !== 'joined') return msg;
+  }
 }
 
 describe.skipIf(!runRelayPoolTests)('RelayRoom', () => {
@@ -211,17 +221,56 @@ describe.skipIf(!runRelayPoolTests)('RelayRoom', () => {
     wsB.close();
   });
 
+  it('peer-leave only after the last socket of a user', async () => {
+    const a1 = await openClient('two-devices');
+    const a2 = await openClient('two-devices');
+    const b = await openClient('two-devices');
+    const raw = inbox.get(b)!;
+    // Only what the others did is looked at here.
+    const isJoined = (m: string) => (JSON.parse(m) as ServerMessage).type === 'joined';
+    const seen = { get length() { return raw.length; }, set length(n: number) { raw.length = n; }, filter: (f: (m: ServerMessage) => boolean) => raw.filter((m) => !isJoined(m)).map((m) => JSON.parse(m) as ServerMessage).filter(f) };
+    a1.send(JSON.stringify({ type: 'join', roomId: 'two-devices', userId: 'a', presence: presence('a', 'A', '#111') }));
+    a2.send(JSON.stringify({ type: 'join', roomId: 'two-devices', userId: 'a', presence: presence('a', 'A', '#111') }));
+    b.send(JSON.stringify({ type: 'join', roomId: 'two-devices', userId: 'b', presence: presence('b', 'B', '#222') }));
+    await new Promise((r) => setTimeout(r, 200));
+    seen.length = 0;
+    a1.close(1000, 'phone closed');
+    await new Promise((r) => setTimeout(r, 300));
+    expect(seen.filter((m) => m.type === 'peer-leave')).toEqual([]);
+    a2.close(1000, 'laptop closed');
+    await new Promise((r) => setTimeout(r, 300));
+    expect(seen.filter((m) => m.type === 'peer-leave')).toEqual([{ type: 'peer-leave', userId: 'a' }]);
+    b.close();
+  });
+
+  it('tells the joiner it joined', async () => {
+    const ws = await openClient('joined-room');
+    ws.send(JSON.stringify({ type: 'join', roomId: 'joined-room', userId: 'a', presence: presence('a', 'A', '#111') }));
+    expect(await nextJson(ws, 3000, true)).toEqual({ type: 'joined', userId: 'a' });
+    ws.close();
+  });
+
+  it('relays focus in presence', async () => {
+    const wsA = await openClient('focus-room');
+    const wsB = await openClient('focus-room');
+    wsA.send(JSON.stringify({ type: 'join', roomId: 'focus-room', userId: 'a', presence: presence('a', 'A', '#111') }));
+    wsB.send(JSON.stringify({ type: 'join', roomId: 'focus-room', userId: 'b', presence: presence('b', 'B', '#222') }));
+    await nextJson(wsA);
+    await nextJson(wsB);
+    const upd = nextJson(wsB);
+    wsA.send(JSON.stringify({ type: 'presence', presence: { ...presence('a', 'A', '#111'), focus: { item: 'kp6p', doing: 'writing' } } }));
+    const m = await upd;
+    expect(m.type === 'peer-join' && m.peer.focus).toEqual({ item: 'kp6p', doing: 'writing' });
+    expect(m.type === 'peer-join' && m.peer.lastSeen).toBeGreaterThan(0);
+    wsA.close();
+    wsB.close();
+  });
+
   it('ping receives pong via auto-response', async () => {
     const ws = await openClient('ping-room');
     ws.send(JSON.stringify({ type: 'ping' }));
-    const pong = await new Promise<string>((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error('pong timeout')), 3000);
-      ws.addEventListener('message', (ev) => {
-        clearTimeout(t);
-        resolve(String(ev.data));
-      });
-    });
-    expect(pong).toBe('{"type":"pong"}');
+    const pong = await nextJson(ws, 3000);
+    expect(JSON.stringify(pong)).toBe('{"type":"pong"}');
     ws.close();
   });
 

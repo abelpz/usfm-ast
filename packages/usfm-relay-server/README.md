@@ -104,7 +104,7 @@ Messages are JSON text frames.
 
 | Type        | Purpose |
 |------------|---------|
-| `join`     | `{ type: 'join', roomId, userId, presence }` — after WebSocket open |
+| `join`     | `{ type: 'join', roomId, userId, presence, auth? }` — after WebSocket open; `auth: { token }` when the relay asks for Door43 sign-in |
 | `relay`    | `{ type: 'relay', message: RealtimeMessage }` — forward to other peers |
 | `presence` | `{ type: 'presence', presence: PeerPresence }` — update awareness |
 | `ping`     | `{ type: 'ping' }` — keepalive (auto-answered with `pong` at the edge when frames match) |
@@ -115,18 +115,35 @@ Messages are JSON text frames.
 |--------------|---------|
 | `relay`      | `{ type: 'relay', message: RealtimeMessage }` |
 | `peer-join`  | `{ type: 'peer-join', peer: PeerPresence }` |
-| `peer-leave` | `{ type: 'peer-leave', userId }` |
+| `peer-leave` | `{ type: 'peer-leave', userId }` — when the person's last socket in the room closes |
+| `joined`     | `{ type: 'joined', userId }` — the join was accepted (a client alone in a room hears nothing else) |
+| `denied`     | `{ type: 'denied', reason: 'auth' \| 'access' \| 'room' \| 'full' }` — the join was refused; the socket closes with 4403 |
 | `pong`       | `{ type: 'pong' }` — response to `ping` |
 
-`PeerPresence` / `RealtimeMessage` match [`realtime-transport.ts`](../usfm-editor-core/src/sync/realtime-transport.ts).
+`PeerPresence` / `RealtimeMessage` match [`realtime-transport.ts`](../usfm-editor-core/src/sync/realtime-transport.ts). A presence may also carry `focus: { item, doing: 'viewing' | 'writing' }` (an app that is not an editor: the note a person is on). `lastSeen` is set by the server.
+
+## Door43 sign-in and limits
+
+All optional; without them the relay behaves as before (anyone may join any room).
+
+| Variable | Meaning |
+|---|---|
+| `AUTH_MODE` | `door43`: a room is `host\|owner/repo\|key`; the join must bring a Door43 token (`auth.token`) that can read `owner/repo` on `host`. The person is known by their Door43 login and full name, not by what the app sends. |
+| `ALLOWED_HOSTS` | Door43 hosts a room may name, comma separated: `git.door43.org,qa.door43.org`. `localhost:PORT` is spoken to over http (a local mock). |
+| `ALLOWED_ORIGINS` | Pages that may connect, comma separated (exact `Origin`); others get 403. |
+| `MAX_MESSAGE_BYTES` | Larger messages are dropped (default 65536). |
+| `MAX_PEERS` | People in one room at most (default 50); one more gets `denied: full`. |
+| `PRESENCE_STALE_MS` | A socket whose last presence is older than this is taken as gone (a phone that lost its signal): not handed to newcomers, not counted, closed. Only for clients that say their presence again regularly. Unset: off. |
+
+Taller (gateway-tasks) deploys it with `AUTH_MODE=door43`, its hosts and its origin, `MAX_MESSAGE_BYTES=4096` and `PRESENCE_STALE_MS=50000` (it says its presence every 20 s).
 
 ## Tests (this package)
 
 - **`tests/protocol.test.ts`** — always runs (ping/pong frame strings).
-- **`tests/relay.test.ts`** — full Durable Object + WebSocket tests via `@cloudflare/vitest-pool-workers`.  
-  They run when **`RUN_RELAY_POOL_TESTS=1`** (the GitHub Actions Test step sets this; `turbo.json` passes it through). Locally: `RUN_RELAY_POOL_TESTS=1 bun run test` in this package (Linux/WSL recommended). Otherwise rely on `protocol.test.ts` + `wrangler dev` + editor-core `RELAY_URL` tests.
+- **`tests/relay.test.ts`** — full Durable Object + WebSocket tests via `@cloudflare/vitest-pool-workers`.
+- **`tests/door43-auth.test.ts`** — the same with Door43 sign-in (`vitest.auth.config.ts` sets the variables; Door43 is mocked with `fetchMock`).
 
-Windows note: Miniflare + SQLite DO storage can be flaky; use WSL or CI for pool-worker tests.
+The pool tests run when **`RUN_RELAY_POOL_TESTS=1`**, which reaches the Worker runtime as a binding: `RUN_RELAY_POOL_TESTS=1 bun run test`. Storage is not isolated per test (each test uses rooms of its own), which keeps them working on Windows.
 
 ## Cost (rough)
 
